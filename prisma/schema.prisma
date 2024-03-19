@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Person {
+  id        Int     @id @default(autoincrement())
+  firstName String
+  lastName  String
+  role      String?
+  nickname  String?
+  notes     String?
+  qrCode    String?
+  
+  loans     Loan[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @default(now()) @updatedAt
+
+  @@unique([firstName, lastName, nickname])
+}
+
+model Item {
+  id       Int            @id @default(autoincrement())
+  name     String
+  type     String
+  status   String     @default("Out")
+  notes    String?
+  qrCode    String?
+  loans    ItemsInLoans[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @default(now()) @updatedAt
+}
+
+model Loan {
+  id         Int            @id @default(autoincrement())
+  person     Person         @relation(fields: [personId], references: [id])
+  items      ItemsInLoans[]
+  notes      String?
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @default(now()) @updatedAt
+  
+  personId   Int
+}
+
+model ItemsInLoans {
+  loan         Loan       @relation(fields: [loanId], references: [id])
+  item         Item       @relation(fields: [itemId], references: [id])
+  dateLoaned   DateTime   @default(now())
+  dateReturned DateTime?
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @default(now()) @updatedAt
+
+  loanId     Int
+  itemId     Int
+
+  @@id([loanId, itemId])
+}

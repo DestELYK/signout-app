@@ -8,6 +8,12 @@ import compression from "compression";
 import express from "express";
 import morgan from "morgan";
 import sourceMapSupport from "source-map-support";
+import https from 'https'
+
+const privateKey = fs.readFileSync('./sslcert/server.key', 'utf8');
+const certificate = fs.readFileSync('./sslcert/server.crt', 'utf8');
+
+const credentials = { key: privateKey, cert: certificate };
 
 sourceMapSupport.install({
   retrieveSourceMap: function (source) {
@@ -60,8 +66,8 @@ app.use(morgan("tiny"));
 app.all("*", remixHandler);
 
 const port = process.env.PORT || 3000;
-app.listen(port, async () => {
-  console.log(`Express server listening at http://localhost:${port}`);
+https.createServer(credentials, app).listen(port, async () => {
+  console.log(`Express server listening at https://localhost:${port}`);
 
   if (process.env.NODE_ENV === "development") {
     broadcastDevReady(initialBuild);

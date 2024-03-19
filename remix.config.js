@@ -2,6 +2,8 @@
 export default {
   ignoredRouteFiles: ["**/*.css"],
   serverModuleFormat: "esm",
+  postcss: true,
+  browserNodeBuiltinsPolyfill: { modules: { timers: true } }
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // publicPath: "/build/",
