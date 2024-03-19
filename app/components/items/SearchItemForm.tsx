@@ -42,12 +42,12 @@ interface SearchItemFormProps
 export default function SearchItemForm({
   items,
   onStatusChanged,
-  onAddItem,
+  onSubmit,
   ...props
 }: {
   items: ItemFormValues[];
   onStatusChanged: (status: STATUS) => void;
-  onAddItem: (item: ItemFormValues) => void;
+  onSubmit: (item: ItemFormValues) => void;
   props?: React.FormHTMLAttributes<HTMLFormElement>;
 }) {
   const itemForm = useForm({
@@ -111,7 +111,7 @@ export default function SearchItemForm({
         itemForm.setFieldError("qrCode", ERRORS.ITEM_EXISTS);
         itemForm.setFieldError("name", ERRORS.ITEM_EXISTS);
       } else if (value.length == 1) {
-        onAddItem?.(value[0]);
+        onSubmit?.(value[0]);
       }
 
       changeStatus(STATUS.NONE);

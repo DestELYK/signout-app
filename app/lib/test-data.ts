@@ -19,6 +19,48 @@ const TEST_PEOPLE = [
     firstName: "Kyle",
     lastName: "Dunn",
   },
+  {
+    id: 1,
+    qrCode: "1",
+    firstName: "Bailey",
+    lastName: "Wells",
+  },
+  {
+    id: 2,
+    qrCode: "2",
+    firstName: "Leo",
+    lastName: "Alvarez",
+  },
+  {
+    id: 3,
+    qrCode: "3",
+    firstName: "Junior",
+    lastName: "Meyer",
+  },
+  {
+    id: 4,
+    qrCode: "4",
+    firstName: "Alma",
+    lastName: "Odling",
+  },
+  {
+    id: 5,
+    qrCode: "5",
+    firstName: "Kelsie",
+    lastName: "Reilly",
+  },
+  {
+    id: 6,
+    qrCode: "6",
+    firstName: "Christopher",
+    lastName: "Vasquez",
+  },
+  {
+    id: 7,
+    qrCode: "7",
+    firstName: "Paige",
+    lastName: "O'Gallagher",
+  },
 ];
 
 const TEST_ITEMS = [
@@ -100,13 +142,14 @@ export function findPerson(person: {
     setTimeout(() => {
       const foundPeople = TEST_PEOPLE.filter(
         (p) =>
-          person.qrCode === p.qrCode ||
+          (person.qrCode && p.qrCode === person.qrCode) ||
           (person.name &&
-            (p.firstName.toLowerCase().includes(person.name.toLowerCase()) ||
-              p.lastName.toLowerCase().includes(person.name.toLowerCase())))
+            `${p.firstName} ${p.lastName}`
+              .toLowerCase()
+              .includes(person.name.toLowerCase()))
       );
 
-      return resolve(TEST_PEOPLE);
+      return resolve(foundPeople);
     });
   });
 }
