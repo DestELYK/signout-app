@@ -1,23 +1,14 @@
+import {
+    ActionIcon,
+    Tooltip
+} from "@mantine/core";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
-import Scanner, { ScanResults, State } from "./Scanner";
-import { useEffect, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 import { IconQrcode, IconQrcodeOff, IconX } from "@tabler/icons-react";
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Center,
-  Dialog,
-  Flex,
-  Group,
-  Modal,
-  Stack,
-  Tooltip,
-  rem,
-} from "@mantine/core";
 import QrScanner from "qr-scanner";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
+import { useEffect, useRef, useState } from "react";
+import Scanner, { ScanResults, State } from "./Scanner";
 
 const MODAL_ID = "qr-scanner";
 
@@ -44,8 +35,8 @@ export default function QrButton({
   const openScanner = () => {
     modals.open({
       modalId: MODAL_ID,
-      size:"calc(100vw - 3 rem)",
-      children: (        
+      size: "calc(100vw - 3 rem)",
+      children: (
         <Scanner
           startOnLoad
           hideButton
@@ -73,9 +64,9 @@ export default function QrButton({
           }}
         />
       ),
-      centered: true
-    })
-  } 
+      centered: true,
+    });
+  };
 
   return (
     <>
@@ -84,13 +75,13 @@ export default function QrButton({
           size="input-sm"
           disabled={!hasCamera}
           onClick={() => {
-            openScanner()
+            openScanner();
             setScanning(!scanning);
           }}
           variant="outline"
           style={{ justifySelf: "flex-end", alignSelf: "flex-end" }}
         >
-          {!hasCamera ? <IconQrcodeOff/> : <IconQrcode/>}
+          {!hasCamera ? <IconQrcodeOff /> : <IconQrcode />}
         </ActionIcon>
       </Tooltip>
     </>

@@ -1,6 +1,6 @@
-import { Button, Center, Container, Group, Stack, Text } from "@mantine/core";
-import { useEffect, useRef, useState } from "react";
+import { Center } from "@mantine/core";
 import QrScanner from "qr-scanner";
+import { useEffect, useRef, useState } from "react";
 
 export enum State {
   Stopped,

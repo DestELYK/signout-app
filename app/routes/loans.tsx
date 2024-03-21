@@ -4,28 +4,23 @@ import {
   Box,
   Button,
   Card,
-  CardProps,
   Center,
   Collapse,
   Container,
   Flex,
   Group,
   Menu,
-  Modal,
-  NavLink,
   ScrollArea,
   Stack,
   Text,
   Title,
-  UnstyledButton,
-  UnstyledButtonProps,
   px,
-  rem,
+  rem
 } from "@mantine/core";
 import { useDisclosure, useHover, useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { Prisma } from "@prisma/client";
-import { LoaderFunctionArgs, json } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
   Link,
   MetaFunction,
@@ -86,6 +81,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
   });
 
   return json({ loans: loans });
+}
+
+export async function action({
+  request
+}: ActionFunctionArgs) {
+  const formData = await request.json();
+  return json(formData);
 }
 
 function LoanItemView({
@@ -185,12 +187,12 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
 
   const openSignout = () => {
     modals.open({
-      modalId: 'sign-out-item',
+      modalId: "sign-out-item",
       title: "Sign-Out Item",
       centered: true,
-      children: <LoanForm/>
-    })
-  }
+      children: <LoanForm />,
+    });
+  };
 
   return (
     <>
@@ -263,7 +265,9 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
         <Card.Section withBorder inheritPadding p="lg" mt="xs">
           <Stack style={{ justifySelf: "flex-end" }}>
             <Group grow>
-              <Button component={Link} to={`/loans/create`}>Sign-Out Items</Button>
+              <Button component={Link} to={`/loans/create`}>
+                Sign-Out Items
+              </Button>
               <Button>Sign-In Items</Button>
             </Group>
           </Stack>
@@ -280,7 +284,7 @@ export default function Page() {
 
   const loanId = params.loanId;
 
-  const isNestedRoute = path.pathname.replace('/loans', '') !== '';
+  const isNestedRoute = path.pathname.replace("/loans", "") !== "";
 
   return (
     <Container p="sm" miw="100dvw" h="100dvh">
@@ -290,9 +294,7 @@ export default function Page() {
             <LoanListView {...(loanId && { activeId: loanId })} />
           </Box>
           {isNestedRoute ? (
-            <Box w="100%" h="100%">
-              <Outlet />
-            </Box>
+            <Outlet />
           ) : (
             <Card w="100%" h="100%" withBorder>
               <Center w="100%" h="100%">

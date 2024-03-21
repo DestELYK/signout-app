@@ -1,40 +1,31 @@
 import {
-  ActionIcon,
-  Burger,
-  Button,
-  Card,
-  Container,
-  Flex,
-  Grid,
-  GridCol,
-  Group,
-  Menu,
-  MenuDropdown,
-  ScrollArea,
-  SimpleGrid,
-  Skeleton,
-  Stack,
-  Text,
-  px,
-  rem,
+    ActionIcon,
+    Button,
+    Card,
+    Container,
+    Flex,
+    Group,
+    Menu,
+    ScrollArea,
+    Stack,
+    Text,
+    px,
+    rem
 } from "@mantine/core";
 import {
-  Await,
-  Link,
-  MetaFunction,
-  NavLink,
-  Outlet,
-  defer,
-  json,
-  useLoaderData,
-  useLocation,
+    Await,
+    Link,
+    MetaFunction,
+    defer,
+    useLoaderData,
+    useLocation
 } from "@remix-run/react";
-import { Suspense } from "react";
-import { prisma } from "~/lib/prisma.server";
 import { IconDots } from "@tabler/icons-react";
-import { formatDate } from "~/lib/utils";
+import { Suspense } from "react";
 import { setTimeout } from "timers/promises";
 import ListSkeleton from "~/components/ListSkeleton";
+import { prisma } from "~/lib/prisma.server";
+import { formatDate } from "~/lib/utils";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Item Loan App" }];

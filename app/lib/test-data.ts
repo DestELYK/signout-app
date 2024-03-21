@@ -150,6 +150,6 @@ export function findPerson(person: {
       );
 
       return resolve(foundPeople);
-    });
+    }, 1000);
   });
 }

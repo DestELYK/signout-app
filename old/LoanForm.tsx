@@ -1,23 +1,22 @@
 // @ts-nocheck
 import {
-  Badge,
-  Button,
-  Center,
-  Combobox,
-  Fieldset,
-  Flex,
-  Group,
-  Loader,
-  Switch,
-  Text,
-  TextInput,
-  useCombobox,
+    Button,
+    Center,
+    Combobox,
+    Fieldset,
+    Flex,
+    Group,
+    Loader,
+    Switch,
+    Text,
+    TextInput,
+    useCombobox
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { Person, Prisma } from "@prisma/client";
 import { Form, useFetcher } from "@remix-run/react";
 import { useState } from "react";
 import QrButton from "./QrButton";
-import { Person, Prisma } from "@prisma/client";
 
 export default function LoanForm({ loanId }: { loanId?: number }) {
   const peopleFetcher = useFetcher<Person | Person[]>();

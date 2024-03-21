@@ -1,7 +1,6 @@
-import { Flex } from "@mantine/core";
 // @ts-ignore
-import {QRCode} from "react-qr-code";
 import { useEffect, useState } from "react";
+import { QRCode } from "react-qr-code";
 import { ItemFormValues, getItems } from "~/lib/test-data";
 
 export default function Page() {

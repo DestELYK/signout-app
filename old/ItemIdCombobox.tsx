@@ -1,23 +1,21 @@
 import {
-  ActionIcon,
-  Center,
-  Combobox,
-  Flex,
-  Loader,
-  NumberInput,
-  Stack,
-  Text,
-  Title,
-  useCombobox,
+    ActionIcon,
+    Center,
+    Combobox,
+    Flex,
+    Loader,
+    NumberInput,
+    Stack,
+    Text,
+    Title,
+    useCombobox,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useFetcher } from "@remix-run/react";
 import {
-  IconChevronCompactDown,
-  IconChevronCompactUp,
-  IconQrcode,
-  IconQrcodeOff,
-  IconX,
+    IconQrcode,
+    IconQrcodeOff,
+    IconX
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { loader } from "~/routes/items";

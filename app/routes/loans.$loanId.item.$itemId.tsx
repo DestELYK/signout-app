@@ -1,7 +1,7 @@
 import { LoaderFunctionArgs, json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import invariant from 'tiny-invariant';
 import { prisma } from "~/lib/prisma.server";
-import invariant from 'tiny-invariant' 
 
 export const loader = async ({params}: LoaderFunctionArgs) => {
     invariant(params.loanId, "Expected params.loanId");

@@ -1,29 +1,13 @@
 import {
-  ActionIcon,
-  Center,
-  Combobox,
-  Flex,
-  Loader,
-  NumberInput,
-  NumberInputProps,
-  Stack,
-  Text,
-  TextInput,
-  Title,
-  useCombobox,
+    Combobox,
+    Flex,
+    Stack,
+    TextInput,
+    useCombobox
 } from "@mantine/core";
-import { notifications } from "@mantine/notifications";
-import { FetcherWithComponents, useFetcher } from "@remix-run/react";
-import {
-  IconChevronCompactDown,
-  IconChevronCompactUp,
-  IconQrcode,
-  IconQrcodeOff,
-  IconX,
-} from "@tabler/icons-react";
+import { FetcherWithComponents } from "@remix-run/react";
 import { ReactNode, useEffect, useState } from "react";
-import { loader } from "~/routes/items";
-import Scanner, { State, hasCamera } from "../app/components/Scanner";
+import { hasCamera } from "../app/components/Scanner";
 
 export function QRCombobox<T>({fetcher, optionsHandler, href, name, onChange}: {fetcher: FetcherWithComponents<T>, optionsHandler: (item: T) => ReactNode, href: string, name: string, onChange?: (value: string, data: any) => void}) {
   const combobox = useCombobox();

@@ -1,5 +1,5 @@
-import { Center, Container, Stack, Text } from "@mantine/core";
-import { useEffect, useRef, useState } from "react";
+import { Container, Stack, Text } from "@mantine/core";
+import { useState } from "react";
 import Scanner from "~/components/Scanner";
 
 export default function Page() {
