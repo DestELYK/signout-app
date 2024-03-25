@@ -14,12 +14,16 @@ import {
   Text,
   Title,
   px,
-  rem
+  rem,
 } from "@mantine/core";
-import { useDisclosure, useHover, useMediaQuery } from "@mantine/hooks";
-import { modals } from "@mantine/modals";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { Item, Person, Prisma } from "@prisma/client";
-import { ActionFunctionArgs, LoaderFunctionArgs, json, redirect } from "@remix-run/node";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  json,
+  redirect,
+} from "@remix-run/node";
 import {
   Link,
   MetaFunction,
@@ -28,9 +32,9 @@ import {
   useLocation,
   useNavigate,
   useParams,
+  useSearchParams,
 } from "@remix-run/react";
 import { IconFilter } from "@tabler/icons-react";
-import LoanForm from "~/components/LoanForm";
 import { prisma } from "~/lib/prisma.server";
 import { dateDiff, fullName } from "~/lib/utils";
 
@@ -38,7 +42,7 @@ export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];
 };
 
-const loanInfo = {
+const loanInfo: Prisma.LoanSelect = {
   id: true,
   person: {
     select: {
@@ -60,46 +64,61 @@ const loanInfo = {
       },
     },
   },
-} satisfies Prisma.LoanSelect;
+};
 
 type LoanItemPayload = Prisma.LoanGetPayload<{ select: typeof loanInfo }>;
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const loans = await prisma.loan.findMany({
-    where: {
-      items: {
-        some: {
-          dateReturned: null,
-        },
-      },
-    },
+  const url = new URL(request.url);
+
+  const itemIds = url.searchParams.getAll("itemId");
+  const personId = url.searchParams.get("personId");
+
+  let filter: Prisma.LoanFindManyArgs = {
     select: loanInfo,
     orderBy: {
       updatedDate: "desc",
     },
-  });
+  };
 
-  return json({ loans: loans });
+  try {
+    filter["where"] = {
+      ...(itemIds &&
+        itemIds.length > 0 && {
+          items: {
+            some: {
+              OR: itemIds.map((itemId) => {
+                return {
+                  itemId: parseInt(itemId),
+                };
+              }),
+            },
+          },
+        }),
+      ...(personId && { personId: parseInt(personId) }),
+    };
+  } catch (e) {
+    console.error("Failed to create filter", e);
+  }
+
+  return json(await prisma.loan.findMany(filter));
 }
 
 export async function action({ request }: ActionFunctionArgs) {
-  const formData: {person?: Person, items?: Item[]} = await request.json();
-
-  // TODO - server side validation
+  const formData: { person?: Person; items?: Item[] } = await request.json();
 
   try {
     if (!formData.person) {
-      throw Error('No person selected');
+      throw Error("No person selected");
     }
 
     if (!formData.items || formData.items.length == 0) {
-      throw Error('Loan requires at least one item')
+      throw Error("Loan requires at least one item");
     }
 
-    let result: {id: number} = {id: -1};
+    let result: { id: number } = { id: -1 };
     switch (request.method) {
       case "POST":
-
         result = await prisma.loan.create({
           data: {
             person: {
@@ -112,9 +131,9 @@ export async function action({ request }: ActionFunctionArgs) {
                   lastName: formData.person.lastName,
                   nickname: formData.person.nickname,
                   role: formData.person.role,
-                  qrCode: formData.person.qrCode
-                }
-              }
+                  qrCode: formData.person.qrCode,
+                },
+              },
             },
             items: {
               create: formData.items.map((item) => {
@@ -125,13 +144,13 @@ export async function action({ request }: ActionFunctionArgs) {
                       create: {
                         name: item.name,
                         type: item.type,
-                        qrCode: item.qrCode
-                      }
-                    }
-                  }
-                }
-              })
-            }
+                        qrCode: item.qrCode,
+                      },
+                    },
+                  },
+                };
+              }),
+            },
           },
           include: {
             items: true,
@@ -139,18 +158,14 @@ export async function action({ request }: ActionFunctionArgs) {
           },
         });
 
-        console.debug('Created new loan: %s', result)
+        console.debug("Created new loan: %s", result);
         break;
     }
 
-    return redirect(`/loans/${result.id}`)
+    return redirect(`/loans/${result.id}`);
   } catch (e) {
     return json({ error: e });
   }
-
-  // TODO - create new loan
-
-  return json(formData);
 }
 
 function LoanItemView({
@@ -226,18 +241,11 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
     useDisclosure(false);
   const [filterOpened, { toggle: toggleFilter }] = useDisclosure(false);
   const navigate = useNavigate();
+  const searchParams = useSearchParams({ outstanding: "" });
 
-  const { loans } = useLoaderData<typeof loader>();
-  const { hovered, ref } = useHover();
+  const loans = useLoaderData<LoanItemPayload[]>();
 
-  const openSignout = () => {
-    modals.open({
-      modalId: "sign-out-item",
-      title: "Sign-Out Item",
-      centered: true,
-      children: <LoanForm />,
-    });
-  };
+  const outstandingLoans = loans.filter((loan) => loan._count.items > 0);
 
   return (
     <>
@@ -280,7 +288,7 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
         <Collapse in={filterOpened}>
           <Text>Filter stuff</Text>
         </Collapse>
-        {loans.length ? (
+        {outstandingLoans.length ? (
           <ScrollArea.Autosize
             mah="100%"
             type="auto"
@@ -288,7 +296,7 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
             offsetScrollbars
           >
             <Stack>
-              {loans.map((loan) => (
+              {outstandingLoans.map((loan) => (
                 <LoanItemView
                   key={loan.id}
                   isActive={activeId === loan.id.toString()}
@@ -310,10 +318,12 @@ function LoanListView({ activeId }: { activeId?: string | undefined }) {
         <Card.Section withBorder inheritPadding p="lg" mt="xs">
           <Stack style={{ justifySelf: "flex-end" }}>
             <Group grow>
-              <Button component={Link} to={`/loans/create`}>
+              <Button component={Link} to={"/loans/signout"}>
                 Sign-Out Items
               </Button>
-              <Button>Sign-In Items</Button>
+              <Button component={Link} to="/loans/signin">
+                Sign-In Items
+              </Button>
             </Group>
           </Stack>
         </Card.Section>

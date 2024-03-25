@@ -28,7 +28,7 @@ enum ERRORS {
 
 export default function SearchForm<T>({
   children,
-  formData,
+  formData = {label: undefined, placeholder: {qrCode: 'QRCode', name: 'Name'}, submitIcon: <IconPlus/>},
   disabled,
   onQRCodeChanged,
   onNameChanged,
@@ -47,6 +47,7 @@ export default function SearchForm<T>({
       qrCode: string;
       name: string;
     };
+    submitIcon?: JSX.Element
   };
   disabled?: boolean | false;
   onItemSelect: (value: string) => SearchFormValues;
@@ -117,7 +118,8 @@ export default function SearchForm<T>({
           <Flex align="start" w="100%">
             <TextInput
               w="100%"
-              placeholder="QR Code"
+              placeholder={formData.placeholder?.qrCode}
+              {...formData.label && {label: formData.label.qrCode}}
               size="sm"
               onFocus={() => {
                 form.reset();
@@ -170,7 +172,8 @@ export default function SearchForm<T>({
             <TextInput
               w="100%"
               mt="sm"
-              placeholder="Item Name"
+              placeholder={formData.placeholder?.name}
+              {...formData.label && {label: formData.label.name}}
               onFocus={() => {
                 form.reset();
                 setSelectedItem("");
@@ -210,7 +213,7 @@ export default function SearchForm<T>({
               type="submit"
               disabled={disabled}
             >
-              <IconPlus />
+              {formData.submitIcon}
             </ActionIcon>
           </Flex>
         </Combobox.Target>

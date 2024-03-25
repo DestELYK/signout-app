@@ -1,6 +1,9 @@
 import { Card, CloseButton, Code, Flex, Title } from "@mantine/core";
 import { useActionData, useFetcher, useNavigate } from "@remix-run/react";
-import LoanForm, { LoanDataValues, LoanFormValues } from "~/components/LoanForm";
+import LoanForm, {
+  LoanDataValues,
+  LoanFormValues,
+} from "~/components/LoanForm";
 import { loader as itemsLoader } from "./items";
 import { action } from "./loans";
 import { loader as peopleLoader } from "./people";
@@ -14,16 +17,16 @@ export default function Page() {
   const items = useFetcher<typeof itemsLoader>();
 
   const data: LoanDataValues = {
-    people: people.data ? people.data: [],
+    people: people.data ? people.data : [],
     items: items.data ? items.data : [],
-    loading: items.state === "loading" || people.state === "loading"
-  }
+    loading: items.state === "loading" || people.state === "loading",
+  };
 
   // @ts-ignore
   const handleSubmit = (values: LoanFormValues) => {
     fetcher.submit(values, {
       action: "/loans",
-      method: "POST",
+      method: "PATCH",
       encType: "application/json",
       navigate: false,
     });
@@ -44,26 +47,26 @@ export default function Page() {
         </Flex>
       </Card.Section>
       <LoanForm
-      onPersonSearch={(value) => {
-        if (value) {
-          const searchParams = value.qrCode
-            ? `qrCode=${value.qrCode}`
-            : `query=${value.name}`;
-      
+        onPersonSearch={(value) => {
+          if (value) {
+            const searchParams = value.qrCode
+              ? `qrCode=${value.qrCode}`
+              : `query=${value.name}`;
+
             people.load(`/people?${searchParams}`);
-        } else {
-          people.load('')
-        }
-      }}
+          } else {
+            people.load("");
+          }
+        }}
         onItemSearch={(value) => {
           if (value) {
             const searchParams = value.qrCode
               ? `qrCode=${value.qrCode}`
               : `query=${value.name}`;
-        
+
             items.load(`/items?${searchParams}`);
           } else {
-            items.load('')
+            items.load("");
           }
         }}
         onSubmit={handleSubmit}
