@@ -2,6 +2,7 @@ import { LoaderFunctionArgs, json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 import { prisma } from "~/lib/prisma.server";
+import { fullName } from "~/lib/utils";
 
 
 export const loader = async ({params}: LoaderFunctionArgs) => {
@@ -28,7 +29,7 @@ export default function Page() {
     
     return (
         <div>
-            <h1>{`${person.firstName} ${person.lastName}`}</h1>
+            <h1>{fullName(person)}</h1>
             <p>{`${person.loans.length} loan(s)`}</p>
         </div>
     )

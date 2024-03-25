@@ -15,12 +15,12 @@ import {
   Text,
   Title,
   px,
-  rem
+  rem,
 } from "@mantine/core";
 import { useDisclosure, useHover, useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
-import { Prisma } from "@prisma/client";
-import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
+import { Item, Person, Prisma } from "@prisma/client";
+import { ActionFunctionArgs, LoaderFunctionArgs, json, redirect } from "@remix-run/node";
 import {
   Link,
   MetaFunction,
@@ -33,7 +33,7 @@ import {
 import { IconDots, IconFilter } from "@tabler/icons-react";
 import LoanForm from "~/components/LoanForm";
 import { prisma } from "~/lib/prisma.server";
-import { dateDiff } from "~/lib/utils";
+import { dateDiff, fullName } from "~/lib/utils";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];
@@ -83,10 +83,74 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return json({ loans: loans });
 }
 
-export async function action({
-  request
-}: ActionFunctionArgs) {
-  const formData = await request.json();
+export async function action({ request }: ActionFunctionArgs) {
+  const formData: {person?: Person, items?: Item[]} = await request.json();
+
+  // TODO - server side validation
+
+  try {
+    if (!formData.person) {
+      throw Error('No person selected');
+    }
+
+    if (!formData.items || formData.items.length == 0) {
+      throw Error('Loan requires at least one item')
+    }
+
+    let result: {id: number} = {id: -1};
+    switch (request.method) {
+      case "POST":
+
+        result = await prisma.loan.create({
+          data: {
+            person: {
+              connectOrCreate: {
+                where: {
+                  id: formData.person.id,
+                },
+                create: {
+                  firstName: formData.person.firstName,
+                  lastName: formData.person.lastName,
+                  nickname: formData.person.nickname,
+                  role: formData.person.role,
+                  qrCode: formData.person.qrCode
+                }
+              }
+            },
+            items: {
+              create: formData.items.map((item) => {
+                return {
+                  item: {
+                    connectOrCreate: {
+                      where: { id: item.id },
+                      create: {
+                        name: item.name,
+                        type: item.type,
+                        qrCode: item.qrCode
+                      }
+                    }
+                  }
+                }
+              })
+            }
+          },
+          include: {
+            items: true,
+            person: true,
+          },
+        });
+
+        console.debug('Created new loan: %s', result)
+        break;
+    }
+
+    return redirect(`/loans/${result.id}`)
+  } catch (e) {
+    return json({ error: e });
+  }
+
+  // TODO - create new loan
+
   return json(formData);
 }
 
@@ -133,7 +197,8 @@ function LoanItemView({
             lineClamp={1}
             style={{ justifySelf: "flex-start" }}
           >
-            {`${loan.person.firstName} ${loan.person.lastName}`}
+            {/* @ts-ignore */}
+            {fullName(loan.person)}
           </Title>
 
           <Badge

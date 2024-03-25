@@ -14,66 +14,115 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
+import { Item, Person } from "@prisma/client";
 import { IconEdit } from "@tabler/icons-react";
 import { useState } from "react";
-import {
-  ItemFormValues,
-  PersonFormValues,
-  findItem,
-  findPerson,
-} from "~/lib/test-data";
-import SearchForm from "./SearchForm";
+import { fullName } from "~/lib/utils";
+import SearchForm, { SearchFormValues } from "./SearchForm";
 import ItemTable from "./items/ItemTable";
 
+export interface LoanFormValues {
+  person: Person | undefined;
+  items: Item[];
+}
+
+export interface LoanDataValues {
+  people: Person[];
+  items: Item[];
+  loading?: boolean | false;
+}
+
 export default function LoanForm({
+  data,
+  onPersonSearch,
+  onItemSearch,
+  onPersonChange,
+  onItemAdd,
+  onItemRemove,
   onSubmit,
 }: {
-  onSubmit?: (person: PersonFormValues, items: ItemFormValues[]) => void;
+  data?: LoanDataValues;
+  onPersonSearch?: (value?: SearchFormValues) => void;
+  onPersonChange?: (person: Person) => void;
+  onItemSearch?: (value?: SearchFormValues) => void;
+  onItemAdd?: (item: Item) => void;
+  onItemRemove?: (index: number, item?: Item) => void;
+  onSubmit?: (values: LoanFormValues) => void;
 }) {
-  const loanForm = useForm<{
-    person: PersonFormValues | undefined;
-    items: ItemFormValues[];
-  }>({
+  const loanForm = useForm<LoanFormValues>({
     initialValues: {
       person: undefined,
       items: [],
     },
     validate: {
-      person: (value, values) => {
+      person: (value) => {
         if (value === undefined) return "Need to select person";
       },
-      items: (value, values) => {
+      items: (value) => {
         if (value.length === 0) return "Need at least one item";
       },
     },
   });
-  const [loading, setLoading] = useState(false);
+  const [personSearch, setPersonSearch] = useState<SearchFormValues>();
+  const [itemSearch, setItemSearch] = useState<SearchFormValues>();
 
-  function addItem(item: ItemFormValues): Promise<ItemFormValues> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        return resolve(item);
-      }, 1000);
-    });
-  }
+  // const [itemSubmitted, setItemSubmitted] = useState(false);
+  // const [personSubmitted, setPersonSubmitted] = useState(false);
 
-  function removeItem(item: ItemFormValues): Promise<ItemFormValues> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        return resolve(item);
-      }, 1000);
-    });
-  }
+  // const items = useFetcher<typeof itemLoader>();
+  // const people = useFetcher<typeof personLoader>();
+
+  // const loading = items.state === "loading" || people.state === "loading";
+
+  // useEffect(() => {
+  //   if (personSubmitted && people.state === "idle") {
+  //     setPersonSubmitted(false);
+
+  //     if (people.data && people.data.length > 0) {
+  //       // @ts-ignore
+  //       loanForm.setFieldValue("person", people.data[0]);
+  //     }
+  //   }
+  // }, [personSubmitted, people.state]);
+
+  // useEffect(() => {
+  //   if (itemSubmitted && items.state === "idle") {
+  //     setItemSubmitted(false);
+
+  //     console.log('Submitted Item: %s', items.data);
+
+  //     if (items.data && items.data.length > 0) {
+  //       loanForm.insertListItem("items", items.data[0]);
+  //     }
+  //   }
+  // }, [itemSubmitted, items.state]);
+
+  // function findPerson(person: SearchFormValues) {
+  //   const searchParams = person.qrCode
+  //     ? `qrCode=${person.qrCode}`
+  //     : `query=${person.name}`;
+
+  //   people.load(`/people?${searchParams}`);
+  //   setPersonSearch(person);
+  // }
+
+  // function findItem(item: SearchFormValues) {
+  //   const searchParams = item.qrCode
+  //     ? `qrCode=${item.qrCode}`
+  //     : `query=${item.name}`;
+
+  //   items.load(`/items?${searchParams}`);
+  //   setItemSearch(item);
+  // }
 
   return (
     <Flex w="100%" h="100%" direction="column">
-      <Fieldset legend="Person" disabled={loading} h="min-content">
+      <Fieldset legend="Person" h="min-content">
         {loanForm.values.person ? (
           <Flex direction="row" w="100%">
-            <Text
-              w="100%"
-              size="sm"
-            >{`${loanForm.values.person.firstName} ${loanForm.values.person.lastName}`}</Text>
+            <Text w="100%" size="sm">
+              {`${loanForm.values.person.firstName} ${loanForm.values.person.lastName}`}
+            </Text>
             <ActionIcon
               style={{ justifySelf: "end" }}
               size="sm"
@@ -85,45 +134,54 @@ export default function LoanForm({
           </Flex>
         ) : (
           <SearchForm
-            mapItems={(value: string, item: PersonFormValues) => (
-              <Combobox.Option
-                value={`${item.firstName} ${item.lastName}`}
-                key={item.id}
-              >
-                <Highlight highlight={value}>
-                  {`${item.firstName} ${item.lastName}`}
-                </Highlight>
-              </Combobox.Option>
-            )}
-            onComboboxSearch={(value) => {
-              return findPerson({ name: value }).then((result) => {
-                const itemMap = new Map();
-                result.forEach((r) =>
-                  itemMap.set(`${r.firstName} ${r.lastName}`, r)
-                );
+            onQRCodeChanged={(value) => {
+              onPersonSearch?.(value ? { qrCode: value } : undefined);
+            }}
+            onNameChanged={(value) => {
+              onPersonSearch?.(value ? { name: value } : undefined);
+            }}
+            onItemSelect={(value) => {
+              const person: Person = JSON.parse(value);
 
-                return itemMap;
-              });
+              return {
+                qrCode: person.qrCode == null ? undefined : person.qrCode,
+                name: fullName(person),
+              };
             }}
-            onSubmit={(item) => {
-              setLoading(true);
-              findPerson({ ...item }).then((result) => {
-                setLoading(false);
-                if (result.length > 0) {
-                  // TODO - Add Confirmation
-                  loanForm.setFieldValue("person", result[0]);
-                } else {
-                  loanForm.setFieldError("person", "No results")
-                }
-              });
+            onSubmit={(value) => {
+              const person: Person = JSON.parse(value);
+
+              loanForm.setFieldValue("person", person);
+              onPersonChange?.(person);
             }}
-          />
+          >
+            {data && data.people.length > 0 ? (
+              data.people.map((person) => {
+                return (
+                  <Combobox.Option
+                    value={JSON.stringify(person)}
+                    key={person.id}
+                  >
+                    {personSearch && personSearch.name ? (
+                      <Highlight highlight={personSearch.name}>
+                        {fullName(person)}
+                      </Highlight>
+                    ) : (
+                      fullName(person)
+                    )}
+                  </Combobox.Option>
+                );
+              })
+            ) : (
+              <Combobox.Empty>No people found</Combobox.Empty>
+            )}
+          </SearchForm>
         )}
       </Fieldset>
-      <Fieldset legend="Items" disabled={loading} p="sm" h="100%">
+      <Fieldset legend="Items" p="sm" h="100%">
         <Box pos="relative" h="100%">
           <LoadingOverlay
-            visible={loading}
+            visible={data?.loading}
             zIndex={1000}
             overlayProps={{ radius: "sm", blur: 2 }}
           />
@@ -131,74 +189,72 @@ export default function LoanForm({
             <ScrollArea h="calc(100dvh - 30rem)">
               <ItemTable
                 items={loanForm.values.items}
-                loading={loading}
                 onRemoveItem={(item, index) => {
-                  setLoading(true);
-                  removeItem(item).then((value) => {
-                    setLoading(false);
-                    loanForm.removeListItem("items", index);
-                  });
+                  loanForm.removeListItem("items", index);
+
+                  onItemRemove?.(index, data?.items[index]);
                 }}
               />
             </ScrollArea>
             <Divider mb="md" />
             <SearchForm
-              mapItems={(value: string, item: ItemFormValues) =>
-                item.name ? (
-                  <Combobox.Option value={item.name} key={item.id}>
-                    <Highlight highlight={value}>{item.name}</Highlight>
-                  </Combobox.Option>
-                ) : (
-                  <Text>Unknown</Text>
-                )
-              }
-              onComboboxSearch={(value) => {
-                return findItem({ name: value }).then((result) => {
-                  const itemMap = new Map();
-                  console.log(result);
-                  result.forEach((r) => {
-                    itemMap.set(r.name, r);
-                  });
-                  return itemMap;
-                });
+              onQRCodeChanged={(value) => {
+                onItemSearch?.(value ? { qrCode: value } : undefined);
               }}
-              onSubmit={(item) => {
-                setLoading(true);
-                findItem(item).then((result) => {
-                  if (result.length > 0) {
-                    if (
-                      loanForm.values.items.find((i) => i.id === result[0].id)
-                    ) {
-                      loanForm.setFieldError("items", "Item already exists")
-                    } else {
-                      // TODO - Add Confirmation
-                      loanForm.insertListItem("items", result[0]);
-                    }
-                  } else {
-                    loanForm.setFieldError("items", "No results")
-                  }
+              onNameChanged={(value) => {
+                onItemSearch?.(value ? { name: value } : undefined);
+              }}
+              onItemSelect={(value) => {
+                const item: Item = JSON.parse(value);
 
-                  setLoading(false);
-                });
+                return {
+                  qrCode: item.qrCode == null ? undefined : item.qrCode,
+                  name: item.name,
+                };
               }}
-            />
+              onSubmit={(value) => {
+                const item: Item = JSON.parse(value);
+
+                loanForm.insertListItem("items", item);
+                onItemAdd?.(item);
+              }}
+            >
+              {data?.items && data.items.length > 0 ? (
+                data.items.map((item, index) => (
+                  <Combobox.Option value={JSON.stringify(item)} key={index}>
+                    {itemSearch && itemSearch.name ? (
+                      <Highlight highlight={itemSearch.name}>
+                        {item.name}
+                      </Highlight>
+                    ) : (
+                      item.name
+                    )}
+                  </Combobox.Option>
+                ))
+              ) : (
+                <Combobox.Empty>No items found</Combobox.Empty>
+              )}
+            </SearchForm>
           </Flex>
         </Box>
       </Fieldset>
       <Group justify="end">
         <form
-          onSubmit={loanForm.onSubmit((values) => {
-            onSubmit?.(values.person!, values.items);
-          }, (errors, values) => {
-            notifications.show({
-              id: 'error',
-              color: "red",
-              message: 'Failed',
-              autoClose: 1000
-            })
-          })}
+          onSubmit={loanForm.onSubmit(
+            (values) => {
+              onSubmit?.(values);
+            },
+            (errors, values) => {
+              notifications.show({
+                id: "error",
+                color: "red",
+                message: "Failed",
+                autoClose: 1000,
+              });
+            }
+          )}
         >
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={data?.loading}>
             Submit
           </Button>
         </form>

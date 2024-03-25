@@ -1,3 +1,4 @@
+
 export const formatDate = (date: Date) => {
     if (date === undefined)
         return 'None';
@@ -35,4 +36,8 @@ export const dateDiff = (date: Date) => {
     }
 
     return dateDiff;
+}
+
+export const fullName = ({firstName, lastName, nickname}: {firstName: string, lastName: string, nickname?: string | null}) => {
+    return `${firstName} ${lastName}${nickname ? ` (${nickname})` : ''}`
 }

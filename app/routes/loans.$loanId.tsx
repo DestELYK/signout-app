@@ -3,6 +3,7 @@ import { LoaderFunctionArgs } from "@remix-run/node";
 import { json, useLoaderData, useNavigate } from "@remix-run/react";
 import invariant from "tiny-invariant";
 import { prisma } from "~/lib/prisma.server";
+import { fullName } from "~/lib/utils";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -31,7 +32,7 @@ export default function Page() {
       <Card.Section withBorder inheritPadding px="xs" mb="sm">
         <Flex direction="row" justify="center" align="center">
           <Title w="100%" order={4} ta="center" fw="bold">
-            {`${loan.person.firstName} ${loan.person.lastName} (${loan.person.nickname})`}
+            {fullName(loan.person)}
           </Title>
           <CloseButton size="xl" style={{justifySelf: "flex-end"}} onClick={() => navigate('/loans')}/>
         </Flex>
