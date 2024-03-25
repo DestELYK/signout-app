@@ -9,13 +9,12 @@ import {
   Container,
   Flex,
   Group,
-  Menu,
   ScrollArea,
   Stack,
   Text,
   Title,
   px,
-  rem,
+  rem
 } from "@mantine/core";
 import { useDisclosure, useHover, useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
@@ -30,7 +29,7 @@ import {
   useNavigate,
   useParams,
 } from "@remix-run/react";
-import { IconDots, IconFilter } from "@tabler/icons-react";
+import { IconFilter } from "@tabler/icons-react";
 import LoanForm from "~/components/LoanForm";
 import { prisma } from "~/lib/prisma.server";
 import { dateDiff, fullName } from "~/lib/utils";
@@ -207,25 +206,6 @@ function LoanItemView({
           >
             {loan.person.role}
           </Badge>
-          <Menu withinPortal position="bottom-end" shadow="sm">
-            <Menu.Target>
-              <ActionIcon variant="subtle" color="gray">
-                <IconDots
-                  style={{
-                    width: rem(16),
-                    height: rem(16),
-                  }}
-                />
-              </ActionIcon>
-            </Menu.Target>
-
-            <Menu.Dropdown>
-              <Menu.Item>
-                <Link to={`/loans/${loan.id}`}>View Loan</Link>
-              </Menu.Item>
-              <Menu.Item>Modify Loan</Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
         </Flex>
       </Card.Section>
 
