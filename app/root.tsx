@@ -7,21 +7,26 @@ import '@mantine/tiptap/styles.css';
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node";
 import {
-    Links,
-    LiveReload,
-    Meta,
-    Outlet,
-    Scripts,
-    ScrollRestoration,
+  Links,
+  LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
 } from "@remix-run/react";
 
-import { ColorSchemeScript, MantineProvider } from '@mantine/core';
+import { ColorSchemeScript, MantineProvider, createTheme } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
 ];
+
+const theme = createTheme({
+  primaryColor: "blue",
+  fontFamily: "'Open Sans', sans-serif"
+})
 
 export default function App() {
   return (
@@ -34,7 +39,7 @@ export default function App() {
         <ColorSchemeScript/>
       </head>
       <body>
-        <MantineProvider forceColorScheme='light' theme={{}}>
+        <MantineProvider forceColorScheme='light' theme={theme}>
           <ModalsProvider>
             <Notifications/>
             <Outlet />
@@ -47,3 +52,7 @@ export default function App() {
     </html>
   );
 }
+function rgb(arg0: number, arg1: number, arg2: number): string {
+  throw new Error('Function not implemented.');
+}
+
