@@ -1,7 +1,10 @@
 
-export const formatDate = (date: Date) => {
+export const formatDate = (date: string | Date) => {
     if (date === undefined)
         return 'None';
+
+    if (typeof date === "string")
+        date = new Date(date);
 
     return date.toLocaleString('en-US', {
         year: 'numeric',
@@ -13,9 +16,11 @@ export const formatDate = (date: Date) => {
     });
 }
 
-export const dateDiff = (date: Date) => {
+export const dateDiff = (date: string | Date) => {
     if (date === undefined)
         return 0;
+
+    if (typeof date === "string") date = new Date(date);
 
     const now = new Date();
     const dayDiff = now.getDay() - date.getDay();

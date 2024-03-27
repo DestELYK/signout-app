@@ -8,8 +8,8 @@ import { fullName } from "~/lib/utils";
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
 
-  return json({
-    loan: await prisma.loan.findFirstOrThrow({
+  try {
+    return json(await prisma.loan.findFirstOrThrow({
       where: { id: parseInt(params.loanId) },
       include: {
         person: true,
@@ -19,16 +19,22 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
           },
         },
       },
-    }),
-  });
+    }));
+  } catch(e) {
+    console.log('Failed to find /loans/$loanId', e);
+    throw new Response(null, {
+      status: 404,
+      statusText: "Not Found",
+    })
+  }
 };
 
 export default function Page() {
-  const { loan } = useLoaderData<typeof loader>();
+  const loan = useLoaderData<typeof loader>();
   const navigate = useNavigate()
 
   return (
-    <Card padding="sm" radius="sm" withBorder h="100%">
+    <Card padding="sm" radius="sm" withBorder w="100%" h="100%">
       <Card.Section withBorder inheritPadding px="xs" mb="sm">
         <Flex direction="row" justify="center" align="center">
           <Title w="100%" order={4} ta="center" fw="bold">

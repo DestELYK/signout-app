@@ -24,6 +24,20 @@ export const links: LinksFunction = () => [
 ];
 
 const theme = createTheme({
+  colors: {
+    blue: [
+      "#ecf6fe",
+      "#d8e9f7",
+      "#abd2f0",
+      "#7dbaec",
+      "#59a5e7",
+      "#4598e5",
+      "#3a92e5",
+      "#2e7fcc",
+      "#2471b7",
+      "#0c61a2"
+    ]
+  },
   primaryColor: "blue",
   fontFamily: "'Open Sans', sans-serif"
 })

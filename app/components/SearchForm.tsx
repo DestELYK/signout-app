@@ -5,7 +5,7 @@ import {
   Combobox,
   Flex,
   TextInput,
-  useCombobox
+  useCombobox,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconPlus } from "@tabler/icons-react";
@@ -28,8 +28,14 @@ enum ERRORS {
 
 export default function SearchForm<T>({
   children,
-  formData = {label: undefined, placeholder: {qrCode: 'QRCode', name: 'Name'}, submitIcon: <IconPlus/>},
+  formData = {
+    label: undefined,
+    placeholder: { qrCode: "QRCode", name: "Name" },
+    submitIcon: <IconPlus />,
+  },
   disabled,
+  qrDisabled,
+  submitHidden,
   onQRCodeChanged,
   onNameChanged,
   onSubmit,
@@ -40,19 +46,25 @@ export default function SearchForm<T>({
   children: React.ReactNode;
   formData?: {
     placeholder?: {
-      qrCode: string;
-      name: string;
+      qrCode?: string;
+      name?: string;
     };
     label?: {
-      qrCode: string;
-      name: string;
+      qrCode?: string;
+      name?: string;
     };
-    submitIcon?: JSX.Element
+    description?: {
+      qrCode?: string;
+      name?: string;
+    };
+    submitIcon?: JSX.Element;
   };
-  disabled?: boolean | false;
+  disabled?: boolean;
+  qrDisabled?: boolean;
+  submitHidden?: boolean;
   onItemSelect: (value: string) => SearchFormValues;
-  onQRCodeChanged?: (value: string) => void;
-  onNameChanged?: (value: string) => void;
+  onQRCodeChanged?: (value: string) => boolean;
+  onNameChanged?: (value: string) => boolean;
   onSubmit?: (value: string) => void;
   onCreateButton?: () => void;
   props?: React.FormHTMLAttributes<HTMLFormElement>;
@@ -89,6 +101,12 @@ export default function SearchForm<T>({
 
   const [selectedItem, setSelectedItem] = useState("");
 
+  function reset() {
+    form.reset();
+    setSelectedItem("");
+    combobox.closeDropdown();
+  }
+
   return (
     <form
       {...props.props}
@@ -108,91 +126,89 @@ export default function SearchForm<T>({
           combobox.closeDropdown();
         }}
         store={combobox}
-        onClose={() => {
-          if (!selectedItem) {
-            form.reset();
-          }
-        }}
       >
-        <Combobox.Target>
-          <Flex align="start" w="100%">
-            <TextInput
-              w="100%"
-              placeholder={formData.placeholder?.qrCode}
-              {...formData.label && {label: formData.label.qrCode}}
-              size="sm"
-              onFocus={() => {
-                form.reset();
-                setSelectedItem("");
-                combobox.openDropdown();
-              }}
-              onClick={() => {
-                form.reset();
-                setSelectedItem("");
-                combobox.openDropdown();
-              }}
-              onBlur={() => {
-                combobox.closeDropdown();
-              }}
-              rightSection={
-                <CloseButton
-                  aria-label="Clear input"
-                  onClick={() => {
-                    form.clearErrors();
-                    form.setFieldValue("qrCode", "");
-                    combobox.closeDropdown();
-                  }}
-                  style={{
-                    display: form.isDirty("qrCode") ? undefined : "none",
-                  }}
-                />
-              }
-              {...form.getInputProps("qrCode")}
-              onChange={(event) => {
-                form.getInputProps("qrCode").onChange(event);
-
-                onQRCodeChanged?.(event.currentTarget.value);
-              }}
-            />
-            <Box style={{ verticalAlign: "top" }}>
-              <QrButton
-                onResult={(result: ScanResults) => {
+        {!qrDisabled ? (
+          <Combobox.Target>
+            <Flex align="start" w="100%">
+              <TextInput
+                w="100%"
+                placeholder={formData.placeholder?.qrCode}
+                {...(formData.label && { label: formData.label.qrCode })}
+                size="sm"
+                description={formData.description?.qrCode}
+                onFocus={() => {
+                  reset();
                   combobox.openDropdown();
+                }}
+                onClick={() => {
+                  reset();
+                  combobox.openDropdown();
+                }}
+                onBlur={() => {
+                  reset();
+                  combobox.closeDropdown();
+                }}
+                rightSection={
+                  <CloseButton
+                    aria-label="Clear input"
+                    onClick={() => {
+                      reset();
+                    }}
+                    style={{
+                      display: form.isDirty("qrCode") ? undefined : "none",
+                    }}
+                  />
+                }
+                {...form.getInputProps("qrCode")}
+                onChange={(event) => {
+                  form.getInputProps("qrCode").onChange(event);
 
-                  form.setFieldValue("qrCode", result.data);
-
-                  onQRCodeChanged?.(result.data);
+                  if (onQRCodeChanged?.(event.currentTarget.value)) {
+                    combobox.openDropdown();
+                  } else {
+                    combobox.closeDropdown();
+                  }
                 }}
               />
-            </Box>
-          </Flex>
-        </Combobox.Target>
+              <Box style={{ verticalAlign: "top" }}>
+                <QrButton
+                  onResult={(result: ScanResults) => {
+                    combobox.openDropdown();
+
+                    form.setFieldValue("qrCode", result.data);
+
+                    onQRCodeChanged?.(result.data);
+                  }}
+                />
+              </Box>
+            </Flex>
+          </Combobox.Target>
+        ) : null}
         <Combobox.Target>
           <Flex align="start" w="100%">
             <TextInput
               w="100%"
               mt="sm"
+              description={formData.description?.name}
               placeholder={formData.placeholder?.name}
-              {...formData.label && {label: formData.label.name}}
+              {...(formData.label && { label: formData.label.name })}
               onFocus={() => {
-                form.reset();
-                setSelectedItem("");
+                reset();
                 combobox.openDropdown();
               }}
               onClick={() => {
-                form.reset();
-                setSelectedItem("");
+                reset();
                 combobox.openDropdown();
               }}
               onBlur={() => {
+                reset();
                 combobox.closeDropdown();
               }}
               rightSection={
                 <CloseButton
                   aria-label="Clear input"
                   onClick={() => {
-                    form.setFieldValue("name", "");
-                    combobox.closeDropdown();
+                    reset();
                   }}
                   style={{
                     display: form.isDirty("name") ? undefined : "none",
@@ -203,21 +219,27 @@ export default function SearchForm<T>({
               onChange={(event) => {
                 form.getInputProps("name").onChange(event);
 
-                onNameChanged?.(event.currentTarget.value);
+                if (onNameChanged?.(event.currentTarget.value)) {
+                  combobox.openDropdown();
+                } else {
+                  combobox.closeDropdown();
+                }
               }}
             />
-            <ActionIcon
-              mt="sm"
-              size="input-sm"
-              style={{ verticalAlign: "top" }}
-              type="submit"
-              disabled={disabled}
-            >
-              {formData.submitIcon}
-            </ActionIcon>
+            {!submitHidden ? (
+              <ActionIcon
+                mt="sm"
+                size="input-sm"
+                style={{ verticalAlign: "top" }}
+                type="submit"
+                disabled={disabled}
+              >
+                {formData.submitIcon}
+              </ActionIcon>
+            ) : null}
           </Flex>
         </Combobox.Target>
-        <Combobox.Dropdown mah={200} style={{ overflowY: "auto" }}>
+        <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
           {children}
         </Combobox.Dropdown>
       </Combobox>
