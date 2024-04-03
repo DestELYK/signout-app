@@ -1,13 +1,9 @@
-import {
-    ActionIcon,
-    Tooltip
-} from "@mantine/core";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
-import { modals } from "@mantine/modals";
+import { ActionIcon, Modal, Tooltip } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconQrcode, IconQrcodeOff, IconX } from "@tabler/icons-react";
 import QrScanner from "qr-scanner";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Scanner, { ScanResults, State } from "./Scanner";
 
 const MODAL_ID = "qr-scanner";
@@ -17,11 +13,8 @@ export default function QrButton({
 }: {
   onResult: (result: ScanResults) => void;
 }) {
-  const [opened, { toggle, close }] = useDisclosure(false);
-  const [scanning, setScanning] = useState(false);
+  const [opened, { open, close }] = useDisclosure(false);
   const [hasCamera, setHasCamera] = useState(false);
-  const mediaMatch = useMediaQuery("(min-width: 62em)");
-  const qrScanner = useRef(null);
 
   useEffect(() => {
     QrScanner.hasCamera()
@@ -32,24 +25,27 @@ export default function QrButton({
       .catch(() => setHasCamera(false));
   }, []);
 
-  const openScanner = () => {
-    modals.open({
-      modalId: MODAL_ID,
-      size: "calc(100vw - 3 rem)",
-      children: (
+  return (
+    <>
+      <Modal
+        centered
+        fullScreen
+        opened={opened}
+        onClose={close}
+      >
         <Scanner
           startOnLoad
           hideButton
           onResult={(result) => {
             console.log("Found result: %s", result.data);
-            modals.close(MODAL_ID);
+            close();
             onResult(result);
           }}
           onStateChanged={(state) => {
             switch (state) {
               case State.Rejected:
               case State.Failed:
-                modals.close(MODAL_ID);
+                close();
                 break;
             }
           }}
@@ -63,20 +59,13 @@ export default function QrButton({
               });
           }}
         />
-      ),
-      centered: true,
-    });
-  };
-
-  return (
-    <>
+      </Modal>
       <Tooltip label={hasCamera ? "Scan QR Code" : "No Camera"}>
         <ActionIcon
           size="input-sm"
           disabled={!hasCamera}
           onClick={() => {
-            openScanner();
-            setScanning(!scanning);
+            open();
           }}
           variant="outline"
           style={{ justifySelf: "flex-end", alignSelf: "flex-end" }}
