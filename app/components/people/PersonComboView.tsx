@@ -1,8 +1,14 @@
 import { Badge, Flex, Highlight } from "@mantine/core";
-import { fullName } from "~/lib/utils";
-import { PersonWithCount } from "~/routes/people";
+import { PersonFindMany } from "~/utils/types.server";
+import { fullName } from "~/utils/utils";
 
-export default function PersonView({highlight, person}: {highlight: string, person: PersonWithCount}) {
+export default function PersonView({
+  highlight,
+  person,
+}: {
+  highlight: string;
+  person: PersonFindMany;
+}) {
   return (
     <>
       <Highlight
@@ -24,9 +30,9 @@ export default function PersonView({highlight, person}: {highlight: string, pers
           style={{ justifySelf: "flex-end" }}
           miw="max-content"
           ml="auto"
-          color={person.role === "Staff" ? "blue" : "green"}
+          color={person.role.color}
         >
-          {person.role}
+          {person.role.name}
         </Badge>
       </Flex>
     </>

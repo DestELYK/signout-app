@@ -1,90 +1,169 @@
 import {
-    Box,
-    Button,
-    Card,
-    Checkbox,
-    CloseButton,
-    Combobox,
-    Divider,
-    Fieldset,
-    Flex,
-    Group,
-    ScrollArea,
-    Stack,
-    Stepper,
-    Text,
-    Title,
+  Box,
+  Button,
+  Card,
+  Checkbox,
+  CloseButton,
+  Fieldset,
+  Flex,
+  Group,
+  ScrollArea,
+  Stepper,
+  Text,
+  Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { notifications } from "@mantine/notifications";
-import { Item, Person } from "@prisma/client";
-import { useActionData, useFetcher, useNavigate } from "@remix-run/react";
+import { LoaderFunctionArgs } from "@remix-run/node";
+import { useNavigate, useSearchParams } from "@remix-run/react";
 import { IconSearch } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  redirect,
+  typedjson,
+  useTypedFetcher,
+  useTypedLoaderData,
+} from "remix-typedjson";
 import { LoanItemView } from "~/components/LoanItemView";
 import SearchForm, { SearchFormValues } from "~/components/SearchForm";
-import ItemView from "~/components/items/ItemView";
-import PersonView from "~/components/people/PersonView";
-import { fullName } from "~/lib/utils";
-import { loader as itemsLoader } from "./items";
-import { action, loader as loansLoader } from "./loans";
-import { loader as peopleLoader } from "./people";
+import { prisma } from "~/lib/prisma.server";
+import { loanFindMany } from "~/utils/types.server";
+import { fullName } from "~/utils/utils";
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const url = new URL(request.url);
+
+  const loanIdParam = url.searchParams.get("loanId");
+
+  if (loanIdParam && loanIdParam.length !== 0) {
+    try {
+      const result = await prisma.loan.findFirstOrThrow({
+        where: {
+          id: parseInt(loanIdParam),
+        },
+        select: {
+          ...loanFindMany.select,
+        },
+      });
+
+      if (!result) {
+        return redirect("/loans/signin");
+      }
+
+      return typedjson({ selectedLoan: result, outstandingLoans: undefined });
+    } catch (e) {
+      console.error("Failed to find loan", e);
+
+      return redirect("/loans/signin");
+    }
+  } else {
+    return typedjson({
+      outstandingLoans: await prisma.loan.findMany({
+        where: {
+          items: {
+            some: {
+              dateReturned: null,
+            },
+          },
+        },
+        select: loanFindMany.select,
+      }),
+      selectedLoan: undefined,
+    });
+  }
+};
 
 export default function Page() {
   const navigate = useNavigate();
-  const fetcher = useFetcher();
-  const actionData = useActionData<typeof action>();
+  const fetcher = useTypedFetcher();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const signinForm = useForm<{
-    loanId: number;
     itemIds: number[];
   }>({
     initialValues: {
       itemIds: [],
-      loanId: -1,
     },
   });
 
-  const searchPeople = useFetcher<typeof peopleLoader>();
-  const searchItems = useFetcher<typeof itemsLoader>();
-  const loans = useFetcher<typeof loansLoader>();
-  const items = useFetcher<typeof itemsLoader>();
+  const loan = useTypedLoaderData<typeof loader>();
+
+  console.log(loan)
 
   const [searchingForPerson, setSearchingForPerson] = useState(true);
 
   const [active, setActive] = useState(0);
+  const [personSearch, setPersonSearch] = useState<SearchFormValues>();
+  const [itemSearch, setItemSearch] = useState<SearchFormValues>();
 
-  function searchForPerson(value?: SearchFormValues) {
-    if (value) {
-      const searchParams = value.qrCode
-        ? `qrCode=${value.qrCode}`
-        : `query=${value.name}`;
+  const loanId = searchParams.get("loanId");
 
-      searchPeople.load(`/people?${searchParams}`);
-    } else {
-      searchPeople.load("");
+  useEffect(() => {
+    setActive(loanId ? 1 : 0);
+  }, [loanId]);
 
-      return false;
-    }
+  const filteredLoans =
+    loan &&
+    loan.outstandingLoans &&
+    loan.outstandingLoans.length > 0 &&
+    (personSearch || itemSearch)
+      ? loan.outstandingLoans.filter((l) => {
+          if (personSearch) {
+            if (personSearch.qrCode) {
+              return l.person.qrCode === personSearch.qrCode;
+            } else if (personSearch.name) {
+              return fullName(l.person)
+                .toLowerCase()
+                .includes(personSearch.name.toLowerCase());
+            }
+          } else if (itemSearch) {
+            if (itemSearch.qrCode) {
+              return l.items.find((i) => i.item.qrCode == itemSearch.qrCode);
+            } else if (itemSearch.name) {
+              return l.items.find((i) => i.item.name == itemSearch.name);
+            }
+          }
 
-    return true;
-  }
+          return true;
+        })
+      : loan.outstandingLoans;
 
-  function searchForItem(value?: SearchFormValues) {
-    if (value) {
-      const searchParams = value.qrCode
-        ? `qrCode=${value.qrCode}`
-        : `query=${value.name}`;
+  const loans =
+    filteredLoans && filteredLoans.length > 0 ? (
+      <ScrollArea.Autosize
+        mah="calc(100dvh - 35rem)"
+        type="auto"
+        scrollbars="y"
+      >
+        {filteredLoans.map((l) => (
+          <LoanItemView
+            key={l.id}
+            loan={l}
+            onClick={() => {
+              setSearchParams((prev) => {
+                prev.set("loanId", l.id.toString());
+                return prev;
+              });
+            }}
+          />
+        ))}
+      </ScrollArea.Autosize>
+    ) : (
+      <Text>No loans found</Text>
+    );
 
-      searchItems.load(`/items?${searchParams}`);
-    } else {
-      searchItems.load("");
+  useEffect(() => {
+    const event = (event: BeforeUnloadEvent) => {
+      // Cancel the event as stated by the standard.
+      event.preventDefault();
+      // Chrome requires returnValue to be set.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", event);
 
-      return false;
-    }
-
-    return true;
-  }
+    return () => {
+      window.removeEventListener("beforeunload", event);
+    };
+  });
 
   return (
     <Card withBorder h="100%" w="100%">
@@ -96,7 +175,7 @@ export default function Page() {
           <CloseButton
             size="xl"
             style={{ justifySelf: "flex-end" }}
-            onClick={() => navigate("/loans")}
+            onClick={() => navigate('/loans')}
           />
         </Flex>
       </Card.Section>
@@ -105,7 +184,13 @@ export default function Page() {
         orientation="vertical"
         active={active}
         onStepClick={(index) => {
-          if (index < active) setActive(index);
+          if (index < active) {
+            setActive(index);
+            setSearchParams((prev) => {
+              prev.delete("loanId");
+              return prev;
+            });
+          }
         }}
       >
         <Stepper.Step
@@ -130,47 +215,17 @@ export default function Page() {
                     },
                     submitIcon: <IconSearch />,
                   }}
-                  onQRCodeChanged={(value) =>
-                    searchForPerson?.(value ? { qrCode: value } : undefined)
-                  }
-                  onNameChanged={(value) =>
-                    searchForPerson?.(value ? { name: value } : undefined)
-                  }
-                  onItemSelect={(value) => {
-                    const person: Person = JSON.parse(value);
-
-                    loans.load(`/loans?personId=${person.id}`);
-
-                    return {
-                      qrCode: person.qrCode == null ? undefined : person.qrCode,
-                      name: fullName(person),
-                    };
+                  onQRCodeChanged={(value) => {
+                    setPersonSearch(value ? { qrCode: value } : undefined);
+                    return value.length !== 0;
+                  }}
+                  onNameChanged={(value) => {
+                    setPersonSearch(value ? { name: value } : undefined);
+                    return value.length !== 0;
                   }}
                   submitHidden
-                >
-                  {searchPeople.data && searchPeople.data.length > 0 ? (
-                    searchPeople.data.filter((person) => person._count.loans > 0).map((person, index) => (
-                      <Combobox.Option
-                        value={JSON.stringify(person)}
-                        key={index}
-                      >
-                        <>
-                          <PersonView
-                            highlight=""
-                            person={{
-                              ...person,
-                              createdDate: new Date(person.createdDate),
-                              updatedDate: new Date(person.updatedDate),
-                            }}
-                          />
-                          <Divider mt="sm" />
-                        </>
-                      </Combobox.Option>
-                    ))
-                  ) : (
-                    <Combobox.Empty>No items found</Combobox.Empty>
-                  )}
-                </SearchForm>
+                  showCombobox={false}
+                />
               </div>
               <div hidden={searchingForPerson}>
                 {/* Searching for Item */}
@@ -182,37 +237,17 @@ export default function Page() {
                     },
                     submitIcon: <IconSearch />,
                   }}
-                  onQRCodeChanged={(value) =>
-                    searchForItem?.(value ? { qrCode: value } : undefined)
-                  }
-                  onNameChanged={(value) =>
-                    searchForItem?.(value ? { name: value } : undefined)
-                  }
-                  onItemSelect={(value) => {
-                    const item: Item = JSON.parse(value);
-
-                    loans.load(`/loans?itemId=${item.id}`);
-
-                    return {
-                      qrCode: item.qrCode == null ? undefined : item.qrCode,
-                      name: item.name,
-                    };
+                  onQRCodeChanged={(value) => {
+                    setItemSearch(value ? { qrCode: value } : undefined);
+                    return value.length !== 0;
+                  }}
+                  onNameChanged={(value) => {
+                    setItemSearch(value ? { name: value } : undefined);
+                    return value.length !== 0;
                   }}
                   submitHidden
-                >
-                  {searchItems.data && searchItems.data.length > 0 ? (
-                    searchItems.data.filter((item) => item._count.loans > 0).map((item, index) => (
-                      <Combobox.Option value={JSON.stringify(item)} key={index}>
-                        <>
-                          <ItemView highlight="" item={item} />
-                          <Divider mt="sm" />
-                        </>
-                      </Combobox.Option>
-                    ))
-                  ) : (
-                    <Combobox.Empty>No items found</Combobox.Empty>
-                  )}
-                </SearchForm>
+                  showCombobox={false}
+                />
               </div>
             </Box>
             <Flex direction="row" w="100%" justify="end" mt="sm">
@@ -229,35 +264,7 @@ export default function Page() {
             </Flex>
           </Fieldset>
           <Fieldset h="100%" legend="Loans">
-            {loans.data && loans.data.length > 0 ? (
-              <ScrollArea.Autosize
-                mah="100%"
-                type="auto"
-                scrollbars="y"
-                offsetScrollbars
-              >
-                <Stack gap="sm">
-                  {loans.data.map((loan) =>
-                    loan._count.items > 0 ? (
-                      <LoanItemView
-                        loan={{
-                          ...loan,
-                          createdDate: new Date(loan.createdDate),
-                          updatedDate: new Date(loan.updatedDate),
-                        }}
-                        onClick={() => {
-                          items.load(`/items?loanId=${loan.id}`);
-                          signinForm.setFieldValue("loanId", loan.id);
-                          setActive(1);
-                        }}
-                      />
-                    ) : null
-                  )}
-                </Stack>
-              </ScrollArea.Autosize>
-            ) : (
-              <Text>No loans found</Text>
-            )}
+            {loans}
           </Fieldset>
         </Stepper.Step>
         <Stepper.Step
@@ -266,7 +273,9 @@ export default function Page() {
           description="Select Item(s) to Sign-In"
         >
           <Fieldset legend="Items">
-            {items.data && items.data.length > 0 ? (
+            {loan.selectedLoan &&
+            loan.selectedLoan.items &&
+            loan.selectedLoan.items.length > 0 ? (
               <Checkbox.Group
                 label="Select items for signing in"
                 description="All items selected will be marked as returned"
@@ -281,12 +290,11 @@ export default function Page() {
                 }
               >
                 <Group mt="sm">
-                  {items.data.map((item, index) => {
-                    console.log(item);
+                  {loan.selectedLoan.items.filter(i => !i.dateReturned).map((item, index) => {
                     return (
                       <Checkbox
-                        value={item.id.toString()}
-                        label={item.name}
+                        value={item.item.id.toString()}
+                        label={item.item.name}
                         checked
                       />
                     );
@@ -296,20 +304,17 @@ export default function Page() {
             ) : (
               <Text>No Items</Text>
             )}
+            {/* {loan && loan.items && loan.items.length > 0  */}
           </Fieldset>
 
           <form
             onSubmit={signinForm.onSubmit((values) => {
               fetcher.submit(values, {
-                action: "/loans",
+                action: `/loans/${loanId}`,
                 method: "PATCH",
                 encType: "application/json",
                 navigate: false,
               });
-
-              notifications.show({
-                message: `Updated loan`
-              })
             })}
           >
             <Group w="100%" justify="end">

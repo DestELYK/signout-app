@@ -26,24 +26,8 @@ enum ERRORS {
   EXISTS = "Item already exists",
 }
 
-export default function SearchForm<T>({
-  children,
-  formData = {
-    label: undefined,
-    placeholder: { qrCode: "QRCode", name: "Name" },
-    submitIcon: <IconPlus />,
-  },
-  disabled,
-  qrDisabled,
-  submitHidden,
-  onQRCodeChanged,
-  onNameChanged,
-  onSubmit,
-  onItemSelect,
-  onCreateButton,
-  ...props
-}: {
-  children: React.ReactNode;
+export type SearchFormProps = {
+  children?: React.ReactNode;
   formData?: {
     placeholder?: {
       qrCode?: string;
@@ -59,16 +43,36 @@ export default function SearchForm<T>({
     };
     submitIcon?: JSX.Element;
   };
+  showCombobox?: boolean;
   disabled?: boolean;
   qrDisabled?: boolean;
   submitHidden?: boolean;
-  onItemSelect: (value: string) => SearchFormValues;
+  onItemSelect?: (value: string) => SearchFormValues;
   onQRCodeChanged?: (value: string) => boolean;
   onNameChanged?: (value: string) => boolean;
   onSubmit?: (value: string) => void;
   onCreateButton?: () => void;
   props?: React.FormHTMLAttributes<HTMLFormElement>;
-}) {
+};
+
+export default function SearchForm<T>({
+  children,
+  formData = {
+    label: undefined,
+    placeholder: { qrCode: "QRCode", name: "Name" },
+    submitIcon: <IconPlus />,
+  },
+  disabled,
+  qrDisabled,
+  submitHidden,
+  showCombobox = true,
+  onQRCodeChanged,
+  onNameChanged,
+  onSubmit,
+  onItemSelect,
+  onCreateButton,
+  ...props
+}: SearchFormProps) {
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     initialValues: {
@@ -119,9 +123,12 @@ export default function SearchForm<T>({
         onOptionSubmit={(value) => {
           setSelectedItem(value);
 
-          const result = onItemSelect(value);
-          form.setFieldValue("name", result.name ? result.name : "");
-          form.setFieldValue("qrCode", result.qrCode ? result.qrCode : "");
+          const result = onItemSelect?.(value);
+
+          if (result) {
+            form.setFieldValue("name", result.name ? result.name : "");
+            form.setFieldValue("qrCode", result.qrCode ? result.qrCode : "");
+          }
 
           combobox.closeDropdown();
         }}
@@ -239,9 +246,11 @@ export default function SearchForm<T>({
             ) : null}
           </Flex>
         </Combobox.Target>
-        <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
-          {children}
-        </Combobox.Dropdown>
+        {showCombobox ? (
+          <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
+            {children}
+          </Combobox.Dropdown>
+        ) : null}
       </Combobox>
     </form>
   );

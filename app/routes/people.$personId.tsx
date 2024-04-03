@@ -1,32 +1,31 @@
-import { LoaderFunctionArgs, json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import {
+  ActionIcon,
+  Card,
+  Flex,
+  Grid,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { useToggle } from "@mantine/hooks";
+import { LoaderFunctionArgs } from "@remix-run/node";
+import { IconCheck, IconEdit } from "@tabler/icons-react";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import { prisma } from "~/lib/prisma.server";
-import { fullName } from "~/lib/utils";
+import { PersonFindOne, personFindOne } from "~/utils/types.server";
+import { fullName } from "~/utils/utils";
+
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.personId, "Expected params.personId");
 
   try {
-    return json(
+    return typedjson(
       await prisma.person.findFirstOrThrow({
         where: { id: parseInt(params.personId) },
-        include: {
-          loans: {
-            include: {
-              _count: {
-                select: {
-                  items: {
-                    where: {
-                      dateReturned: null,
-                    },
-                  },
-                },
-              },
-              items: true,
-            },
-          },
-        },
+        include: personFindOne.include,
       })
     );
   } catch (e) {
@@ -39,12 +38,57 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 };
 
 export default function Page() {
-  const person = useLoaderData<typeof loader>();
+  const person = useTypedLoaderData<typeof loader>();
+
+  const [editing, toggle] = useToggle([false, true]);
+
+  const form = useForm<PersonFindOne>({ initialValues: person });
 
   return (
-    <div>
-      <h1>{fullName(person)}</h1>
-      <p>{`${person.loans.length} loan(s)`}</p>
-    </div>
+    <Card padding="sm" radius="sm" withBorder w="100%" h="100%">
+      <Card.Section withBorder inheritPadding px="xs" mb="sm">
+        <Flex direction="row" justify="center" align="center">
+          {editing ? (
+            <Grid w="100%">
+              <Grid.Col span={6}>
+                <TextInput
+                  label="First Name"
+                  required
+                  {...form.getInputProps("firstName")}
+                />
+              </Grid.Col>
+              <Grid.Col span={6}>
+                <TextInput
+                  label="Last Name"
+                  placeholder=""
+                  required
+                  {...form.getInputProps("lastName")}
+                />
+              </Grid.Col>
+              <Grid.Col span={6}>
+                <TextInput
+                  label="Nickname"
+                  placeholder="Optional"
+                  {...form.getInputProps("nickname")}
+                />
+              </Grid.Col>
+            </Grid>
+          ) : (
+            <Title order={3} w="100%" ta="center" fw="bold">
+              {fullName(person)}
+            </Title>
+          )}
+          {/* <CloseButton
+        size="xl"
+        style={{ justifySelf: "flex-end" }}
+        onClick={() => navigate("/loans")}
+      /> */}
+          <ActionIcon variant="subtle" color="gray" onClick={() => toggle()}>
+            {editing ? <IconCheck /> : <IconEdit />}
+          </ActionIcon>
+        </Flex>
+      </Card.Section>
+      <Text>Information</Text>
+    </Card>
   );
 }

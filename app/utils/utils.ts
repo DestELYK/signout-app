@@ -12,6 +12,7 @@ export const formatDate = (date: string | Date) => {
         day: 'numeric',
         hour: 'numeric',
         minute: 'numeric',
+        second: '2-digit',
         hour12: true
     });
 }

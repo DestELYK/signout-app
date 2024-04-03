@@ -1,27 +1,8 @@
 import { Prisma } from "@prisma/client";
-import { LoaderFunctionArgs, json } from "@remix-run/node";
+import { LoaderFunctionArgs } from "@remix-run/node";
+import { typedjson } from "remix-typedjson";
 import { prisma } from "~/lib/prisma.server";
-
-const itemSelect: Prisma.ItemSelect = {
-  id: true,
-  name: true,
-  qrCode: true,
-  type: true,
-  notes: true,
-  createdDate: true,
-  updatedDate: true,
-  _count: {
-    select: {
-      loans: { where: { dateReturned: null } },
-    },
-  },
-};
-
-const itemWithCount = Prisma.validator<Prisma.ItemDefaultArgs>()({
-  select: itemSelect,
-});
-
-export type ItemWithCount = Prisma.ItemGetPayload<typeof itemWithCount>;
+import { itemFindMany } from "~/utils/types.server";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
@@ -64,11 +45,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
     console.error("Failed to create filter for /items", e);
   }
 
-  return json(
+  return typedjson(
     await prisma.item.findMany({
-      select: itemSelect,
+      select: itemFindMany.select,
       where: filter,
-      orderBy: [{ type: "asc" }, { name: "asc" }],
+      orderBy: [{ name: "asc" }],
     })
   );
 }

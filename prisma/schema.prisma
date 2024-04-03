@@ -17,55 +17,74 @@ model Person {
   id        Int     @id @default(autoincrement())
   firstName String
   lastName  String
-  role      String?
+  role      Tag     @relation(fields: [tagId], references: [id])
   nickname  String?
-  notes     String?
+  notes     String  @default("")
   qrCode    String?
-  
-  loans     Loan[]
+
+  loans         Loan[]
+  returnedItems LoanedItem[]
 
   createdDate DateTime @default(now())
-  updatedDate DateTime @default(now()) @updatedAt
+  updatedDate DateTime @updatedAt
+
+  tagId Int
 
   @@unique([firstName, lastName, nickname])
 }
 
 model Item {
-  id       Int            @id @default(autoincrement())
-  name     String
-  type     String
-  status   String     @default("Out")
-  notes    String?
-  qrCode    String?
-  loans    ItemsInLoans[]
+  id     Int     @id @default(autoincrement())
+  qrCode String?
+  name   String
+  notes  String  @default("")
+
+  tags Tag[]
+
+  loans LoanedItem[]
 
   createdDate DateTime @default(now())
-  updatedDate DateTime @default(now()) @updatedAt
+  updatedDate DateTime @updatedAt
 }
 
 model Loan {
-  id         Int            @id @default(autoincrement())
-  person     Person         @relation(fields: [personId], references: [id])
-  items      ItemsInLoans[]
-  notes      String?
+  id     Int          @id @default(autoincrement())
+  person Person       @relation(fields: [personId], references: [id])
+  items  LoanedItem[]
+  notes  String       @default("")
+  tags   Tag[]
 
   createdDate DateTime @default(now())
-  updatedDate DateTime @default(now()) @updatedAt
-  
-  personId   Int
+  updatedDate DateTime @updatedAt
+
+  personId Int
 }
 
-model ItemsInLoans {
-  loan         Loan       @relation(fields: [loanId], references: [id])
-  item         Item       @relation(fields: [itemId], references: [id])
-  dateLoaned   DateTime   @default(now())
+model LoanedItem {
+  loan         Loan      @relation(fields: [loanId], references: [id])
+  item         Item      @relation(fields: [itemId], references: [id])
+  dateLoaned   DateTime  @default(now())
   dateReturned DateTime?
 
-  createdDate DateTime @default(now())
-  updatedDate DateTime @default(now()) @updatedAt
+  returnedBy Person? @relation(fields: [returnedById], references: [id])
 
-  loanId     Int
-  itemId     Int
+  createdDate DateTime @default(now())
+  updatedDate DateTime @updatedAt
+
+  loanId       Int
+  itemId       Int
+  returnedById Int?
 
   @@id([loanId, itemId])
+}
+
+model Tag {
+  id       Int    @id @default(autoincrement())
+  name     String
+  color    String
+  category String
+
+  loans  Loan[]
+  items  Item[]
+  people Person[]
 }

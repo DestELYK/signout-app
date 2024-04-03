@@ -11,38 +11,32 @@ import {
   Group,
   List,
   LoadingOverlay,
-  ScrollArea,
   Stack,
   Text,
-  Title,
+  Title
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { Item, Person } from "@prisma/client";
-import { useActionData, useFetcher, useNavigate } from "@remix-run/react";
+import { useActionData, useNavigate } from "@remix-run/react";
 import { IconEdit, IconPlus } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useTypedFetcher } from "remix-typedjson";
 import SearchForm, { SearchFormValues } from "~/components/SearchForm";
+import ItemComboView from "~/components/items/ItemComboView";
 import ItemTable from "~/components/items/ItemTable";
-import ItemView from "~/components/items/ItemView";
-import PersonView from "~/components/people/PersonView";
-import { dateDiff, formatDate, fullName } from "~/lib/utils";
-import { ItemWithCount, loader as itemsLoader } from "./items";
+import PersonView from "~/components/people/PersonComboView";
+import { ItemFindMany, PersonFindOne } from "~/utils/types.server";
+import { dateDiff, formatDate, fullName } from "~/utils/utils";
+import { loader as itemsLoader } from "./items";
 import { loader as itemLoader } from "./items.$itemId";
 import { action } from "./loans";
-import { PersonWithCount, loader as peopleLoader } from "./people";
+import { loader as peopleLoader } from "./people";
 import { loader as personLoader } from "./people.$personId";
 
 interface LoanFormValues {
-  person: Person | undefined;
-  items: Item[];
-}
-
-interface LoanDataValues {
-  people: PersonWithCount[];
-  items: ItemWithCount[];
-  loading?: boolean | false;
+  person: PersonFindOne | undefined;
+  items: ItemFindMany[];
 }
 
 // TODO - Error fields
@@ -57,80 +51,14 @@ interface LoanDataValues {
 
 export default function Page() {
   const navigate = useNavigate();
-  const fetcher = useFetcher();
+  const fetcher = useTypedFetcher();
   const actionData = useActionData<typeof action>();
 
-  const searchPeopleFetcher = useFetcher<typeof peopleLoader>();
-  const searchItemsFetcher = useFetcher<typeof itemsLoader>();
+  const searchPeopleFetcher = useTypedFetcher<typeof peopleLoader>();
+  const searchItemsFetcher = useTypedFetcher<typeof itemsLoader>();
 
-  const submitPersonFetcher = useFetcher<typeof personLoader>();
-  const submitItemFetcher = useFetcher<typeof itemLoader>();
-
-  useEffect(() => {
-    if (submitPersonFetcher.state === "idle" && submitPersonFetcher.data) {
-      const outstandingLoans = submitPersonFetcher.data.loans.filter(
-        (loan) => loan._count.items > 0
-      );
-      if (outstandingLoans.length > 0) {
-        const person = submitPersonFetcher.data;
-        modals.openConfirmModal({
-          title: "Outstanding Loans",
-          children: (
-            <Stack>
-              <Text c="red">
-                {fullName(person)} already has {outstandingLoans.length} loans
-                out!
-              </Text>
-              <List>
-                {outstandingLoans.map((loan) => (
-                  <List.Item>
-                    <Text>
-                      {formatDate(loan.createdDate)} - {loan.items.length} items
-                    </Text>
-                    <Text>{dateDiff(loan.createdDate)}</Text>
-                  </List.Item>
-                ))}
-              </List>
-              <Text>
-                Are you sure you want to create a new loan for{" "}
-                {person.firstName}?
-              </Text>
-            </Stack>
-          ),
-          labels: {
-            confirm: "Yes",
-            cancel: "No",
-          },
-          onConfirm: () => {
-            loanForm.setFieldValue("person", {
-              ...person,
-              createdDate: new Date(person.createdDate),
-              updatedDate: new Date(person.updatedDate),
-            });
-          },
-          onCancel: () => {
-            loanForm.setFieldValue("person", undefined);
-          },
-        });
-      } else {
-        loanForm.setFieldValue("person", {
-          ...submitPersonFetcher.data,
-          createdDate: new Date(submitPersonFetcher.data.createdDate),
-          updatedDate: new Date(submitPersonFetcher.data.updatedDate),
-        });
-      }
-    }
-  }, [submitPersonFetcher.state]);
-
-  useEffect(() => {
-    if (submitItemFetcher.data) {
-      loanForm.insertListItem("items", {
-        ...submitItemFetcher.data,
-        createdDate: new Date(submitItemFetcher.data.createdDate),
-        updatedDate: new Date(submitItemFetcher.data.updatedDate),
-      });
-    }
-  }, [submitItemFetcher.state]);
+  const submitPersonFetcher = useTypedFetcher<typeof personLoader>();
+  const submitItemFetcher = useTypedFetcher<typeof itemLoader>();
 
   const loading =
     searchItemsFetcher.state === "loading" ||
@@ -182,13 +110,9 @@ export default function Page() {
             <>
               <PersonView
                 highlight={personSearch.name ? personSearch.name : ""}
-                person={{
-                  ...person,
-                  createdDate: new Date(person.createdDate),
-                  updatedDate: new Date(person.updatedDate),
-                }}
+                person={person}
               />
-              <Divider mt="sm"/>
+              <Divider mt="sm" />
             </>
           </Combobox.Option>
         );
@@ -206,14 +130,17 @@ export default function Page() {
         <Combobox.Option
           value={item.id.toString()}
           key={item.id}
-          disabled={item._count.loans > 0}
+          disabled={
+            item._count.loans > 0 ||
+            loanForm.values.items.find((i) => i.id == item.id) != undefined
+          }
         >
           <>
-            <ItemView
+            <ItemComboView
               highlight={itemSearch.name ? itemSearch.name : ""}
               item={item}
             />
-            <Divider mt="sm"/>
+            <Divider mt="sm" />
           </>
         </Combobox.Option>
       ))
@@ -222,6 +149,89 @@ export default function Page() {
     );
 
   //#endregion Options
+
+  useEffect(() => {
+    const event = (event: BeforeUnloadEvent) => {
+      // Cancel the event as stated by the standard.
+      event.preventDefault();
+      // Chrome requires returnValue to be set.
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", event);
+
+    return () => {
+      window.removeEventListener("beforeunload", event);
+    };
+  });
+
+  useEffect(() => {
+    if (submitPersonFetcher.state === "idle" && submitPersonFetcher.data) {
+      const outstandingLoans = submitPersonFetcher.data.loans.filter(
+        (loan) => loan.items.find((i) => !i.dateReturned) != undefined
+      );
+      if (outstandingLoans.length > 0) {
+        const person = submitPersonFetcher.data;
+        modals.openConfirmModal({
+          title: "Outstanding Loans",
+          children: (
+            <Stack>
+              <Text c="red">
+                {fullName(person)} already has {outstandingLoans.length} loans
+                out!
+              </Text>
+              <List>
+                {outstandingLoans.map((loan) => (
+                  <List.Item>
+                    <Text>
+                      {formatDate(loan.createdDate)} - {loan.items.length} items
+                    </Text>
+                    <Text>{dateDiff(loan.createdDate)}</Text>
+                  </List.Item>
+                ))}
+              </List>
+              <Text>
+                Are you sure you want to create a new loan for{" "}
+                {person.firstName}?
+              </Text>
+            </Stack>
+          ),
+          labels: {
+            confirm: "Yes",
+            cancel: "No",
+          },
+          onConfirm: () => {
+            loanForm.setFieldValue("person", person);
+          },
+          onCancel: () => {
+            loanForm.setFieldValue("person", undefined);
+          },
+        });
+      } else {
+        loanForm.setFieldValue("person", submitPersonFetcher.data);
+      }
+    }
+  }, [submitPersonFetcher.data]);
+
+  useEffect(() => {
+    console.log(
+      "%s %s %s",
+      submitItemFetcher.state,
+      submitItemFetcher.data,
+      loanForm.values.items
+    );
+    if (
+      submitItemFetcher.state === "idle" &&
+      submitItemFetcher.data &&
+      loanForm.values.items.filter((i) => i.id == submitItemFetcher.data.id)
+        .length == 0
+    ) {
+      loanForm.insertListItem("items", {
+        ...submitItemFetcher.data,
+        createdDate: new Date(submitItemFetcher.data.createdDate),
+        updatedDate: new Date(submitItemFetcher.data.updatedDate),
+      });
+    }
+  }, [submitItemFetcher.data]);
 
   function updateData(path: "person" | "item", value: SearchFormValues) {
     switch (path) {
@@ -298,7 +308,7 @@ export default function Page() {
 
     handleDataSubmit(path, value);
 
-    return result;
+    return {};
   }
 
   function handleDataSubmit(path: "loan" | "person" | "item", value: string) {
@@ -335,12 +345,16 @@ export default function Page() {
           <CloseButton
             size="xl"
             style={{ justifySelf: "flex-end" }}
-            onClick={() => navigate("/loans")}
+            onClick={() => navigate('/loans')}
           />
         </Flex>
       </Card.Section>
       <Flex w="100%" h="100%" direction="column">
-        <Fieldset legend="Person" h="min-content">
+        <Fieldset
+          legend="Person"
+          h="min-content"
+          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
+        >
           <Box pos="relative" h="100%">
             <LoadingOverlay
               visible={searchPeopleFetcher.state != "idle"}
@@ -384,22 +398,33 @@ export default function Page() {
             )}
           </Box>
         </Fieldset>
-        <Fieldset legend="Items" p="sm" h="100%">
+        <Text
+          my="sm"
+          size="xs"
+          c="red"
+          hidden={loanForm.errors.person == undefined}
+        >
+          {loanForm.errors.person}
+        </Text>
+        <Fieldset
+          legend="Items"
+          p="sm"
+          h="100%"
+          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
+        >
           <Box pos="relative" h="100%">
             <LoadingOverlay
               visible={searchItemsFetcher.state != "idle"}
               zIndex={1000}
               overlayProps={{ radius: "sm", blur: 2 }}
             />
-            <Flex direction="column">
-              <ScrollArea h="calc(100dvh - 30rem)">
-                <ItemTable
-                  items={loanForm.values.items}
-                  onRemoveItem={(item, index) => {
-                    loanForm.removeListItem("items", index);
-                  }}
-                />
-              </ScrollArea>
+            <Flex direction="column" h="100%">
+              <ItemTable
+                items={loanForm.values.items}
+                onRemoveItem={(item, index) => {
+                  loanForm.removeListItem("items", index);
+                }}
+              />
               <Divider mb="md" />
               <SearchForm
                 onQRCodeChanged={(value) =>
@@ -414,6 +439,14 @@ export default function Page() {
             </Flex>
           </Box>
         </Fieldset>
+        <Text
+          my="sm"
+          size="xs"
+          c="red"
+          hidden={loanForm.errors.items == undefined}
+        >
+          {loanForm.errors.items}
+        </Text>
         <Group mt="sm" justify="end">
           <form
             onSubmit={loanForm.onSubmit(
@@ -424,7 +457,7 @@ export default function Page() {
                 notifications.show({
                   id: "error",
                   color: "red",
-                  message: "Failed",
+                  message: "Failed to create loan",
                   autoClose: 1000,
                 });
               }

@@ -1,26 +1,33 @@
-import {
-  Badge,
-  Card,
-  Flex,
-  Stack,
-  Text,
-  Title,
-  px,
-  rem
-} from "@mantine/core";
-import { dateDiff, fullName } from "~/lib/utils";
-import { LoanItemPayload } from "../routes/loans";
+import { Badge, Card, Group, Stack, Text, Title, rem } from "@mantine/core";
+import { LoanFindMany } from "~/utils/types.server";
+import { dateDiff, formatDate, fullName } from "~/utils/utils";
 
 export function LoanItemView({
   loan,
-  isActive,
+  active,
   onClick,
 }: {
-  loan: LoanItemPayload;
-  isActive?: boolean | false;
+  loan: LoanFindMany;
+  active?: boolean;
   onClick: React.MouseEventHandler;
 }) {
   const loanItemHeight = 100;
+
+  const outstanding = loan.items.find((i) => !i.dateReturned) != undefined;
+
+  const sortedItems = loan.items.sort((a, b) => {
+    if (a.dateReturned && b.dateReturned && a.dateReturned > b.dateReturned) {
+      return 1;
+    } else if (
+      a.dateReturned &&
+      b.dateReturned &&
+      a.dateReturned < b.dateReturned
+    ) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
 
   return (
     <Card
@@ -28,52 +35,68 @@ export function LoanItemView({
       shadow="sm"
       radius="sm"
       p="lg"
+      mb="xs"
       mih={rem(loanItemHeight)}
       w="100%"
-      className="active"
-      {...(loan._count.items > 0 && {
-        style: {
-          borderColor: "red",
-          borderWidth: px(2),
-        },
+      onClick={onClick}
+      style={{
+        cursor: "pointer",
+      }}
+      {...(active && {
+        bg: "blue",
+        c: "white",
       })}
     >
-      <Card.Section withBorder inheritPadding px="xs">
-        <Flex
-          direction="row"
-          justify="flex-end"
-          align="center"
-          w="100%"
-          gap="md"
-        >
+      <Card.Section withBorder inheritPadding px="xs" mb="sm">
+        <Group justify="space-between" gap={0}>
           <Title
-            w="100%"
             order={5}
             fw="bold"
             lineClamp={1}
             style={{ justifySelf: "flex-start" }}
           >
-            {/* @ts-ignore */}
+            #{loan.id}
+          </Title>
+          <Badge color={outstanding ? "red" : "green"}>
+            {outstanding ? "Out" : "In"}
+          </Badge>
+        </Group>
+      </Card.Section>
+      <Card.Section inheritPadding px="xs" mb="xs">
+        <Group justify="space-between" gap={0}>
+          <Title
+            order={6}
+            fw="bold"
+            lineClamp={1}
+            style={{ justifySelf: "flex-start" }}
+          >
             {fullName(loan.person)}
           </Title>
-
-          <Badge
-            color={loan.person.role === "Staff" ? "blue" : "green"}
-            miw="max-content"
-          >
-            {loan.person.role}
-          </Badge>
-        </Flex>
+          <Group style={{ justifySelf: "center" }}>
+            <Badge color={loan.person.role.color} variant="dot">
+              {loan.person.role.name}
+            </Badge>
+          </Group>
+        </Group>
       </Card.Section>
-      <Card.Section onClick={onClick}>
-        <Stack mt="xs" gap={0}>
-          <Text size="sm" ta="center">{`Out since ${new Date(
-            loan.createdDate
-          ).toDateString()} (${dateDiff(new Date(loan.createdDate))})`}</Text>
-          <Text size="sm" ta="center">{`${loan._count.items} outstanding item${
-            loan._count.items > 1 ? "s" : ""
-          }`}</Text>
-        </Stack>
+      <Card.Section>
+        {outstanding ? (
+          <Stack gap={0}>
+            <Text size="sm" ta="center">
+              Out since {formatDate(loan.createdDate)} (
+              {dateDiff(loan.createdDate)})
+            </Text>
+            {loan.items.map((i) => (
+              <Text key={i.item.id} size="sm" ta="center">
+                {`${i.item.name} - ${i.dateReturned ? "In" : "Out"}`}
+              </Text>
+            ))}
+          </Stack>
+        ) : (
+          <Text size="sm" ta="center">
+            All items returned on {formatDate(sortedItems[0].dateReturned!)}
+          </Text>
+        )}
       </Card.Section>
     </Card>
   );

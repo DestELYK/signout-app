@@ -1,76 +1,46 @@
 import {
-  Box,
   Card,
   Center,
   Container,
   Flex,
+  Group,
+  Loader,
+  Pagination,
   ScrollArea,
   Title,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { Item, Person, Prisma } from "@prisma/client";
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  json,
-  redirect,
-} from "@remix-run/node";
+import { Prisma } from "@prisma/client";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import {
   MetaFunction,
   Outlet,
-  useLoaderData,
   useLocation,
   useNavigate,
   useParams,
   useSearchParams,
 } from "@remix-run/react";
+import { Suspense, useState } from "react";
+import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
 import { LoanItemView } from "~/components/LoanItemView";
 import { prisma } from "~/lib/prisma.server";
+import {
+  ItemFindMany,
+  PersonFindOne,
+  loanFindMany,
+} from "~/utils/types.server";
 import { LoanListView } from "../components/LoanListView";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];
 };
 
-const loanSelect: Prisma.LoanSelect = {
-  id: true,
-  person: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      nickname: true,
-      role: true,
-    },
-  },
-  createdDate: true,
-  updatedDate: true,
-  _count: {
-    select: {
-      items: {
-        where: {
-          dateReturned: null,
-        },
-      },
-    },
-  },
-};
-
-const loanFindMany = Prisma.validator<Prisma.LoanDefaultArgs>()({
-  select: loanSelect,
-});
-
-export type LoanFindMany = Prisma.LoanGetPayload<typeof loanFindMany>;
-
-export type LoanItemPayload = Prisma.LoanGetPayload<{
-  select: typeof loanSelect;
-}>;
-
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
 
   const itemIds = url.searchParams.getAll("itemId");
   const personId = url.searchParams.get("personId");
+  const outstanding = url.searchParams.has("outstanding");
 
   let filter: Prisma.LoanWhereInput = {};
 
@@ -89,24 +59,32 @@ export async function loader({ request }: LoaderFunctionArgs) {
           },
         }),
       ...(personId && { personId: parseInt(personId) }),
+      ...(outstanding && { items: { some: { dateReturned: null } } }),
     };
   } catch (e) {
     console.error("Failed to create filter", e);
   }
 
-  return json(
-    await prisma.loan.findMany({
-      select: loanSelect,
+  return typedjson({
+    count: await prisma.loan.count({
       where: filter,
-      orderBy: { updatedDate: "desc" },
-    })
-  );
+    }),
+    loans: await prisma.loan.findMany({
+      select: loanFindMany.select,
+      where: filter,
+      orderBy: [
+        {
+          createdDate: "desc",
+        },
+      ],
+    }),
+  });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const formData: {
-    person?: Person;
-    items?: Item[];
+    person?: PersonFindOne;
+    items?: ItemFindMany[];
     loanId: number;
     itemIds: number[];
   } = await request.json();
@@ -119,41 +97,34 @@ export async function action({ request }: ActionFunctionArgs) {
           throw Error("No person selected");
         }
 
+        const person = formData.person!;
+
         if (!formData.items || formData.items.length == 0) {
           throw Error("Loan requires at least one item");
         }
 
+        const items = formData.items!;
+
         result = await prisma.loan.create({
           data: {
             person: {
-              connectOrCreate: {
-                where: {
-                  id: formData.person.id,
-                },
-                create: {
-                  firstName: formData.person.firstName,
-                  lastName: formData.person.lastName,
-                  nickname: formData.person.nickname,
-                  role: formData.person.role,
-                  qrCode: formData.person.qrCode,
-                },
+              connect: {
+                id: person.id,
               },
             },
             items: {
-              create: formData.items.map((item) => {
-                return {
-                  item: {
-                    connectOrCreate: {
-                      where: { id: item.id },
-                      create: {
-                        name: item.name,
-                        type: item.type,
-                        qrCode: item.qrCode,
-                      },
-                    },
+              create: items.map((item) => ({
+                item: {
+                  connect: {
+                    id: item.id,
                   },
-                };
-              }),
+                },
+                returnedBy: {
+                  connect: {
+                    id: person.id,
+                  },
+                },
+              })),
             },
           },
           include: {
@@ -164,45 +135,18 @@ export async function action({ request }: ActionFunctionArgs) {
 
         console.debug("Created new loan: %s", result);
         return redirect(`/loans/${result.id}`);
-      case "PATCH":
-        if (!formData.loanId) {
-          throw Error("No loan supplied");
-        }
-
-        if (!formData.itemIds || formData.itemIds.length == 0) {
-          throw Error("Loan requires at least one item");
-        }
-
-        const updateCount = await prisma.loan.update({
-          where: { id: formData.loanId },
-          data: {
-            items: {
-              updateMany: formData.itemIds.map((itemId) => {
-                return {
-                  where: { itemId: itemId },
-                  data: {
-                    dateReturned: new Date(),
-                  },
-                };
-              }),
-            },
-          },
-        });
-
-        console.log("%i entries updated", updateCount);
-
-        result.id = formData.loanId;
-
-        return redirect(`/loans/${result.id}`);
       default:
         throw new Response(null, {
           status: 405,
         });
     }
   } catch (e) {
-    return json({ error: e });
+    console.error(`Failed to ${request.method} a loan`, e);
+    return typedjson({ error: "Failed to create loan" });
   }
 }
+
+const ITEMS_PER_PAGE = 15;
 
 export default function Page() {
   const params = useParams();
@@ -216,37 +160,70 @@ export default function Page() {
   const navigate = useNavigate();
   const searchParams = useSearchParams({ outstanding: "" });
 
-  const loans = useLoaderData<typeof loader>();
+  const data = useTypedLoaderData<typeof loader>();
 
-  const outstandingLoans = loans.filter((loan) => loan._count.items > 0);
+  const [activePage, setPage] = useState(1);
+
+  const filteredLoans = [
+    ...data.loans.sort((a, b) => {
+      if (a.items.find((i) => !i.dateReturned)) {
+        if (b.items.find((i) => !i.dateReturned))
+          return b.createdDate.getTime() - a.createdDate.getTime();
+        else
+          return -1000;
+      } else {
+        if (b.items.find((i) => !i.dateReturned))
+          return 1000;
+        else
+          return b.createdDate.getTime() - a.createdDate.getTime();
+      }
+    }),
+  ].slice(
+    activePage * ITEMS_PER_PAGE,
+    activePage * ITEMS_PER_PAGE + ITEMS_PER_PAGE
+  );
+
+  // const outstandingLoans = loans.filter((loan) => loan._count.items > 0);
 
   const loanList = (
     <LoanListView {...(loanId && { activeId: loanId })}>
-      {outstandingLoans.length ? (
-        <ScrollArea.Autosize
-          mah="100%"
-          type="auto"
-          scrollbars="y"
-          offsetScrollbars
+      <Suspense fallback={<Loader />}>
+        {filteredLoans.length ? (
+          <ScrollArea.Autosize
+            mah="calc(100dvh - 10rem)"
+            type="auto"
+            scrollbars="y"
+          >
+            {filteredLoans.map((loan) => (
+              <LoanItemView
+                key={loan.id}
+                active={loanId === loan.id.toString()}
+                loan={loan}
+                onClick={() => {
+                  navigate(`/loans/${loan.id}`);
+                }}
+              />
+            ))}
+          </ScrollArea.Autosize>
+        ) : (
+          <div className="h-full w-full">No Outstanding Loans</div>
+        )}
+        <Pagination.Root
+          w="100%"
+          mt="md"
+          px="sm"
+          style={{ flexWrap: "nowrap" }}
+          total={data ? data.count / ITEMS_PER_PAGE : 0}
+          value={activePage}
+          onChange={setPage}
         >
-          {outstandingLoans.map((loan) => (
-            <LoanItemView
-              key={loan.id}
-              isActive={loanId === loan.id.toString()}
-              loan={{
-                ...loan,
-                createdDate: new Date(loan.createdDate),
-                updatedDate: new Date(loan.updatedDate),
-              }}
-              onClick={() => {
-                navigate(`/loans/${loan.id}`);
-              }}
-            />
-          ))}
-        </ScrollArea.Autosize>
-      ) : (
-        <div className="h-full w-full">No Outstanding Loans</div>
-      )}
+          <Group gap={5} justify="center">
+            <Pagination.Previous />
+            <Pagination.Items />
+            <Pagination.Next />
+          </Group>
+        </Pagination.Root>
+      </Suspense>
     </LoanListView>
   );
 
@@ -254,7 +231,7 @@ export default function Page() {
     <Container p="sm" miw="100dvw" h="100dvh">
       {mediaMatch ? (
         <Flex direction="row" w="100%" h="100%" gap="lg">
-          <Box h="100%">{loanList}</Box>
+          {loanList}
           {isNestedRoute ? (
             <Outlet />
           ) : (

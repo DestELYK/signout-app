@@ -1,38 +1,10 @@
 import { Prisma } from "@prisma/client";
-import { LoaderFunctionArgs, json } from "@remix-run/node";
+import { LoaderFunctionArgs } from "@remix-run/node";
 import { error } from "console";
+import { typedjson } from "remix-typedjson";
 import { prisma } from "~/lib/prisma.server";
+import { personFindMany } from "~/utils/types.server";
 
-export const personSelect: Prisma.PersonSelect = {
-  id: true,
-  qrCode: true,
-  firstName: true,
-  lastName: true,
-  nickname: true,
-  role: true,
-  notes: true,
-  createdDate: true,
-  updatedDate: true,
-  _count: {
-    select: {
-      loans: {
-        where: {
-          items: {
-            some: {
-              dateReturned: null,
-            },
-          },
-        },
-      },
-    },
-  },
-};
-
-const personWithCount = Prisma.validator<Prisma.PersonDefaultArgs>()({
-  select: personSelect,
-});
-
-export type PersonWithCount = Prisma.PersonGetPayload<typeof personWithCount>;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -85,21 +57,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("Failed to create filter for /people", error);
   }
 
-  return json(
+  return typedjson(
     await prisma.person.findMany({
       where: filter,
-      select: personSelect,
+      select: personFindMany.select,
       orderBy: [
         {
-            firstName: "asc"
+          firstName: "asc",
         },
         {
-            lastName: "asc"
+          lastName: "asc",
         },
         {
-            nickname: "asc"
-        }
-      ]
+          nickname: "asc",
+        },
+      ],
     })
   );
 };
