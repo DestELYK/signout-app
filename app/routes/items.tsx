@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { LoaderFunctionArgs } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson } from "remix-typedjson";
 import { prisma } from "~/lib/prisma.server";
 import { itemFindMany } from "~/utils/types.server";
@@ -52,4 +52,48 @@ export async function loader({ request }: LoaderFunctionArgs) {
       orderBy: [{ name: "asc" }],
     })
   );
+}
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.json();
+
+  try {
+    switch (request.method) {
+      case "POST":
+        const name = formData.name;
+
+        if (!name) {
+          throw new Error("Name must be provided");
+        }
+
+        const qrCode = formData.qrCode;
+
+        const tags: { id: number }[] = formData.tags;
+
+        if (tags.length < 1) {
+          throw new Error("There must be at least 1 tag");
+        }
+
+        return typedjson(
+          await prisma.item.create({
+            data: {
+              name: name,
+              ...qrCode && {qrCode: qrCode},
+              tags: {
+                connect: tags
+              }
+            }
+          })
+        );
+      default:
+        throw new Response(null, {
+          status: 405,
+        });
+    }
+  } catch (e) {
+    console.error(e);
+    throw new Response(null, {
+      status: 500,
+    });
+  }
 }

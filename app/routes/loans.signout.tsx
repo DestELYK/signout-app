@@ -11,11 +11,13 @@ import {
   Group,
   List,
   LoadingOverlay,
+  Modal,
   Stack,
   Text,
-  Title
+  Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { useDisclosure, useToggle } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { useActionData, useNavigate } from "@remix-run/react";
@@ -23,42 +25,49 @@ import { IconEdit, IconPlus } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import SearchForm, { SearchFormValues } from "~/components/SearchForm";
+import CreateItemForm from "~/components/items/CreateItemForm";
 import ItemComboView from "~/components/items/ItemComboView";
 import ItemTable from "~/components/items/ItemTable";
+import CreatePersonForm from "~/components/people/CreatePersonForm";
 import PersonView from "~/components/people/PersonComboView";
 import { ItemFindMany, PersonFindOne } from "~/utils/types.server";
 import { dateDiff, formatDate, fullName } from "~/utils/utils";
-import { loader as itemsLoader } from "./items";
+import { action as itemAction, loader as itemsLoader } from "./items";
 import { loader as itemLoader } from "./items.$itemId";
-import { action } from "./loans";
+import { action as loanAction } from "./loans";
 import { loader as peopleLoader } from "./people";
 import { loader as personLoader } from "./people.$personId";
+import { loader as tagsLoader } from "./tags";
 
 interface LoanFormValues {
   person: PersonFindOne | undefined;
   items: ItemFindMany[];
 }
 
-// TODO - Error fields
-// TODO - New item creation
-// TODO - New person creation
-// TODO - move all functions and mapping outside of return
+// TODO - Allow adding tags to loan
+// TODO - Move some fetchers into this page's loader
 // TODO - saving form data
 // TODO - prevent going back to previous page during form
-// TODO - prevent navigation from scanner
-// TODO - implement form id page
-// TODO - implement importing and exporting data
+// TODO - create components for searching person and items with the SearchForm
+// TODO - load items on search
 
 export default function Page() {
   const navigate = useNavigate();
   const fetcher = useTypedFetcher();
-  const actionData = useActionData<typeof action>();
+  const submitLoan = useActionData<typeof loanAction>();
 
   const searchPeopleFetcher = useTypedFetcher<typeof peopleLoader>();
   const searchItemsFetcher = useTypedFetcher<typeof itemsLoader>();
+  const searchTagsFetcher = useTypedFetcher<typeof tagsLoader>();
 
   const submitPersonFetcher = useTypedFetcher<typeof personLoader>();
   const submitItemFetcher = useTypedFetcher<typeof itemLoader>();
+
+  const submitNewPerson = useTypedFetcher<typeof itemAction>();
+  const submitNewItem = useTypedFetcher<typeof itemAction>();
+
+  const [opened, { open, close }] = useDisclosure(false);
+  const [createType, toggleCreateType] = useToggle(["person", "item"]);
 
   const loading =
     searchItemsFetcher.state === "loading" ||
@@ -213,12 +222,6 @@ export default function Page() {
   }, [submitPersonFetcher.data]);
 
   useEffect(() => {
-    console.log(
-      "%s %s %s",
-      submitItemFetcher.state,
-      submitItemFetcher.data,
-      loanForm.values.items
-    );
     if (
       submitItemFetcher.state === "idle" &&
       submitItemFetcher.data &&
@@ -232,6 +235,22 @@ export default function Page() {
       });
     }
   }, [submitItemFetcher.data]);
+
+  // updates on new person creation
+  useEffect(() => {
+    if (submitNewPerson.state === "idle" && submitNewPerson.data) {
+      handleItemSelect("person", submitNewPerson.data.id.toString());
+      close();
+    }
+  }, [submitNewPerson.state, submitNewPerson.data]);
+
+  // updates on new person creation
+  useEffect(() => {
+    if (submitNewItem.state === "idle" && submitNewItem.data) {
+      handleItemSelect("item", submitNewItem.data.id.toString());
+      close();
+    }
+  }, [submitNewItem.state, submitNewItem.data]);
 
   function updateData(path: "person" | "item", value: SearchFormValues) {
     switch (path) {
@@ -306,9 +325,19 @@ export default function Page() {
       console.error("Failed to parse selected item for %s", path, e);
     }
 
-    handleDataSubmit(path, value);
+    if (value === "$create") {
+      handleDataCreation(path);
+    } else {
+      handleDataSubmit(path, value);
+    }
 
     return {};
+  }
+
+  function handleDataCreation(path: "person" | "item") {
+    searchTagsFetcher.load("");
+    toggleCreateType(path);
+    open();
   }
 
   function handleDataSubmit(path: "loan" | "person" | "item", value: string) {
@@ -336,143 +365,244 @@ export default function Page() {
   }
 
   return (
-    <Card withBorder h="100%" w="100%">
-      <Card.Section withBorder inheritPadding px="xs" mb="sm">
-        <Flex direction="row" justify="center" align="center">
-          <Title w="100%" order={4} ta="center" fw="bold">
-            Sign-Out Items
-          </Title>
-          <CloseButton
-            size="xl"
-            style={{ justifySelf: "flex-end" }}
-            onClick={() => navigate('/loans')}
+    <>
+      <Modal
+        opened={opened}
+        onClose={close}
+        title={createType == "person" ? "Create New Person" : "Create New Item"}
+      >
+        {createType == "person" ? (
+          <CreatePersonForm
+            onTagSearch={(value) => {
+              searchTagsFetcher.load(`/tags?category=Person Role&q=${value}`);
+            }}
+            onSubmit={(values) => {
+              modals.openConfirmModal({
+                id: "person-create-confirm",
+                title: "Confirm Creation",
+                centered: true,
+                children: (
+                  <Text>
+                    Are you sure you want to create a new person named{" "}
+                    {fullName(values)}?
+                  </Text>
+                ),
+                labels: {
+                  confirm: "Yes",
+                  cancel: "No",
+                },
+                onConfirm: () => {
+                  modals.close("person-create-confirm");
+                  submitNewPerson.submit(values, {
+                    action: "/people",
+                    method: "POST",
+                    navigate: false,
+                    encType: "application/json",
+                  });
+                },
+                onCancel: () => {
+                  modals.close("item-create-confirm");
+                },
+              });
+            }}
+            loading={submitNewPerson.state !== "idle"}
+            tags={searchTagsFetcher.data}
           />
-        </Flex>
-      </Card.Section>
-      <Flex w="100%" h="100%" direction="column">
-        <Fieldset
-          legend="Person"
-          h="min-content"
-          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
-        >
-          <Box pos="relative" h="100%">
-            <LoadingOverlay
-              visible={searchPeopleFetcher.state != "idle"}
-              zIndex={1000}
-              overlayProps={{ radius: "sm", blur: 2 }}
-            />
-            {loanForm.values.person ? (
-              <Flex direction="row" w="100%">
-                <Text w="100%" size="sm">
-                  {`${loanForm.values.person.firstName} ${loanForm.values.person.lastName}`}
-                </Text>
-                <ActionIcon
-                  style={{ justifySelf: "end" }}
-                  size="sm"
-                  color="red"
-                  onClick={() => loanForm.setFieldValue("person", undefined)}
-                >
-                  <IconEdit />
-                </ActionIcon>
-              </Flex>
-            ) : (
-              <SearchForm
-                formData={{
-                  placeholder: {
-                    qrCode: "Enter QR Code",
-                    name: "Enter person's name",
+        ) : (
+          createType == "item" && (
+            <CreateItemForm
+              onTagSearch={(value) => {
+                searchTagsFetcher.load(`/tags?category=Item Type&q=${value}`);
+              }}
+              onSubmit={(values) => {
+                modals.openConfirmModal({
+                  id: "item-create-confirm",
+                  title: "Confirm Creation",
+                  centered: true,
+                  children: (
+                    <Text>
+                      Are you sure you want to create a new item named{" "}
+                      {values.name}?
+                    </Text>
+                  ),
+                  labels: {
+                    confirm: "Yes",
+                    cancel: "No",
                   },
-                  description: {
-                    name: "Search for person using their name",
+                  onConfirm: () => {
+                    modals.close("item-create-confirm");
+                    submitNewItem.submit(values, {
+                      action: "/items",
+                      method: "POST",
+                      navigate: false,
+                      encType: "application/json",
+                    });
                   },
-                }}
-                onQRCodeChanged={(value) =>
-                  updateData("person", { qrCode: value })
-                }
-                onNameChanged={(value) => updateData("person", { name: value })}
-                onItemSelect={(value) => handleItemSelect("person", value)}
-                submitHidden
-              >
-                {personSearchOptions}
-              </SearchForm>
-            )}
-          </Box>
-        </Fieldset>
-        <Text
-          my="sm"
-          size="xs"
-          c="red"
-          hidden={loanForm.errors.person == undefined}
-        >
-          {loanForm.errors.person}
-        </Text>
-        <Fieldset
-          legend="Items"
-          p="sm"
-          h="100%"
-          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
-        >
-          <Box pos="relative" h="100%">
-            <LoadingOverlay
-              visible={searchItemsFetcher.state != "idle"}
-              zIndex={1000}
-              overlayProps={{ radius: "sm", blur: 2 }}
-            />
-            <Flex direction="column" h="100%">
-              <ItemTable
-                items={loanForm.values.items}
-                onRemoveItem={(item, index) => {
-                  loanForm.removeListItem("items", index);
-                }}
-              />
-              <Divider mb="md" />
-              <SearchForm
-                onQRCodeChanged={(value) =>
-                  updateData("item", { qrCode: value })
-                }
-                onNameChanged={(value) => updateData("item", { name: value })}
-                onItemSelect={(value) => handleItemSelect("item", value)}
-                submitHidden
-              >
-                {itemSearchOptions}
-              </SearchForm>
-            </Flex>
-          </Box>
-        </Fieldset>
-        <Text
-          my="sm"
-          size="xs"
-          c="red"
-          hidden={loanForm.errors.items == undefined}
-        >
-          {loanForm.errors.items}
-        </Text>
-        <Group mt="sm" justify="end">
-          <form
-            onSubmit={loanForm.onSubmit(
-              (values) => {
-                handleDataSubmit("loan", JSON.stringify(values));
-              },
-              (errors, values) => {
-                notifications.show({
-                  id: "error",
-                  color: "red",
-                  message: "Failed to create loan",
-                  autoClose: 1000,
+                  onCancel: () => {
+                    modals.close("item-create-confirm");
+                  },
                 });
-              }
-            )}
+              }}
+              loading={submitNewItem.state !== "idle"}
+              tags={searchTagsFetcher.data}
+            />
+          )
+        )}
+      </Modal>
+      <Card withBorder h="100%" w="100%">
+        <Card.Section withBorder inheritPadding px="xs" mb="sm">
+          <Flex direction="row" justify="center" align="center">
+            <Title w="100%" order={4} ta="center" fw="bold">
+              Sign-Out Items
+            </Title>
+            <CloseButton
+              size="xl"
+              style={{ justifySelf: "flex-end" }}
+              onClick={() => navigate("/loans")}
+            />
+          </Flex>
+        </Card.Section>
+        <Flex w="100%" h="100%" direction="column">
+          <Fieldset
+            legend="Person"
+            h="min-content"
+            {...(loanForm.errors.items && { style: { borderColor: "red" } })}
           >
-            <Button
-              type="submit"
-              disabled={loading}
-              rightSection={<IconPlus />}
+            <Box pos="relative" h="100%">
+              <LoadingOverlay
+                visible={
+                  searchPeopleFetcher.state !== "idle" ||
+                  submitPersonFetcher.state !== "idle"
+                }
+                zIndex={1000}
+                overlayProps={{ radius: "sm", blur: 2 }}
+              />
+              {loanForm.values.person ? (
+                <Flex direction="row" w="100%">
+                  <Text w="100%" size="sm">
+                    {`${loanForm.values.person.firstName} ${loanForm.values.person.lastName}`}
+                  </Text>
+                  <ActionIcon
+                    style={{ justifySelf: "end" }}
+                    size="sm"
+                    color="red"
+                    onClick={() => loanForm.setFieldValue("person", undefined)}
+                  >
+                    <IconEdit />
+                  </ActionIcon>
+                </Flex>
+              ) : (
+                <SearchForm
+                  formData={{
+                    placeholder: {
+                      qrCode: "Enter QR Code",
+                      name: "Enter person's name",
+                    },
+                    description: {
+                      name: "Search for person using their name",
+                    },
+                  }}
+                  onQRCodeChanged={(value) =>
+                    updateData("person", { qrCode: value })
+                  }
+                  onNameChanged={(value) =>
+                    updateData("person", { name: value })
+                  }
+                  onItemSelect={(value) => handleItemSelect("person", value)}
+                  onCreateButton={() => {
+                    handleDataCreation("person");
+                    return true;
+                  }}
+                  submitHidden
+                >
+                  {personSearchOptions}
+                </SearchForm>
+              )}
+            </Box>
+          </Fieldset>
+          <Text
+            my="sm"
+            size="xs"
+            c="red"
+            hidden={loanForm.errors.person == undefined}
+          >
+            {loanForm.errors.person}
+          </Text>
+          <Fieldset
+            legend="Items"
+            p="sm"
+            h="100%"
+            {...(loanForm.errors.items && { style: { borderColor: "red" } })}
+          >
+            <Box pos="relative" h="100%">
+              <LoadingOverlay
+                visible={
+                  searchItemsFetcher.state !== "idle" ||
+                  submitItemFetcher.state !== "idle"
+                }
+                zIndex={1000}
+                overlayProps={{ radius: "sm", blur: 2 }}
+              />
+              <Flex direction="column" h="100%">
+                <ItemTable
+                  items={loanForm.values.items}
+                  onRemoveItem={(item, index) => {
+                    loanForm.removeListItem("items", index);
+                  }}
+                />
+                <Divider mb="md" />
+                <SearchForm
+                  onQRCodeChanged={(value) =>
+                    updateData("item", { qrCode: value })
+                  }
+                  onNameChanged={(value) => updateData("item", { name: value })}
+                  onItemSelect={(value) => handleItemSelect("item", value)}
+                  onCreateButton={() => {
+                    handleDataCreation("item");
+                    return true;
+                  }}
+                  submitHidden
+                >
+                  {itemSearchOptions}
+                </SearchForm>
+              </Flex>
+            </Box>
+          </Fieldset>
+          <Text
+            my="sm"
+            size="xs"
+            c="red"
+            hidden={loanForm.errors.items == undefined}
+          >
+            {loanForm.errors.items}
+          </Text>
+          <Group mt="sm" justify="end">
+            <form
+              onSubmit={loanForm.onSubmit(
+                (values) => {
+                  handleDataSubmit("loan", JSON.stringify(values));
+                },
+                (errors, values) => {
+                  notifications.show({
+                    id: "error",
+                    color: "red",
+                    message: "Failed to create loan",
+                    autoClose: 1000,
+                  });
+                }
+              )}
             >
-              Create Loan
-            </Button>
-          </form>
-        </Group>
-      </Flex>
-    </Card>
+              <Button
+                type="submit"
+                disabled={loading}
+                rightSection={<IconPlus />}
+              >
+                Create Loan
+              </Button>
+            </form>
+          </Group>
+        </Flex>
+      </Card>
+    </>
   );
 }

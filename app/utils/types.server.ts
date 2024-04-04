@@ -1,5 +1,7 @@
 import { Prisma } from "@prisma/client";
 
+//#region Loan types
+
 export const loanFindMany = Prisma.validator<Prisma.LoanDefaultArgs>()({
   select: {
     id: true,

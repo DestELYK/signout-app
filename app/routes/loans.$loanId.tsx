@@ -38,6 +38,12 @@ import { prisma } from "~/lib/prisma.server";
 import { LoanFindOne, loanFindOne } from "~/utils/types.server";
 import { formatDate, fullName } from "~/utils/utils";
 
+// TODO - Show returned by if another person returned the item
+// TODO - Allow editing the person (changing who has the loan, in the case of incorrect person selected)
+// TODO - Allow editing individual items (in case of swapping items)
+// TODO - Allow adding tags to the loan
+// TODO - Create a base component for displaying single item (for use for items and people)
+
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
 
@@ -99,8 +105,6 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
             }),
           },
         });
-
-        console.log(updateCount);
 
         if (!updateCount) {
           throw new Response(null, {

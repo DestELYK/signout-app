@@ -35,6 +35,11 @@ export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];
 };
 
+// TODO - implement importing and exporting data
+// TODO - allow filtering the list
+// TODO - hide pagination if all loans are displayed on one page
+// TODO - create a base component for displaying list of items (for use with items and people)
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
 

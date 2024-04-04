@@ -1,10 +1,9 @@
 import { Prisma } from "@prisma/client";
-import { LoaderFunctionArgs } from "@remix-run/node";
+import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { error } from "console";
 import { typedjson } from "remix-typedjson";
 import { prisma } from "~/lib/prisma.server";
 import { personFindMany } from "~/utils/types.server";
-
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -75,3 +74,57 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     })
   );
 };
+
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.json();
+
+  try {
+    switch (request.method) {
+      case "POST":
+        const firstName = formData.firstName;
+
+        if (!firstName) {
+          throw new Error("FirstName must be provided");
+        }
+
+        const lastName = formData.lastName;
+
+        if (!lastName) {
+          throw new Error("LastName must be provided");
+        }
+
+        const nickname = formData.nickname;
+
+        const qrCode = formData.qrCode;
+
+        const role: { id: number } = formData.role;
+
+        if (!role) {
+          throw new Error("There must be a role");
+        }
+
+        return typedjson(
+          await prisma.person.create({
+            data: {
+              firstName: firstName,
+              lastName: lastName,
+              ...(nickname && { nickname: nickname }),
+              ...(qrCode && { qrCode: qrCode }),
+              role: {
+                connect: role,
+              },
+            },
+          })
+        );
+      default:
+        throw new Response(null, {
+          status: 405,
+        });
+    }
+  } catch (e) {
+    console.error(e);
+    throw new Response(null, {
+      status: 500,
+    });
+  }
+}

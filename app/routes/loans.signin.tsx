@@ -7,6 +7,7 @@ import {
   Fieldset,
   Flex,
   Group,
+  LoadingOverlay,
   ScrollArea,
   Stepper,
   Text,
@@ -28,6 +29,13 @@ import SearchForm, { SearchFormValues } from "~/components/SearchForm";
 import { prisma } from "~/lib/prisma.server";
 import { loanFindMany } from "~/utils/types.server";
 import { fullName } from "~/utils/utils";
+
+// TODO - Add returned by person field
+// TODO - Limit number of loans shown (hide until user searches)
+// TODO - Modify how loan items are displayed
+// TODO - Allow loans to be listed as a grid
+// TODO - Stack items
+// TODO - show no items selected error
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -51,7 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
       return typedjson({ selectedLoan: result, outstandingLoans: undefined });
     } catch (e) {
-      console.error("Failed to find loan", e);
+      console.error("Failed to find loan: ", e);
 
       return redirect("/loans/signin");
     }
@@ -87,8 +95,6 @@ export default function Page() {
 
   const loan = useTypedLoaderData<typeof loader>();
 
-  console.log(loan)
-
   const [searchingForPerson, setSearchingForPerson] = useState(true);
 
   const [active, setActive] = useState(0);
@@ -102,33 +108,33 @@ export default function Page() {
   }, [loanId]);
 
   const filteredLoans =
-    loan &&
-    loan.outstandingLoans &&
-    loan.outstandingLoans.length > 0 &&
-    (personSearch || itemSearch)
-      ? loan.outstandingLoans.filter((l) => {
-          if (personSearch) {
-            if (personSearch.qrCode) {
-              return l.person.qrCode === personSearch.qrCode;
-            } else if (personSearch.name) {
-              return fullName(l.person)
-                .toLowerCase()
-                .includes(personSearch.name.toLowerCase());
+    loan && loan.outstandingLoans
+      ? loan.outstandingLoans.length > 0 && (personSearch || itemSearch)
+        ? loan.outstandingLoans.filter((l) => {
+            if (personSearch) {
+              if (personSearch.qrCode) {
+                return l.person.qrCode === personSearch.qrCode;
+              } else if (personSearch.name) {
+                return fullName(l.person)
+                  .toLowerCase()
+                  .includes(personSearch.name.toLowerCase());
+              }
+            } else if (itemSearch) {
+              if (itemSearch.qrCode) {
+                return l.items.find((i) => i.item.qrCode == itemSearch.qrCode);
+              } else if (itemSearch.name) {
+                return l.items.find((i) => i.item.name == itemSearch.name);
+              }
             }
-          } else if (itemSearch) {
-            if (itemSearch.qrCode) {
-              return l.items.find((i) => i.item.qrCode == itemSearch.qrCode);
-            } else if (itemSearch.name) {
-              return l.items.find((i) => i.item.name == itemSearch.name);
-            }
-          }
 
-          return true;
-        })
-      : loan.outstandingLoans;
+            return true;
+          })
+        : []
+      : undefined;
 
   const loans =
-    filteredLoans && filteredLoans.length > 0 ? (
+    filteredLoans &&
+    (filteredLoans.length > 0 ? (
       <ScrollArea.Autosize
         mah="calc(100dvh - 35rem)"
         type="auto"
@@ -149,7 +155,7 @@ export default function Page() {
       </ScrollArea.Autosize>
     ) : (
       <Text>No loans found</Text>
-    );
+    ));
 
   useEffect(() => {
     const event = (event: BeforeUnloadEvent) => {
@@ -175,7 +181,7 @@ export default function Page() {
           <CloseButton
             size="xl"
             style={{ justifySelf: "flex-end" }}
-            onClick={() => navigate('/loans')}
+            onClick={() => navigate("/loans")}
           />
         </Flex>
       </Card.Section>
@@ -198,74 +204,80 @@ export default function Page() {
           label="Select Loan"
           description="Select an outstanding loan"
         >
-          <Fieldset
-            legend={`${searchingForPerson ? "Person" : "Item"} Search`}
-            w="100%"
-            p="sm"
-            h="fit-content"
-          >
-            <Box w="100%" h="100%">
-              <div hidden={!searchingForPerson}>
-                {/* Searching for Person */}
-                <SearchForm
-                  formData={{
-                    placeholder: {
-                      name: "Enter person's name",
-                      qrCode: "Enter QR Code",
-                    },
-                    submitIcon: <IconSearch />,
-                  }}
-                  onQRCodeChanged={(value) => {
-                    setPersonSearch(value ? { qrCode: value } : undefined);
-                    return value.length !== 0;
-                  }}
-                  onNameChanged={(value) => {
-                    setPersonSearch(value ? { name: value } : undefined);
-                    return value.length !== 0;
-                  }}
-                  submitHidden
-                  showCombobox={false}
-                />
-              </div>
-              <div hidden={searchingForPerson}>
-                {/* Searching for Item */}
-                <SearchForm
-                  formData={{
-                    placeholder: {
-                      name: "Enter item name",
-                      qrCode: "Enter QR Code",
-                    },
-                    submitIcon: <IconSearch />,
-                  }}
-                  onQRCodeChanged={(value) => {
-                    setItemSearch(value ? { qrCode: value } : undefined);
-                    return value.length !== 0;
-                  }}
-                  onNameChanged={(value) => {
-                    setItemSearch(value ? { name: value } : undefined);
-                    return value.length !== 0;
-                  }}
-                  submitHidden
-                  showCombobox={false}
-                />
-              </div>
-            </Box>
-            <Flex direction="row" w="100%" justify="end" mt="sm">
-              <Button
-                variant="subtle"
-                onClick={() =>
-                  setSearchingForPerson(
-                    (searchingForPerson) => !searchingForPerson
-                  )
-                }
-              >
-                {searchingForPerson ? "Search for item" : "Search for person"}
-              </Button>
-            </Flex>
-          </Fieldset>
-          <Fieldset h="100%" legend="Loans">
-            {loans}
-          </Fieldset>
+          <Box pos="relative">
+            <LoadingOverlay
+              visible={!loan || !loan.outstandingLoans}
+              zIndex={1000}
+            />
+            <Fieldset
+              legend={`${searchingForPerson ? "Person" : "Item"} Search`}
+              w="100%"
+              p="sm"
+              h="fit-content"
+            >
+              <Box pos="relative">
+                <div hidden={!searchingForPerson}>
+                  {/* Searching for Person */}
+                  <SearchForm
+                    formData={{
+                      placeholder: {
+                        name: "Enter person's name",
+                        qrCode: "Enter QR Code",
+                      },
+                      submitIcon: <IconSearch />,
+                    }}
+                    onQRCodeChanged={(value) => {
+                      setPersonSearch(value ? { qrCode: value } : undefined);
+                      return value.length !== 0;
+                    }}
+                    onNameChanged={(value) => {
+                      setPersonSearch(value ? { name: value } : undefined);
+                      return value.length !== 0;
+                    }}
+                    submitHidden
+                    showCombobox={false}
+                  />
+                </div>
+                <div hidden={searchingForPerson}>
+                  {/* Searching for Item */}
+                  <SearchForm
+                    formData={{
+                      placeholder: {
+                        name: "Enter item name",
+                        qrCode: "Enter QR Code",
+                      },
+                      submitIcon: <IconSearch />,
+                    }}
+                    onQRCodeChanged={(value) => {
+                      setItemSearch(value ? { qrCode: value } : undefined);
+                      return value.length !== 0;
+                    }}
+                    onNameChanged={(value) => {
+                      setItemSearch(value ? { name: value } : undefined);
+                      return value.length !== 0;
+                    }}
+                    submitHidden
+                    showCombobox={false}
+                  />
+                </div>
+              </Box>
+              <Flex direction="row" w="100%" justify="end" mt="sm">
+                <Button
+                  variant="subtle"
+                  onClick={() =>
+                    setSearchingForPerson(
+                      (searchingForPerson) => !searchingForPerson
+                    )
+                  }
+                >
+                  {searchingForPerson ? "Search for item" : "Search for person"}
+                </Button>
+              </Flex>
+            </Fieldset>
+            <Fieldset h="100%" legend="Loans">
+              {loans}
+            </Fieldset>
+          </Box>
         </Stepper.Step>
         <Stepper.Step
           h="100%"
@@ -273,38 +285,49 @@ export default function Page() {
           description="Select Item(s) to Sign-In"
         >
           <Fieldset legend="Items">
-            {loan.selectedLoan &&
-            loan.selectedLoan.items &&
-            loan.selectedLoan.items.length > 0 ? (
-              <Checkbox.Group
-                label="Select items for signing in"
-                description="All items selected will be marked as returned"
-                value={signinForm.values.itemIds.map((itemId) =>
-                  itemId.toString()
-                )}
-                onChange={(values) =>
-                  signinForm.setFieldValue(
-                    "itemIds",
-                    values.map((v) => parseInt(v))
-                  )
+            <Box pos="relative">
+              <LoadingOverlay
+                visible={
+                  !loan || !loan.selectedLoan || !loan.selectedLoan.items
                 }
-              >
-                <Group mt="sm">
-                  {loan.selectedLoan.items.filter(i => !i.dateReturned).map((item, index) => {
-                    return (
-                      <Checkbox
-                        value={item.item.id.toString()}
-                        label={item.item.name}
-                        checked
-                      />
-                    );
-                  })}
-                </Group>
-              </Checkbox.Group>
-            ) : (
-              <Text>No Items</Text>
-            )}
-            {/* {loan && loan.items && loan.items.length > 0  */}
+                zIndex={1000}
+              />
+              {loan &&
+                loan.selectedLoan &&
+                loan.selectedLoan.items &&
+                (loan.selectedLoan.items.length > 0 ? (
+                  <Checkbox.Group
+                    label="Select items for signing in"
+                    description="All items selected will be marked as returned"
+                    value={signinForm.values.itemIds.map((itemId) =>
+                      itemId.toString()
+                    )}
+                    onChange={(values) =>
+                      signinForm.setFieldValue(
+                        "itemIds",
+                        values.map((v) => parseInt(v))
+                      )
+                    }
+                  >
+                    <Group mt="sm">
+                      {loan.selectedLoan.items
+                        .filter((i) => !i.dateReturned)
+                        .map((item, index) => {
+                          return (
+                            <Checkbox
+                              key={item.item.id}
+                              value={item.item.id.toString()}
+                              label={item.item.name}
+                              checked
+                            />
+                          );
+                        })}
+                    </Group>
+                  </Checkbox.Group>
+                ) : (
+                  <Text>No Items</Text>
+                ))}
+            </Box>
           </Fieldset>
 
           <form

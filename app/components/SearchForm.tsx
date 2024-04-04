@@ -4,12 +4,14 @@ import {
   CloseButton,
   Combobox,
   Flex,
+  Group,
   TextInput,
   useCombobox,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { nameValidator, qrCodeValidator } from "~/utils/validators.client";
 import QrButton from "./QrButton";
 import { ScanResults } from "./Scanner";
 
@@ -36,6 +38,7 @@ export type SearchFormProps = {
     label?: {
       qrCode?: string;
       name?: string;
+      createButton?: string;
     };
     description?: {
       qrCode?: string;
@@ -51,7 +54,7 @@ export type SearchFormProps = {
   onQRCodeChanged?: (value: string) => boolean;
   onNameChanged?: (value: string) => boolean;
   onSubmit?: (value: string) => void;
-  onCreateButton?: () => void;
+  onCreateButton?: () => boolean;
   props?: React.FormHTMLAttributes<HTMLFormElement>;
 };
 
@@ -80,23 +83,18 @@ export default function SearchForm<T>({
       name: "",
     },
     validate: {
-      // TODO - add check for undefined
       qrCode: (value, values) => {
-        if (value!.length === 0 && values.name!.length === 0) {
+        if (values.name?.length === 0 && values.qrCode?.length === 0) {
           return ERRORS.BOTH_EMPTY;
-        } else if (values.name!.length === 0) {
-          if (!/[0-9]/g.test(value!)) {
-            return ERRORS.INVALID_QRCODE;
-          }
+        } else {
+          return qrCodeValidator(value);
         }
       },
       name: (value, values) => {
-        if (value!.length === 0 && values.qrCode!.length === 0) {
+        if (values.name?.length === 0 && values.qrCode?.length === 0) {
           return ERRORS.BOTH_EMPTY;
-        } else if (values.qrCode!.length === 0) {
-          if (!/[A-Z ]+/gi.test(value!)) {
-            return ERRORS.INVALID_CHARACTERS;
-          }
+        } else {
+          return nameValidator(value);
         }
       },
     },
@@ -249,6 +247,20 @@ export default function SearchForm<T>({
         {showCombobox ? (
           <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
             {children}
+            {onCreateButton ? (
+              <Combobox.Option
+                value="$create"
+                variant="subtle"
+                onClick={() => {
+                  if (onCreateButton()) combobox.closeDropdown();
+                }}
+              >
+                <Group justify="center">
+                  <IconPlus />
+                  {formData.label?.createButton || "Create New Item"}
+                </Group>
+              </Combobox.Option>
+            ) : null}
           </Combobox.Dropdown>
         ) : null}
       </Combobox>
