@@ -24,8 +24,8 @@ import {
   useTypedFetcher,
   useTypedLoaderData,
 } from "remix-typedjson";
-import { LoanItemView } from "~/components/LoanItemView";
 import SearchForm, { SearchFormValues } from "~/components/SearchForm";
+import { LoanItemView } from "~/components/loans/LoanItemView";
 import { prisma } from "~/lib/prisma.server";
 import { loanFindMany } from "~/utils/types.server";
 import { fullName } from "~/utils/utils";

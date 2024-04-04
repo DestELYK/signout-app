@@ -4,33 +4,32 @@ import {
     Group,
     LoadingOverlay,
     Stack,
-    TextInput
+    Text,
+    TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
+import { modals } from "@mantine/modals";
 import { Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
+import { useEffect } from "react";
+import { useTypedFetcher } from "remix-typedjson";
+import { action } from "~/routes/items";
 import {
     nameValidator,
     qrCodeValidator,
     tagValidator,
 } from "~/utils/validators.client";
-import TagCombobox from "../TagCombobox";
+import TagCombobox from "../tags/TagCombobox";
 
 export type ItemFormValues = { name: string; qrCode?: string; tags: Tag[] };
 
 export type CreateItemFormProps = {
-  onSubmit?: (values: ItemFormValues) => void;
-  onTagSearch?: (value: string) => void;
-  loading?: boolean;
-  tags: Tag[];
+  onSubmitted?: (item: { id: number; name: string }) => void;
+  name?: string;
+  qrCode?: string;
 };
 
-export default function CreateItemForm({
-  onSubmit,
-  onTagSearch,
-  loading,
-  tags,
-}: CreateItemFormProps) {
+export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItemFormProps) {
   const form = useForm<ItemFormValues>({
     initialValues: {
       name: "",
@@ -46,7 +45,21 @@ export default function CreateItemForm({
     },
   });
 
-  const test = form.getInputProps("tags");
+  const submitNewItem = useTypedFetcher<typeof action>();
+
+  const loading = submitNewItem.state !== "idle";
+
+  useEffect(() => {
+    name && form.setFieldValue("name", name);
+    qrCode && form.setFieldValue("qrCode", qrCode);
+  }, [name, qrCode])
+
+  // updates on new person creation
+  useEffect(() => {
+    if (submitNewItem.state === "idle" && submitNewItem.data) {
+      onSubmitted?.(submitNewItem.data);
+    }
+  }, [submitNewItem.state, submitNewItem.data]);
 
   return (
     <Box pos="relative">
@@ -54,10 +67,43 @@ export default function CreateItemForm({
       <Form
         action="/items"
         method="POST"
-        onSubmit={form.onSubmit((values) => onSubmit?.(values))}
+        onSubmit={form.onSubmit((values) => {
+          modals.openConfirmModal({
+            id: "item-create-confirm",
+            title: "Confirm Creation",
+            centered: true,
+            children: (
+              <Text>
+                Are you sure you want to create a new item named {values.name}?
+              </Text>
+            ),
+            labels: {
+              confirm: "Yes",
+              cancel: "No",
+            },
+            onConfirm: () => {
+              modals.close("item-create-confirm");
+
+              submitNewItem.submit(values, {
+                action: "/items",
+                method: "POST",
+                navigate: false,
+                encType: "application/json",
+              });
+            },
+            onCancel: () => {
+              modals.close("item-create-confirm");
+            },
+          });
+        })}
       >
         <Stack gap="sm">
-          <TextInput label="Name" required {...form.getInputProps("name")} />
+          <TextInput
+            label="Name"
+            required
+            data-autofocus
+            {...form.getInputProps("name")}
+          />
           <TextInput
             label="QR Code"
             description="Optional qr code entry (can be added later)"
@@ -65,17 +111,16 @@ export default function CreateItemForm({
             {...form.getInputProps("qrCode")}
           />
           <TagCombobox
-            onTagSearch={onTagSearch}
             onChange={(values) => {
-                form.setFieldValue("tags", values);
+              form.setFieldValue("tags", values);
             }}
+            category="Item Type"
             limit={3}
             fieldInfo={{
-                label: "Tags",
-                placeholder: "Search for tags...",
-                description: "Select at least 1 tag for item"
+              label: "Tags",
+              placeholder: "Search for tags...",
+              description: "Select at least 1 tag for item",
             }}
-            tags={tags}
             inputProps={form.getInputProps("tags")}
           />
 

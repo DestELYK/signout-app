@@ -22,14 +22,14 @@ import {
 } from "@remix-run/react";
 import { Suspense, useState } from "react";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
-import { LoanItemView } from "~/components/LoanItemView";
+import { LoanItemView } from "~/components/loans/LoanItemView";
 import { prisma } from "~/lib/prisma.server";
 import {
   ItemFindMany,
   PersonFindOne,
   loanFindMany,
 } from "~/utils/types.server";
-import { LoanListView } from "../components/LoanListView";
+import { LoanListView } from "../components/loans/LoanListView";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];

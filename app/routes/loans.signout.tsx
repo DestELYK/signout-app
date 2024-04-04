@@ -20,6 +20,7 @@ import { useForm } from "@mantine/form";
 import { useDisclosure, useToggle } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
+import { Tag } from "@prisma/client";
 import { useActionData, useNavigate } from "@remix-run/react";
 import { IconEdit, IconPlus } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
@@ -32,16 +33,16 @@ import CreatePersonForm from "~/components/people/CreatePersonForm";
 import PersonView from "~/components/people/PersonComboView";
 import { ItemFindMany, PersonFindOne } from "~/utils/types.server";
 import { dateDiff, formatDate, fullName } from "~/utils/utils";
-import { action as itemAction, loader as itemsLoader } from "./items";
+import { loader as itemsLoader } from "./items";
 import { loader as itemLoader } from "./items.$itemId";
 import { action as loanAction } from "./loans";
 import { loader as peopleLoader } from "./people";
 import { loader as personLoader } from "./people.$personId";
-import { loader as tagsLoader } from "./tags";
 
 interface LoanFormValues {
   person: PersonFindOne | undefined;
   items: ItemFindMany[];
+  tags: Tag[];
 }
 
 // TODO - Allow adding tags to loan
@@ -58,13 +59,9 @@ export default function Page() {
 
   const searchPeopleFetcher = useTypedFetcher<typeof peopleLoader>();
   const searchItemsFetcher = useTypedFetcher<typeof itemsLoader>();
-  const searchTagsFetcher = useTypedFetcher<typeof tagsLoader>();
 
   const submitPersonFetcher = useTypedFetcher<typeof personLoader>();
   const submitItemFetcher = useTypedFetcher<typeof itemLoader>();
-
-  const submitNewPerson = useTypedFetcher<typeof itemAction>();
-  const submitNewItem = useTypedFetcher<typeof itemAction>();
 
   const [opened, { open, close }] = useDisclosure(false);
   const [createType, toggleCreateType] = useToggle(["person", "item"]);
@@ -80,6 +77,7 @@ export default function Page() {
     initialValues: {
       person: undefined,
       items: [],
+      tags: [],
     },
     validate: {
       person: (value) => {
@@ -236,22 +234,6 @@ export default function Page() {
     }
   }, [submitItemFetcher.data]);
 
-  // updates on new person creation
-  useEffect(() => {
-    if (submitNewPerson.state === "idle" && submitNewPerson.data) {
-      handleItemSelect("person", submitNewPerson.data.id.toString());
-      close();
-    }
-  }, [submitNewPerson.state, submitNewPerson.data]);
-
-  // updates on new person creation
-  useEffect(() => {
-    if (submitNewItem.state === "idle" && submitNewItem.data) {
-      handleItemSelect("item", submitNewItem.data.id.toString());
-      close();
-    }
-  }, [submitNewItem.state, submitNewItem.data]);
-
   function updateData(path: "person" | "item", value: SearchFormValues) {
     switch (path) {
       case "person":
@@ -335,7 +317,6 @@ export default function Page() {
   }
 
   function handleDataCreation(path: "person" | "item") {
-    searchTagsFetcher.load("");
     toggleCreateType(path);
     open();
   }
@@ -373,78 +354,20 @@ export default function Page() {
       >
         {createType == "person" ? (
           <CreatePersonForm
-            onTagSearch={(value) => {
-              searchTagsFetcher.load(`/tags?category=Person Role&q=${value}`);
+            onSubmitted={(person) => {
+              handleItemSelect("person", person.id.toString());
+              close();
             }}
-            onSubmit={(values) => {
-              modals.openConfirmModal({
-                id: "person-create-confirm",
-                title: "Confirm Creation",
-                centered: true,
-                children: (
-                  <Text>
-                    Are you sure you want to create a new person named{" "}
-                    {fullName(values)}?
-                  </Text>
-                ),
-                labels: {
-                  confirm: "Yes",
-                  cancel: "No",
-                },
-                onConfirm: () => {
-                  modals.close("person-create-confirm");
-                  submitNewPerson.submit(values, {
-                    action: "/people",
-                    method: "POST",
-                    navigate: false,
-                    encType: "application/json",
-                  });
-                },
-                onCancel: () => {
-                  modals.close("item-create-confirm");
-                },
-              });
-            }}
-            loading={submitNewPerson.state !== "idle"}
-            tags={searchTagsFetcher.data}
+            {...personSearch}
           />
         ) : (
           createType == "item" && (
             <CreateItemForm
-              onTagSearch={(value) => {
-                searchTagsFetcher.load(`/tags?category=Item Type&q=${value}`);
+              onSubmitted={(item) => {
+                handleItemSelect("item", item.id.toString());
+                close();
               }}
-              onSubmit={(values) => {
-                modals.openConfirmModal({
-                  id: "item-create-confirm",
-                  title: "Confirm Creation",
-                  centered: true,
-                  children: (
-                    <Text>
-                      Are you sure you want to create a new item named{" "}
-                      {values.name}?
-                    </Text>
-                  ),
-                  labels: {
-                    confirm: "Yes",
-                    cancel: "No",
-                  },
-                  onConfirm: () => {
-                    modals.close("item-create-confirm");
-                    submitNewItem.submit(values, {
-                      action: "/items",
-                      method: "POST",
-                      navigate: false,
-                      encType: "application/json",
-                    });
-                  },
-                  onCancel: () => {
-                    modals.close("item-create-confirm");
-                  },
-                });
-              }}
-              loading={submitNewItem.state !== "idle"}
-              tags={searchTagsFetcher.data}
+              {...itemSearch}
             />
           )
         )}
