@@ -174,18 +174,15 @@ export default function Page() {
       if (a.items.find((i) => !i.dateReturned)) {
         if (b.items.find((i) => !i.dateReturned))
           return b.createdDate.getTime() - a.createdDate.getTime();
-        else
-          return -1000;
+        else return -1000;
       } else {
-        if (b.items.find((i) => !i.dateReturned))
-          return 1000;
-        else
-          return b.createdDate.getTime() - a.createdDate.getTime();
+        if (b.items.find((i) => !i.dateReturned)) return 1000;
+        else return b.createdDate.getTime() - a.createdDate.getTime();
       }
     }),
   ].slice(
-    activePage * ITEMS_PER_PAGE,
-    activePage * ITEMS_PER_PAGE + ITEMS_PER_PAGE
+    (activePage - 1) * ITEMS_PER_PAGE,
+    (activePage - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
   );
 
   // const outstandingLoans = loans.filter((loan) => loan._count.items > 0);
@@ -213,21 +210,29 @@ export default function Page() {
         ) : (
           <div className="h-full w-full">No Outstanding Loans</div>
         )}
-        <Pagination.Root
-          w="100%"
-          mt="md"
-          px="sm"
-          style={{ flexWrap: "nowrap" }}
-          total={data ? data.count / ITEMS_PER_PAGE : 0}
-          value={activePage}
-          onChange={setPage}
-        >
-          <Group gap={5} justify="center">
-            <Pagination.Previous />
-            <Pagination.Items />
-            <Pagination.Next />
-          </Group>
-        </Pagination.Root>
+        {data.count > ITEMS_PER_PAGE && (
+          <Pagination.Root
+            w="100%"
+            mt="md"
+            px="sm"
+            style={{ flexWrap: "nowrap" }}
+            total={
+              data
+                ? data.count > ITEMS_PER_PAGE
+                  ? data.count / ITEMS_PER_PAGE
+                  : data.count
+                : 0
+            }
+            value={activePage}
+            onChange={setPage}
+          >
+            <Group gap={5} justify="center">
+              <Pagination.Previous />
+              <Pagination.Items />
+              <Pagination.Next />
+            </Group>
+          </Pagination.Root>
+        )}
       </Suspense>
     </LoanListView>
   );
