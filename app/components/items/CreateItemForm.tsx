@@ -1,30 +1,30 @@
 import {
-    Box,
-    Button,
-    Group,
-    LoadingOverlay,
-    Stack,
-    Text,
-    TextInput,
+  Box,
+  Button,
+  Group,
+  LoadingOverlay,
+  Stack,
+  Text,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
-import { Tag } from "@prisma/client";
+import { Item, Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/items";
 import {
-    nameValidator,
-    qrCodeValidator,
-    tagValidator,
+  qrCodeValidator,
+  specialValidator,
+  tagValidator
 } from "~/utils/validators.client";
 import TagCombobox from "../tags/TagCombobox";
 
 export type ItemFormValues = { name: string; qrCode?: string; tags: Tag[] };
 
 export type CreateItemFormProps = {
-  onSubmitted?: (item: { id: number; name: string }) => void;
+  onSubmitted?: (item: Item) => void;
   name?: string;
   qrCode?: string;
 };
@@ -37,7 +37,7 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
       tags: [],
     },
     validate: {
-      name: (value) => nameValidator(value),
+      name: (value) => specialValidator(value),
       qrCode: (value) => {
         if (value && value.length !== 0) return qrCodeValidator(value);
       },

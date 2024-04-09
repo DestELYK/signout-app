@@ -57,9 +57,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   } catch (e) {
     console.log("Failed to find /loans/$loanId", e);
     throw new Response(null, {
-      status: 404,
-      statusText: "Not Found",
-    });
+      status: 404
+    })
   }
 };
 
@@ -138,7 +137,7 @@ export default function Page() {
   const form = useForm<LoanFindOne>();
 
   const outstanding =
-    loan.items.find((item) => !item.dateReturned) !== undefined;
+    loan.items && loan.items.find((item) => !item.dateReturned) !== undefined;
 
   useEffect(() => {
     form.setFieldValue("items", loan.items);

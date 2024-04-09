@@ -14,21 +14,16 @@ import {
   Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { LoaderFunctionArgs } from "@remix-run/node";
+import { useToggle } from "@mantine/hooks";
 import { useNavigate, useSearchParams } from "@remix-run/react";
-import { IconSearch } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import {
-  redirect,
-  typedjson,
-  useTypedFetcher,
-  useTypedLoaderData,
-} from "remix-typedjson";
-import SearchForm, { SearchFormValues } from "~/components/SearchForm";
+import { useTypedFetcher } from "remix-typedjson";
+import SearchItemForm from "~/components/items/SearchItemForm";
 import { LoanItemView } from "~/components/loans/LoanItemView";
-import { prisma } from "~/lib/prisma.server";
-import { loanFindMany } from "~/utils/types.server";
-import { fullName } from "~/utils/utils";
+import SearchPersonForm from "~/components/people/SearchPersonForm";
+import { capitalizeFirstLetter } from "~/utils/utils";
+import { loader as loansLoader } from "./loans";
+import { loader as loanLoader } from "./loans.$loanId";
 
 // TODO - Add returned by person field
 // TODO - Limit number of loans shown (hide until user searches)
@@ -37,54 +32,50 @@ import { fullName } from "~/utils/utils";
 // TODO - Stack items
 // TODO - show no items selected error
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
+// export const loader = async ({ request }: LoaderFunctionArgs) => {
+//   const url = new URL(request.url);
 
-  const loanIdParam = url.searchParams.get("loanId");
+//   const loanIdParam = url.searchParams.get("loanId");
 
-  if (loanIdParam && loanIdParam.length !== 0) {
-    try {
-      const result = await prisma.loan.findFirstOrThrow({
-        where: {
-          id: parseInt(loanIdParam),
-        },
-        select: {
-          ...loanFindMany.select,
-        },
-      });
+//   if (loanIdParam && loanIdParam.length !== 0) {
+//     try {
+//       const result = await prisma.loan.findFirstOrThrow({
+//         where: {
+//           id: parseInt(loanIdParam),
+//         },
+//         select: {
+//           ...loanFindMany.select,
+//         },
+//       });
 
-      if (!result) {
-        return redirect("/loans/signin");
-      }
+//       if (!result) {
+//         return redirect("/loans/signin");
+//       }
 
-      return typedjson({ selectedLoan: result, outstandingLoans: undefined });
-    } catch (e) {
-      console.error("Failed to find loan: ", e);
+//       return typedjson({ selectedLoan: result, outstandingLoans: undefined });
+//     } catch (e) {
+//       console.error("Failed to find loan: ", e);
 
-      return redirect("/loans/signin");
-    }
-  } else {
-    return typedjson({
-      outstandingLoans: await prisma.loan.findMany({
-        where: {
-          items: {
-            some: {
-              dateReturned: null,
-            },
-          },
-        },
-        select: loanFindMany.select,
-      }),
-      selectedLoan: undefined,
-    });
-  }
-};
+//       return redirect("/loans/signin");
+//     }
+//   } else {
+//     return typedjson({
+//       outstandingLoans: await prisma.loan.findMany({
+//         where: {
+//           items: {
+//             some: {
+//               dateReturned: null,
+//             },
+//           },
+//         },
+//         select: loanFindMany.select,
+//       }),
+//       selectedLoan: undefined,
+//     });
+//   }
+// };
 
 export default function Page() {
-  const navigate = useNavigate();
-  const fetcher = useTypedFetcher();
-  const [searchParams, setSearchParams] = useSearchParams();
-
   const signinForm = useForm<{
     itemIds: number[];
   }>({
@@ -93,69 +84,115 @@ export default function Page() {
     },
   });
 
-  const loan = useTypedLoaderData<typeof loader>();
+  const navigate = useNavigate();
 
-  const [searchingForPerson, setSearchingForPerson] = useState(true);
+  const loansFetcher = useTypedFetcher<typeof loansLoader>();
+  const loan = useTypedFetcher<typeof loanLoader>();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [searchType, toggleSearchType] = useToggle(["person", "item"] as const);
+
+  const [searchId, setSearchId] = useState("");
 
   const [active, setActive] = useState(0);
-  const [personSearch, setPersonSearch] = useState<SearchFormValues>();
-  const [itemSearch, setItemSearch] = useState<SearchFormValues>();
 
   const loanId = searchParams.get("loanId");
 
   useEffect(() => {
+    if (loanId) {
+      loan.load(`/loans/${loanId}`);
+      setSearchId("");
+    } else if (searchId) {
+      console.log("Searching by id: %s", searchId);
+      switch (searchType) {
+        case "person":
+          loansFetcher.load(`/loans?personId=${searchId}`);
+          break;
+        case "item":
+          loansFetcher.load(`/loans?itemId=${searchId}`);
+          break;
+      }
+    } else {
+      loansFetcher.load("");
+    }
+
     setActive(loanId ? 1 : 0);
-  }, [loanId]);
+  }, [loanId, searchId]);
 
-  const filteredLoans =
-    loan && loan.outstandingLoans
-      ? loan.outstandingLoans.length > 0 && (personSearch || itemSearch)
-        ? loan.outstandingLoans.filter((l) => {
-            if (personSearch) {
-              if (personSearch.qrCode) {
-                return l.person.qrCode === personSearch.qrCode;
-              } else if (personSearch.name) {
-                return fullName(l.person)
-                  .toLowerCase()
-                  .includes(personSearch.name.toLowerCase());
-              }
-            } else if (itemSearch) {
-              if (itemSearch.qrCode) {
-                return l.items.find((i) => i.item.qrCode == itemSearch.qrCode);
-              } else if (itemSearch.name) {
-                return l.items.find((i) => i.item.name == itemSearch.name);
-              }
-            }
-
-            return true;
-          })
-        : []
-      : undefined;
-
-  const loans =
-    filteredLoans &&
-    (filteredLoans.length > 0 ? (
-      <ScrollArea.Autosize
-        mah="calc(100dvh - 35rem)"
-        type="auto"
-        scrollbars="y"
-      >
-        {filteredLoans.map((l) => (
-          <LoanItemView
-            key={l.id}
-            loan={l}
-            onClick={() => {
-              setSearchParams((prev) => {
-                prev.set("loanId", l.id.toString());
-                return prev;
-              });
-            }}
-          />
-        ))}
-      </ScrollArea.Autosize>
+  const loanOptions =
+    !loanId && loansFetcher.data ? (
+      loansFetcher.data.loans.length > 0 ? (
+        loansFetcher.data.loans
+          .filter((l) => l._count.items > 0)
+          .map((l) => (
+            <LoanItemView
+              key={l.id}
+              loan={l}
+              onClick={() => {
+                setSearchParams((prev) => {
+                  prev.set("loanId", l.id.toString());
+                  return prev;
+                });
+              }}
+            />
+          ))
+      ) : (
+        <Text>No loans found</Text>
+      )
     ) : (
-      <Text>No loans found</Text>
-    ));
+      <Text>Search for loans</Text>
+    );
+
+  // const filteredLoans =
+  //   loan && loan.outstandingLoans
+  //     ? loan.outstandingLoans.length > 0 && (personSearch || itemSearch)
+  //       ? loan.outstandingLoans.filter((l) => {
+  //           if (personSearch) {
+  //             if (personSearch.qrCode) {
+  //               return l.person.qrCode === personSearch.qrCode;
+  //             } else if (personSearch.name) {
+  //               return fullName(l.person)
+  //                 .toLowerCase()
+  //                 .includes(personSearch.name.toLowerCase());
+  //             }
+  //           } else if (itemSearch) {
+  //             if (itemSearch.qrCode) {
+  //               return l.items.find((i) => i.item.qrCode == itemSearch.qrCode);
+  //             } else if (itemSearch.name) {
+  //               return l.items.find((i) => i.item.name == itemSearch.name);
+  //             }
+  //           }
+
+  //           return true;
+  //         })
+  //       : []
+  //     : undefined;
+
+  // const loans =
+  //   filteredLoans &&
+  //   (filteredLoans.length > 0 ? (
+  //     <ScrollArea.Autosize
+  //       mah="calc(100dvh - 35rem)"
+  //       type="auto"
+  //       scrollbars="y"
+  //     >
+  //       {filteredLoans.map((l) => (
+  //         <LoanItemView
+  //           key={l.id}
+  //           loan={l}
+  //           onClick={() => {
+  //             setSearchParams((prev) => {
+  //               prev.set("loanId", l.id.toString());
+  //               return prev;
+  //             });
+  //           }}
+  //         />
+  //       ))}
+  //     </ScrollArea.Autosize>
+  //   ) : (
+  //     <Text>No loans found</Text>
+  //   ));
 
   useEffect(() => {
     const event = (event: BeforeUnloadEvent) => {
@@ -199,86 +236,85 @@ export default function Page() {
           }
         }}
       >
+        {/* First Page - Selecting a loan */}
         <Stepper.Step
           h="100%"
           label="Select Loan"
           description="Select an outstanding loan"
         >
           <Box pos="relative">
-            <LoadingOverlay
-              visible={!loan || !loan.outstandingLoans}
-              zIndex={1000}
-            />
+            <LoadingOverlay visible={false} zIndex={1000} />
             <Fieldset
-              legend={`${searchingForPerson ? "Person" : "Item"} Search`}
+              legend={`${capitalizeFirstLetter(searchType)} Search`}
               w="100%"
               p="sm"
               h="fit-content"
             >
               <Box pos="relative">
-                <div hidden={!searchingForPerson}>
+                <div hidden={searchType != "person"}>
                   {/* Searching for Person */}
-                  <SearchForm
-                    formData={{
-                      placeholder: {
-                        name: "Enter person's name",
-                        qrCode: "Enter QR Code",
-                      },
-                      submitIcon: <IconSearch />,
+                  <SearchPersonForm
+                    submitOnSelect
+                    canCreate={false}
+                    filterItems={(items) =>
+                      items.filter((i) => i._count.loans > 0)
+                    }
+                    onSubmit={(value) => {
+                      console.log("Submit %s", value);
+                      setSearchId(value?.id.toString() || "");
+
+                      return true;
                     }}
-                    onQRCodeChanged={(value) => {
-                      setPersonSearch(value ? { qrCode: value } : undefined);
-                      return value.length !== 0;
-                    }}
-                    onNameChanged={(value) => {
-                      setPersonSearch(value ? { name: value } : undefined);
-                      return value.length !== 0;
-                    }}
-                    submitHidden
-                    showCombobox={false}
                   />
                 </div>
-                <div hidden={searchingForPerson}>
+                <div hidden={searchType != "item"}>
                   {/* Searching for Item */}
-                  <SearchForm
-                    formData={{
-                      placeholder: {
-                        name: "Enter item name",
-                        qrCode: "Enter QR Code",
-                      },
-                      submitIcon: <IconSearch />,
+                  <SearchItemForm
+                    submitOnSelect
+                    canCreate={false}
+                    filterItems={(items) =>
+                      items.filter((i) => i._count.loans > 0)
+                    }
+                    onSubmit={(value) => {
+                      setSearchId(value?.id.toString() || "");
+
+                      return true;
                     }}
-                    onQRCodeChanged={(value) => {
-                      setItemSearch(value ? { qrCode: value } : undefined);
-                      return value.length !== 0;
-                    }}
-                    onNameChanged={(value) => {
-                      setItemSearch(value ? { name: value } : undefined);
-                      return value.length !== 0;
-                    }}
-                    submitHidden
-                    showCombobox={false}
                   />
+                  {/* <SearchItemForm
+                    submitOnSelect
+                    canCreate={false}
+                    onReset={() => setSearchId("")}
+                    onSubmit={(value) => {
+                      setSearchId(value?.id.toString() || "");
+                    }}
+                  /> */}
                 </div>
               </Box>
               <Flex direction="row" w="100%" justify="end" mt="sm">
                 <Button
                   variant="subtle"
-                  onClick={() =>
-                    setSearchingForPerson(
-                      (searchingForPerson) => !searchingForPerson
-                    )
-                  }
+                  onClick={() => {
+                    toggleSearchType();
+                  }}
                 >
-                  {searchingForPerson ? "Search for item" : "Search for person"}
+                  {`Search for ${searchType == "person" ? "item" : "person"}`}
                 </Button>
               </Flex>
             </Fieldset>
             <Fieldset h="100%" legend="Loans">
-              {loans}
+              <ScrollArea.Autosize
+                mah="calc(100dvh - 34rem)"
+                style={{ overflowY: "auto" }}
+              >
+                {loanOptions}
+              </ScrollArea.Autosize>
             </Fieldset>
           </Box>
         </Stepper.Step>
+        {/* END */}
+
+        {/* Second Page - Selecting items to sign-in*/}
         <Stepper.Step
           h="100%"
           label="Select Item(s)"
@@ -286,53 +322,45 @@ export default function Page() {
         >
           <Fieldset legend="Items">
             <Box pos="relative">
-              <LoadingOverlay
-                visible={
-                  !loan || !loan.selectedLoan || !loan.selectedLoan.items
-                }
-                zIndex={1000}
-              />
-              {loan &&
-                loan.selectedLoan &&
-                loan.selectedLoan.items &&
-                (loan.selectedLoan.items.length > 0 ? (
-                  <Checkbox.Group
-                    label="Select items for signing in"
-                    description="All items selected will be marked as returned"
-                    value={signinForm.values.itemIds.map((itemId) =>
-                      itemId.toString()
-                    )}
-                    onChange={(values) =>
-                      signinForm.setFieldValue(
-                        "itemIds",
-                        values.map((v) => parseInt(v))
-                      )
-                    }
-                  >
-                    <Group mt="sm">
-                      {loan.selectedLoan.items
-                        .filter((i) => !i.dateReturned)
-                        .map((item, index) => {
-                          return (
-                            <Checkbox
-                              key={item.item.id}
-                              value={item.item.id.toString()}
-                              label={item.item.name}
-                              checked
-                            />
-                          );
-                        })}
-                    </Group>
-                  </Checkbox.Group>
-                ) : (
-                  <Text>No Items</Text>
-                ))}
+              <LoadingOverlay visible={loan.state !== "idle"} zIndex={1000} />
+              {loan.data && loan.data.items.length > 0 ? (
+                <Checkbox.Group
+                  label="Select items for signing in"
+                  description="All items selected will be marked as returned"
+                  value={signinForm.values.itemIds.map((itemId) =>
+                    itemId.toString()
+                  )}
+                  onChange={(values) =>
+                    signinForm.setFieldValue(
+                      "itemIds",
+                      values.map((v) => parseInt(v))
+                    )
+                  }
+                >
+                  <Group mt="sm">
+                    {loan.data.items
+                      .filter((i) => !i.dateReturned)
+                      .map((item, index) => {
+                        return (
+                          <Checkbox
+                            key={item.item.id}
+                            value={item.item.id.toString()}
+                            label={item.item.name}
+                            checked
+                          />
+                        );
+                      })}
+                  </Group>
+                </Checkbox.Group>
+              ) : (
+                <Text>No Items</Text>
+              )}
             </Box>
           </Fieldset>
 
           <form
             onSubmit={signinForm.onSubmit((values) => {
-              fetcher.submit(values, {
+              loan.submit(values, {
                 action: `/loans/${loanId}`,
                 method: "PATCH",
                 encType: "application/json",
@@ -345,6 +373,7 @@ export default function Page() {
             </Group>
           </form>
         </Stepper.Step>
+        {/* END */}
       </Stepper>
     </Card>
   );

@@ -2,7 +2,7 @@ import { Badge, Flex, Highlight } from "@mantine/core";
 import { PersonFindMany } from "~/utils/types.server";
 import { fullName } from "~/utils/utils";
 
-export default function PersonView({
+export default function PersonComboView({
   highlight,
   person,
 }: {

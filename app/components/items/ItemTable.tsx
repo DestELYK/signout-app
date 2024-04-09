@@ -19,7 +19,7 @@ export default function ItemTable({
   const rows = items.map((item, index) => (
     <Table.Tr key={item.id}>
       <Table.Td>
-        {item.qrCode && (
+        {item.qrCode ? (
           <div
             style={{
               height: "auto",
@@ -34,7 +34,7 @@ export default function ItemTable({
               viewBox={`0 0 32 32`}
             />
           </div>
-        )}
+        ) : null}
       </Table.Td>
       <Table.Td>
         {item.name}

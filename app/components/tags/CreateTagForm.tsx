@@ -1,12 +1,12 @@
 import {
-    Box,
-    Button,
-    ColorInput,
-    Group,
-    LoadingOverlay,
-    Stack,
-    Text,
-    TextInput,
+  Box,
+  Button,
+  ColorInput,
+  Group,
+  LoadingOverlay,
+  Stack,
+  Text,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -15,7 +15,7 @@ import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/tags";
-import { nameValidator } from "~/utils/validators.client";
+import { alphaValidator } from "~/utils/validators.client";
 
 export type TagFormValues = { name: string; color: string; category: string };
 
@@ -39,9 +39,9 @@ export default function CreateTagForm({
       category: "",
     },
     validate: {
-      name: (value) => nameValidator(value),
-      color: (value) => nameValidator(value),
-      category: (value) => nameValidator(value),
+      name: (value) => alphaValidator(value),
+      color: (value) => alphaValidator(value),
+      category: (value) => alphaValidator(value),
     },
   });
 

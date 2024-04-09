@@ -28,6 +28,7 @@ import {
   ItemFindMany,
   PersonFindOne,
   loanFindMany,
+  loanFindOne,
 } from "~/utils/types.server";
 import { LoanListView } from "../components/loans/LoanListView";
 
@@ -110,6 +111,27 @@ export async function action({ request }: ActionFunctionArgs) {
 
         const items = formData.items!;
 
+        const outstandingItems = await prisma.loanedItem.findMany({
+          where: {
+            AND: [
+              {
+                OR: items.map((i) => {
+                  return {
+                    itemId: i.id,
+                  };
+                }),
+              },
+              {
+                dateReturned: null,
+              },
+            ],
+          },
+        });
+
+        if (outstandingItems.length > 0) {
+          throw Error("One of the items is currently outstanding!");
+        }
+
         result = await prisma.loan.create({
           data: {
             person: {
@@ -132,10 +154,7 @@ export async function action({ request }: ActionFunctionArgs) {
               })),
             },
           },
-          include: {
-            items: true,
-            person: true,
-          },
+          include: loanFindOne.include
         });
 
         console.debug("Created new loan: %s", result);
@@ -147,7 +166,11 @@ export async function action({ request }: ActionFunctionArgs) {
     }
   } catch (e) {
     console.error(`Failed to ${request.method} a loan`, e);
-    return typedjson({ error: "Failed to create loan" });
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return typedjson({ error: message });
   }
 }
 

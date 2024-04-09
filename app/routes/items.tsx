@@ -18,9 +18,22 @@ export async function loader({ request }: LoaderFunctionArgs) {
   try {
     filter = query
       ? {
-          name: {
-            contains: query,
-          },
+          OR: [
+            {
+              name: {
+                contains: query,
+              },
+            },
+            {
+              tags: {
+                some: {
+                  name: {
+                    contains: query,
+                  },
+                },
+              },
+            },
+          ],
           ...(loanId && {
             loans: {
               some: {
@@ -78,11 +91,11 @@ export async function action({ request }: ActionFunctionArgs) {
           await prisma.item.create({
             data: {
               name: name,
-              ...qrCode && {qrCode: qrCode},
+              ...(qrCode && { qrCode: qrCode }),
               tags: {
-                connect: tags
-              }
-            }
+                connect: tags,
+              },
+            },
           })
         );
       default:

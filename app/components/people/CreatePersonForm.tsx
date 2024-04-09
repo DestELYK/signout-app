@@ -1,21 +1,21 @@
 import {
-    Box,
-    Button,
-    Group,
-    LoadingOverlay,
-    Stack,
-    Text,
-    TextInput,
+  Box,
+  Button,
+  Group,
+  LoadingOverlay,
+  Stack,
+  Text,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
-import { Tag } from "@prisma/client";
+import { Person, Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/people";
 import { fullName } from "~/utils/utils";
-import { nameValidator, qrCodeValidator } from "~/utils/validators.client";
+import { alphaValidator, qrCodeValidator } from "~/utils/validators.client";
 import TagCombobox from "../tags/TagCombobox";
 
 export type PersonFormValues = {
@@ -27,7 +27,7 @@ export type PersonFormValues = {
 };
 
 export type CreatePersonFormProps = {
-  onSubmitted?: (person: { id: number }) => void;
+  onSubmitted?: (person: Person) => void;
   name?: string;
   qrCode?: string;
 };
@@ -46,10 +46,10 @@ export default function CreatePersonForm({
       role: undefined,
     },
     validate: {
-      firstName: (value) => nameValidator(value),
-      lastName: (value) => nameValidator(value),
+      firstName: (value) => alphaValidator(value),
+      lastName: (value) => alphaValidator(value),
       nickname: (value) => {
-        if (value && value.length !== 0) return nameValidator(value);
+        if (value && value.length !== 0) return alphaValidator(value);
       },
       qrCode: (value) => {
         if (value && value.length !== 0) return qrCodeValidator(value);

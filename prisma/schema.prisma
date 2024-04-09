@@ -17,8 +17,8 @@ model Person {
   id        Int     @id @default(autoincrement())
   firstName String
   lastName  String
-  role      Tag     @relation(fields: [tagId], references: [id])
   nickname  String?
+  role      Tag     @relation(fields: [tagId], references: [id])
   notes     String  @default("")
   qrCode    String?
 
@@ -36,7 +36,7 @@ model Person {
 model Item {
   id     Int     @id @default(autoincrement())
   qrCode String?
-  name   String
+  name   String  @unique
   notes  String  @default("")
 
   tags Tag[]
@@ -80,7 +80,7 @@ model LoanedItem {
 
 model Tag {
   id       Int    @id @default(autoincrement())
-  name     String
+  name     String @unique
   color    String
   category String
 

@@ -1,13 +1,21 @@
-export const nameValidator = (value?: string) => {
+export const alphaValidator = (value?: string) => {
   if (!value || value.length === 0) {
-    return "Name cannot be blank";
-  } else if (!/[A-Z ]+/gi.test(value!)) {
+    return "Field cannot be blank";
+  } else if (/[^A-Z ]+/gi.test(value!)) {
+    return "Invalid characters used in name";
+  }
+};
+
+export const specialValidator = (value?: string) => {
+  if (!value || value.length === 0) {
+    return "Field cannot be blank";
+  } else if (/[^A-Z0-9 ]+/gi.test(value!)) {
     return "Invalid characters used in name";
   }
 };
 
 export const qrCodeValidator = (value?: string) => {
-  if (!/[A-Z0-9-]+/gi.test(value!)) {
+  if (/[^A-Z0-9-]+/gi.test(value!)) {
     return "Invalid characters used in QR code";
   }
 };

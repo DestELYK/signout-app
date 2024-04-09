@@ -47,3 +47,7 @@ export const dateDiff = (date: string | Date) => {
 export const fullName = ({firstName, lastName, nickname}: {firstName: string, lastName: string, nickname?: string | null}) => {
     return `${firstName} ${lastName}${nickname ? ` (${nickname})` : ''}`
 }
+
+export const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
