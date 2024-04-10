@@ -13,11 +13,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteError
 } from "@remix-run/react";
 
 import { ColorSchemeScript, MantineProvider, createTheme } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
+import ErrorPage from './components/ErrorPage';
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
@@ -41,6 +43,33 @@ const theme = createTheme({
   primaryColor: "blue",
   fontFamily: "'Open Sans', sans-serif"
 })
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+        <ColorSchemeScript/>
+      </head>
+      <body style={{width: "100dvw", height: "100dvh"}}>
+        <MantineProvider forceColorScheme='light' theme={theme}>
+          <ModalsProvider>
+            <Notifications/>
+            <ErrorPage error={error}/>
+            <ScrollRestoration />
+            <Scripts />
+            <LiveReload />
+          </ModalsProvider>
+        </MantineProvider>
+      </body>
+    </html>
+  );
+}
 
 export default function App() {
   return (
