@@ -18,7 +18,7 @@ import { Form, Link, useNavigate, useSubmit } from "@remix-run/react";
 import {
   IconArrowBackUp,
   IconDeviceFloppy,
-  IconEdit
+  IconEdit,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
@@ -29,7 +29,7 @@ import {
   LoanedItemInclude,
   PersonFindOne,
 } from "~/utils/types.server";
-import { formatDate, fullName } from "~/utils/utils";
+import { dateDiff, formatDate, fullName } from "~/utils/utils";
 import EditButtons from "../EditButtons";
 import InfoView from "../InfoView";
 import SearchItemForm from "../items/SearchItemForm";
@@ -75,7 +75,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   const form = useForm<LoanPatchValues>({
     onValuesChange: (values: LoanPatchValues) => {
       console.log(values);
-    }
+    },
   });
 
   const infoLoading = fetcher.state != "idle" || loading || !loan;
@@ -106,7 +106,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   }
 
   function updateTags(tags: Tag[]) {
-    form.setFieldValue("tagIds", tags)
+    form.setFieldValue("tagIds", tags);
   }
 
   function editPerson() {
@@ -242,7 +242,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       children: `Are you sure you want to update Loan #${loan.id}?`,
       labels: {
         confirm: "Yes",
-        cancel: "No"
+        cancel: "No",
       },
       onConfirm: () => {
         toggleEditStatus("none");
@@ -256,8 +256,8 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       },
       onCancel: () => {
         modals.closeAll();
-      }
-    })
+      },
+    });
   }
 
   return (
@@ -415,13 +415,18 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                         )}
                       </Group>
                     </Flex>
+                    {i.item.description && (
+                      <Text size="sm" lineClamp={2} truncate="end" fs="italic">
+                        {i.item.description}
+                      </Text>
+                    )}
                     {i.dateReturned ? (
                       <Text size="xs">
-                        Returned: {formatDate(i.dateReturned)}
+                        Returned: {formatDate(i.dateReturned)} ({dateDiff(i.dateReturned)})
                       </Text>
                     ) : i.dateLoaned ? (
                       <Text size="xs">
-                        Last Seen: {formatDate(i.dateLoaned)}
+                        Last Seen: {formatDate(i.dateLoaned)} ({dateDiff(i.dateLoaned)})
                       </Text>
                     ) : (
                       <Text size="xs">Unknown</Text>
@@ -440,6 +445,11 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                               searchItems.filter(
                                 (item) => item._count.loans == 0
                               )
+                            }
+                            disableItem={(item) =>
+                              item.tags.find((t) =>
+                                ["Broken", "Lost", "Missing"].includes(t.name)
+                              ) != undefined
                             }
                             onResult={(item) => updateItem(i, item)}
                           />
