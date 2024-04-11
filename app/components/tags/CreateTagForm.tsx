@@ -35,12 +35,15 @@ export default function CreateTagForm({
   const form = useForm<TagFormValues>({
     initialValues: {
       name: "",
-      color: "",
+      color: "#ffffff",
       category: "",
     },
     validate: {
       name: (value) => alphaValidator(value),
-      color: (value) => alphaValidator(value),
+      color: (value) => {
+        if (/[^A-Z#0-9 ]+/gi.test(value)) {
+          return "Invalid characters used"
+        }},
       category: (value) => alphaValidator(value),
     },
   });

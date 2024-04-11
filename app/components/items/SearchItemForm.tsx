@@ -18,6 +18,7 @@ export interface SearchItemFormProps {
   disabled?: boolean;
   submitOnSelect?: boolean;
   showCombobox?: boolean;
+  autoFocus?: boolean;
   filterItems?: (items: ItemFindMany[]) => ItemFindMany[];
   disableItem?: (item: ItemFindMany) => boolean;
   onChange?: (search?: SearchFormValues) => void;
@@ -29,6 +30,7 @@ export default function SearchItemForm({
   canCreate = true,
   disabled = false,
   showCombobox = true,
+  autoFocus,
   filterItems = (items) => items,
   disableItem,
   onChange,
@@ -38,7 +40,6 @@ export default function SearchItemForm({
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     validateInputOnChange: true,
-    validateInputOnBlur: true,
     onValuesChange(values, previous) {
       onChange?.(values);
     },
@@ -48,18 +49,10 @@ export default function SearchItemForm({
     },
     validate: {
       qrCode: (value, values) => {
-        if (values.name?.length === 0 && values.qrCode?.length === 0) {
-          return "Both field cannot be empty";
-        } else {
-          return qrCodeValidator(value);
-        }
+        return qrCodeValidator(value);
       },
       name: (value, values) => {
-        if (values.name?.length === 0 && values.qrCode?.length === 0) {
-          return "Both field cannot be empty";
-        } else {
-          return specialValidator(value);
-        }
+        return specialValidator(value);
       },
     },
   });
@@ -70,12 +63,16 @@ export default function SearchItemForm({
   const [opened, { open, close }] = useDisclosure(false);
 
   const items =
-    searchItemsFetcher && searchItemsFetcher.data
+    searchItemsFetcher &&
+    searchItemsFetcher.data &&
+    searchItemsFetcher.data instanceof Array
       ? filterItems(searchItemsFetcher.data)
       : [];
 
   useEffect(() => {
     if (itemFetcher.data) {
+      console.log("Item Updated: ", itemFetcher.data)
+
       form.setValues({
         name: itemFetcher.data.name,
         qrCode: itemFetcher.data.qrCode || undefined,
@@ -97,12 +94,12 @@ export default function SearchItemForm({
 
       searchItemsFetcher.load(`/items?${searchParams}`);
     } else {
-      searchItemsFetcher.load("");
+      searchItemsFetcher.data = [];
     }
   }
 
   function submit(value: { id: number }) {
-    console.log("Submitting person %s", JSON.stringify(value));
+    console.log("Submitting item %s", JSON.stringify(value));
     itemFetcher.load(`/items/${value.id}`);
   }
 
@@ -111,10 +108,7 @@ export default function SearchItemForm({
       <Modal opened={opened} onClose={close} title={"Create New Item"}>
         <CreateItemForm
           onSubmitted={(item) => {
-            form.setValues({
-              name: item.name,
-              qrCode: item.qrCode || undefined,
-            });
+            submit(item);
             close();
           }}
           name={form.values.name}
@@ -131,20 +125,27 @@ export default function SearchItemForm({
         }}
         qrDisabled={!isMobile}
         onQRCodeChanged={(value) => {
+          console.log("QRCode updated with %s", value);
           form.setFieldValue("qrCode", value);
-          !form.validate().hasErrors ? search({ qrCode: value }) : search({});
+          form.isValid("qrCode") && value.length >= 2
+            ? search({ qrCode: value })
+            : search({qrCode: ''});
 
           return value.length !== 0;
         }}
         onNameChanged={(value) => {
+          console.log("Name updated with %s", value);
           form.setFieldValue("name", value);
-          !form.validate().hasErrors ? search({ name: value }) : search({});
+          form.isValid("name") && value.length >= 2
+            ? search({ name: value })
+            : search({name: ''});
 
           return value.length !== 0;
         }}
         onSelectedItem={(value) => {
+          console.log("Selected item #%s", value)
           const result = searchItemsFetcher.data.find(
-            (p) => p.id.toString() === value
+            (i) => i.id.toString() === value
           );
 
           if (result) {
@@ -171,6 +172,7 @@ export default function SearchItemForm({
         disableItem={disableItem}
         value={form.values}
         errors={form.errors}
+        autoFocus={autoFocus}
         disabled={disabled}
         showCombobox={showCombobox}
       >

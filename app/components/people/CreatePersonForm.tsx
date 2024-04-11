@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Flex,
   Group,
   LoadingOverlay,
   Stack,
@@ -16,6 +17,7 @@ import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/people";
 import { fullName } from "~/utils/utils";
 import { alphaValidator, qrCodeValidator } from "~/utils/validators.client";
+import QrButton from "../QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
 export type PersonFormValues = {
@@ -76,10 +78,10 @@ export default function CreatePersonForm({
 
   // updates on new person creation
   useEffect(() => {
-    if (submitNewPerson.state === "idle" && submitNewPerson.data) {
+    if (submitNewPerson.data) {
       onSubmitted?.(submitNewPerson.data);
     }
-  }, [submitNewPerson.state, submitNewPerson.data]);
+  }, [submitNewPerson.data]);
 
   return (
     <Box pos="relative">
@@ -89,7 +91,6 @@ export default function CreatePersonForm({
         method="POST"
         onSubmit={form.onSubmit((values) => {
           modals.openConfirmModal({
-            id: "person-create-confirm",
             title: "Confirm Creation",
             centered: true,
             children: (
@@ -103,7 +104,7 @@ export default function CreatePersonForm({
               cancel: "No",
             },
             onConfirm: () => {
-              modals.close("person-create-confirm");
+              modals.closeAll();
 
               submitNewPerson.submit(values, {
                 action: "/people",
@@ -113,7 +114,7 @@ export default function CreatePersonForm({
               });
             },
             onCancel: () => {
-              modals.close("person-create-confirm");
+              modals.closeAll();
             },
           });
         })}
@@ -131,14 +132,22 @@ export default function CreatePersonForm({
             {...form.getInputProps("lastName")}
           />
           <TextInput label="Nickname" {...form.getInputProps("nickname")} />
-          <TextInput
-            label="QR Code"
-            description="Optional qr code entry (can be added later)"
-            placeholder="Optional"
-            {...form.getInputProps("qrCode")}
-          />
+          <Flex direction="row">
+            <TextInput
+              w="100%"
+              label="QR Code"
+              description="Optional qr code entry (can be added later)"
+              placeholder="Optional"
+              {...form.getInputProps("qrCode")}
+            />
+            <QrButton
+              onResult={(result) => {
+                form.setFieldValue("qrCode", result.data);
+              }}
+            />
+          </Flex>
           <TagCombobox
-            onChange={(values) => {
+            onTagsChange={(values) => {
               if (values.length == 1) {
                 form.setFieldValue("role", values[0]);
               } else {
@@ -152,7 +161,7 @@ export default function CreatePersonForm({
               placeholder: "Search for role...",
             }}
             limit={1}
-            inputProps={form.getInputProps("role")}
+            error={form.getInputProps("role").error}
           />
 
           <Group justify="end">

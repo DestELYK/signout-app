@@ -6,7 +6,7 @@ import {
   Group,
   Text,
   TextInput,
-  useCombobox,
+  useCombobox
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React, { useEffect, useRef, useState } from "react";
@@ -41,13 +41,14 @@ export interface SearchFormProps<T extends { id: number; key?: string }> {
   qrDisabled?: boolean;
   items: T[];
   value: SearchFormValues;
+  autoFocus?: boolean;
+  errors?: { name?: string; qrCode?: string };
   onSelectedItem: (value?: string) => void;
   onQRCodeChanged?: (value: string) => boolean;
   onNameChanged?: (value: string) => boolean;
   onSubmit?: (value?: T) => void;
   onCreateButton?: () => boolean;
   disableItem?: (value: T) => boolean;
-  errors?: { name?: string; qrCode?: string };
 }
 
 export default function SearchCombobox<T extends { id: number;}>({
@@ -62,13 +63,14 @@ export default function SearchCombobox<T extends { id: number;}>({
   showCombobox = true,
   items,
   value,
+  autoFocus,
+  errors,
   onQRCodeChanged,
   onNameChanged,
   onSubmit,
   onSelectedItem,
   onCreateButton,
   disableItem = (item) => false,
-  errors,
 }: SearchFormProps<T>) {
   const [search, setSearch] = useState<SearchFormValues>({
     name: "",
@@ -81,6 +83,7 @@ export default function SearchCombobox<T extends { id: number;}>({
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    console.log("Search updated with value: ", value)
     setSearch(value);
   }, [value]);
 
@@ -93,6 +96,7 @@ export default function SearchCombobox<T extends { id: number;}>({
 
           const selected = items?.find((v) => v.id.toString() === value);
 
+          combobox.closeDropdown();
           qrCodeRef.current?.blur();
           nameRef.current?.blur();
 
@@ -161,12 +165,13 @@ export default function SearchCombobox<T extends { id: number;}>({
             ref={nameRef}
             w="100%"
             mt="sm"
+            autoFocus={autoFocus}
             description={formData.description?.name}
             placeholder={formData.placeholder?.name}
             {...(formData.label && { label: formData.label.name })}
             error={errors?.name}
             value={search.name}
-            onFocus={() => {
+            onFocus={(s) => {
               combobox.openDropdown();
             }}
             onClick={() => {

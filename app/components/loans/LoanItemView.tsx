@@ -57,9 +57,14 @@ export function LoanItemView({
           >
             #{loan.id}
           </Title>
-          <Badge color={outstanding ? "red" : "green"}>
-            {outstanding ? "Out" : "In"}
-          </Badge>
+          <Group justify="end">
+            {loan.tags.map((tag) => (
+              <Badge color={tag.color}>{tag.name}</Badge>
+            ))}
+            <Badge color={outstanding ? "red" : "green"}>
+              {outstanding ? "Out" : "In"}
+            </Badge>
+          </Group>
         </Group>
       </Card.Section>
       <Card.Section inheritPadding px="xs" mb="xs">

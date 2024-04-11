@@ -1,6 +1,7 @@
 import {
   Box,
   Button,
+  Flex,
   Group,
   LoadingOverlay,
   Stack,
@@ -19,6 +20,7 @@ import {
   specialValidator,
   tagValidator
 } from "~/utils/validators.client";
+import QrButton from "../QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
 export type ItemFormValues = { name: string; qrCode?: string; tags: Tag[] };
@@ -69,7 +71,6 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
         method="POST"
         onSubmit={form.onSubmit((values) => {
           modals.openConfirmModal({
-            id: "item-create-confirm",
             title: "Confirm Creation",
             centered: true,
             children: (
@@ -82,7 +83,7 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
               cancel: "No",
             },
             onConfirm: () => {
-              modals.close("item-create-confirm");
+              modals.closeAll();
 
               submitNewItem.submit(values, {
                 action: "/items",
@@ -92,7 +93,7 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
               });
             },
             onCancel: () => {
-              modals.close("item-create-confirm");
+              modals.closeAll();
             },
           });
         })}
@@ -104,14 +105,22 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
             data-autofocus
             {...form.getInputProps("name")}
           />
-          <TextInput
-            label="QR Code"
-            description="Optional qr code entry (can be added later)"
-            placeholder="Optional"
-            {...form.getInputProps("qrCode")}
-          />
+          <Flex direction="row">
+            <TextInput
+              w="100%"
+              label="QR Code"
+              description="Optional qr code entry (can be added later)"
+              placeholder="Optional"
+              {...form.getInputProps("qrCode")}
+            />
+            <QrButton
+              onResult={(result) => {
+                form.setFieldValue("qrCode", result.data);
+              }}
+            />
+          </Flex>
           <TagCombobox
-            onChange={(values) => {
+            onTagsChange={(values) => {
               form.setFieldValue("tags", values);
             }}
             category="Item Type"
@@ -121,7 +130,7 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
               placeholder: "Search for tags...",
               description: "Select at least 1 tag for item",
             }}
-            inputProps={form.getInputProps("tags")}
+            error={form.getInputProps("tags").error}
           />
 
           <Group justify="end">

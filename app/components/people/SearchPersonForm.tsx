@@ -19,6 +19,7 @@ export interface SearchPersonFormProps {
   disabled?: boolean;
   submitOnSelect?: boolean;
   showCombobox?: boolean;
+  autoFocus?: boolean;
   filterItems?: (items: PersonFindMany[]) => PersonFindMany[];
   disableItem?: (item: PersonFindMany) => boolean;
   onChange?: (search?: SearchFormValues) => void;
@@ -30,6 +31,7 @@ export default function SearchPersonForm({
   canCreate = true,
   disabled = false,
   showCombobox = true,
+  autoFocus,
   filterItems = (items) => items,
   disableItem,
   onChange,
@@ -39,7 +41,6 @@ export default function SearchPersonForm({
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     validateInputOnChange: true,
-    validateInputOnBlur: true,
     onValuesChange(values, previous) {
       onChange?.(values);
     },
@@ -49,18 +50,10 @@ export default function SearchPersonForm({
     },
     validate: {
       qrCode: (value, values) => {
-        if (values.name?.length === 0 && values.qrCode?.length === 0) {
-          return "Both field cannot be empty";
-        } else {
-          return qrCodeValidator(value);
-        }
+        return qrCodeValidator(value);
       },
       name: (value, values) => {
-        if (values.name?.length === 0 && values.qrCode?.length === 0) {
-          return "Both field cannot be empty";
-        } else {
-          return alphaValidator(value);
-        }
+        return alphaValidator(value);
       },
     },
   });
@@ -71,7 +64,9 @@ export default function SearchPersonForm({
   const [opened, { open, close }] = useDisclosure(false);
 
   const people =
-    searchPeopleFetcher && searchPeopleFetcher.data
+    searchPeopleFetcher &&
+    searchPeopleFetcher.data &&
+    searchPeopleFetcher.data instanceof Array
       ? filterItems(searchPeopleFetcher.data)
       : [];
 
@@ -94,16 +89,16 @@ export default function SearchPersonForm({
         ? `qrCode=${search.qrCode}`
         : `query=${search.name}`;
 
-        console.log("Searching for items with query: %s", searchParams);
+      console.log("Searching for people with query: %s", searchParams);
 
       searchPeopleFetcher.load(`/people?${searchParams}`);
     } else {
-      searchPeopleFetcher.load("");
+      searchPeopleFetcher.data = [];
     }
   }
 
   function submit(value: { id: number }) {
-    console.log("Submitting item %s", JSON.stringify(value));
+    console.log("Submitting person %s", JSON.stringify(value));
     personFetcher.load(`/people/${value.id}`);
   }
 
@@ -112,10 +107,7 @@ export default function SearchPersonForm({
       <Modal opened={opened} onClose={close} title={"Create New Person"}>
         <CreatePersonForm
           onSubmitted={(person) => {
-            form.setValues({
-              name: fullName(person),
-              qrCode: person.qrCode || undefined,
-            });
+            submit(person);
             close();
           }}
           name={form.values.name}
@@ -132,18 +124,25 @@ export default function SearchPersonForm({
         }}
         qrDisabled={!isMobile}
         onQRCodeChanged={(value) => {
+          console.log("QRCode updated with %s", value);
           form.setFieldValue("qrCode", value);
-          !form.validate().hasErrors ? search({ qrCode: value }) : search({});
+          form.isValid("qrCode") && value.length >= 2
+            ? search({ qrCode: value })
+            : search({qrCode: ''});
 
           return value.length !== 0;
         }}
         onNameChanged={(value) => {
+          console.log("Name updated with %s", value);
           form.setFieldValue("name", value);
-          !form.validate().hasErrors ? search({ name: value }) : search({});
+          form.isValid("name") && value.length >= 2
+            ? search({ name: value })
+            : search({name: ''});
 
           return value.length !== 0;
         }}
         onSelectedItem={(value) => {
+          console.log("Selected person #%s", value)
           const result = searchPeopleFetcher.data.find(
             (p) => p.id.toString() === value
           );
@@ -169,10 +168,11 @@ export default function SearchPersonForm({
           },
         })}
         items={people}
+        disableItem={disableItem}
         value={form.values}
         errors={form.errors}
+        autoFocus={autoFocus}
         disabled={disabled}
-        disableItem={disableItem}
         showCombobox={showCombobox}
       >
         {(value) => (

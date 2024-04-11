@@ -18,10 +18,11 @@ import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
-import { useNavigate } from "@remix-run/react";
+import { MetaFunction, useNavigate, useRouteError } from "@remix-run/react";
 import { IconEdit, IconPlus } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
+import ErrorPage from "~/components/ErrorPage";
 import ItemTable from "~/components/items/ItemTable";
 import SearchItemForm from "~/components/items/SearchItemForm";
 import SearchPersonForm from "~/components/people/SearchPersonForm";
@@ -37,6 +38,20 @@ interface LoanFormValues {
 
 // TODO - Allow adding tags to loan
 // TODO - saving form data
+
+export const meta: MetaFunction = () => {
+  return [{ title: "Loan Sign-Out" }];
+};
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <Card padding="sm" radius="sm" withBorder w="100%" h="100%">
+      <ErrorPage error={error} />
+    </Card>
+  );
+}
 
 export default function Page() {
   const navigate = useNavigate();
@@ -250,12 +265,7 @@ export default function Page() {
                         });
                       }
                     } else {
-                      const removeIndex = i.tags.findIndex(
-                        (t) => t.name === "Added"
-                      );
-                      if (removeIndex != -1) {
-                        i.tags.splice(removeIndex, 1);
-                      }
+                      i.tags = i.tags.filter((t) => t.name !== "Added");
                     }
                     return i;
                   })

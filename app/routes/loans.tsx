@@ -18,7 +18,7 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  useSearchParams,
+  useSearchParams
 } from "@remix-run/react";
 import { Suspense, useState } from "react";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
@@ -43,6 +43,10 @@ export const meta: MetaFunction = () => {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
+
+  if (url.pathname.endsWith("/")) {
+    return redirect("/loans");
+  }
 
   const itemIds = url.searchParams.getAll("itemId");
   const personId = url.searchParams.get("personId");
@@ -146,15 +150,10 @@ export async function action({ request }: ActionFunctionArgs) {
                     id: item.id,
                   },
                 },
-                returnedBy: {
-                  connect: {
-                    id: person.id,
-                  },
-                },
               })),
             },
           },
-          include: loanFindOne.include
+          include: loanFindOne.include,
         });
 
         console.debug("Created new loan: %s", result);
@@ -181,7 +180,7 @@ export default function Page() {
   const mediaMatch = useMediaQuery("(min-width: 62em)");
   const path = useLocation();
 
-  const loanId = params.loanId;
+  const loanId = params.loanId?.length !== 0 ? params.loanId : undefined;
 
   const isNestedRoute = path.pathname.replace("/loans", "") !== "";
 

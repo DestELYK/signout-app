@@ -10,7 +10,6 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { Tag } from "@prisma/client";
 import { IconPlus } from "@tabler/icons-react";
-import { GetInputPropsReturnType } from "node_modules/@mantine/form/lib/types";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader } from "~/routes/tags";
@@ -21,31 +20,37 @@ export type OnTagSearch = (value: string, category: string) => void;
 
 export type TagComboboxProps = {
   onTagSearch?: OnTagSearch;
-  onNewTagSubmit?: OnTagSubmit;
-  onChange?: (values: Tag[]) => void;
-  onItemSelect?: (value: string) => void;
-  onItemRemove?: (value: string) => void;
+  onTagsChange?: (value: Tag[]) => void;
+  onTagAdd?: (value: string) => void;
+  onTagRemove?: (value: string) => void;
   fieldInfo?: {
-    label: string;
+    label?: string;
     description?: string;
-    placeholder: string;
+    placeholder?: string;
   };
   category: string;
+  autoFocus?: boolean;
   limit?: number;
-  inputProps?: GetInputPropsReturnType;
+  error?: string;
+  initialValue?: Tag[];
 };
 
 export default function TagCombobox({
-  onChange,
+  onTagSearch,
+  onTagsChange,
+  onTagAdd,
+  onTagRemove,
   fieldInfo = {
     label: "Tags",
     placeholder: "Search for tag...",
   },
   category,
+  autoFocus,
   limit = 5,
-  inputProps,
+  error,
+  initialValue = [],
 }: TagComboboxProps) {
-  const [value, setValue] = useState<Tag[]>([])
+  const [value, setValue] = useState<Tag[]>(initialValue);
   const [search, setSearch] = useState("");
 
   const combobox = useCombobox({
@@ -59,15 +64,21 @@ export default function TagCombobox({
 
   const tags = searchTagsFetcher.data || [];
 
-  const handleValueSelect = (val: string) =>
-    value.find((t) => t.id.toString() === val)
-      ? handleValueRemove(val)
-      : setValue([...value, tags.find((t) => t.id.toString() === val)!]);
-
-  const handleValueRemove = (val: string) =>
+  const handleValueRemove = (val: string) => {
+    onTagRemove?.(val);
     setValue(value.filter((t) => t.id.toString() !== val));
+  };
 
-  const values = value.map((t) => (
+  const handleValueSelect = (val: string) => {
+    if (value.find((t) => t.id.toString() === val)) {
+      handleValueRemove(val);
+    } else {
+      onTagAdd?.(val);
+      setValue([...value, tags.find((t) => t.id.toString() === val)!]);
+    }
+  };
+
+  const values = value.map((t: Tag) => (
     <Pill
       key={t.id}
       withRemoveButton
@@ -97,14 +108,14 @@ export default function TagCombobox({
         ))
     : [];
 
-  // sends event on value change
   useEffect(() => {
-    onChange?.(value);
+    onTagsChange?.(value);
   }, [value]);
 
   useEffect(() => {
+    onTagSearch?.(search, category);
     searchTagsFetcher.load(`/tags?category=${category}&q=${search}`);
-  }, [search])
+  }, [search]);
 
   return (
     <>
@@ -134,46 +145,47 @@ export default function TagCombobox({
             label={fieldInfo.label}
             description={fieldInfo.description}
             required
-            error={inputProps?.error}
+            variant="unstyled"
+            error={error}
             onClick={() => {
               combobox.openDropdown();
             }}
           >
-            <Pill.Group>{values}</Pill.Group>
+            <Pill.Group>
+              {values}
 
-            <Combobox.EventsTarget>
-              <PillsInput.Field
-                placeholder={fieldInfo.placeholder}
-                onKeyDown={(event) => {
-                  if (
-                    event.key === "Backspace" &&
-                    search.length === 0 &&
-                    value.length > 0
-                  ) {
-                    event.preventDefault();
-                    handleValueRemove(value[value.length - 1].id.toString());
-                  }
-                }}
-                value={search}
-                onFocus={() => {
-                  inputProps?.onFocus();
-                  combobox.openDropdown();
-                }}
-                onBlur={() => {
-                  inputProps?.onBlur();
-                  combobox.closeDropdown();
-                }}
-                onChange={(event) => {
-                  inputProps?.onChange(event);
-                  combobox.updateSelectedOptionIndex();
-                  setSearch(event.currentTarget.value);
-                }}
-              />
-            </Combobox.EventsTarget>
+              <Combobox.EventsTarget>
+                <PillsInput.Field
+                  autoFocus={autoFocus}
+                  placeholder={fieldInfo.placeholder}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Backspace" &&
+                      search.length === 0 &&
+                      value.length > 0
+                    ) {
+                      event.preventDefault();
+                      handleValueRemove(value[value.length - 1].id.toString());
+                    }
+                  }}
+                  value={search}
+                  onFocus={() => {
+                    combobox.openDropdown();
+                  }}
+                  onBlur={() => {
+                    combobox.closeDropdown();
+                  }}
+                  onChange={(event) => {
+                    combobox.updateSelectedOptionIndex();
+                    setSearch(event.currentTarget.value);
+                  }}
+                />
+              </Combobox.EventsTarget>
+            </Pill.Group>
           </PillsInput>
         </Combobox.DropdownTarget>
 
-        <Combobox.Dropdown mah={200} style={{overflowY: "auto"}}>
+        <Combobox.Dropdown mah={200} style={{ overflowY: "auto" }}>
           <Combobox.Options>
             {options.length > 0 ? (
               options
