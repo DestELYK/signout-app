@@ -58,8 +58,8 @@ export function LoanItemView({
             #{loan.id}
           </Title>
           <Group justify="end">
-            {loan.tags.map((tag) => (
-              <Badge color={tag.color}>{tag.name}</Badge>
+            {loan.tags.map((tag, index) => (
+              <Badge key={index} color={tag.color}>{tag.name}</Badge>
             ))}
             <Badge color={outstanding ? "red" : "green"}>
               {outstanding ? "Out" : "In"}
@@ -88,8 +88,13 @@ export function LoanItemView({
         {outstanding ? (
           <Stack gap={0}>
             <Text size="sm" ta="center">
-              Out since {formatDate(loan.createdDate)} (
-              {dateDiff(loan.createdDate)})
+              Out since{" "}
+              {formatDate(loan.createdDate, {
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+              })}{" "}
+              ({dateDiff(loan.createdDate)})
             </Text>
             {loan.items.map((i) => (
               <Text key={i.item.id} size="sm" ta="center">
@@ -99,7 +104,12 @@ export function LoanItemView({
           </Stack>
         ) : (
           <Text size="sm" ta="center">
-            All items returned on {formatDate(sortedItems[0].dateReturned!)}
+            All items returned on{" "}
+            {formatDate(sortedItems[0].dateReturned!, {
+              month: "short",
+              day: "2-digit",
+              year: "numeric",
+            })}
           </Text>
         )}
       </Card.Section>
