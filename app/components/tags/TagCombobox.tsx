@@ -21,8 +21,6 @@ export type OnTagSearch = (value: string, category: string) => void;
 export type TagComboboxProps = {
   onTagSearch?: OnTagSearch;
   onTagsChange?: (value: Tag[]) => void;
-  onTagAdd?: (value: string) => void;
-  onTagRemove?: (value: string) => void;
   fieldInfo?: {
     label?: string;
     description?: string;
@@ -38,8 +36,6 @@ export type TagComboboxProps = {
 export default function TagCombobox({
   onTagSearch,
   onTagsChange,
-  onTagAdd,
-  onTagRemove,
   fieldInfo = {
     label: "Tags",
     placeholder: "Search for tag...",
@@ -65,7 +61,6 @@ export default function TagCombobox({
   const tags = searchTagsFetcher.data || [];
 
   const handleValueRemove = (val: string) => {
-    onTagRemove?.(val);
     setValue(value.filter((t) => t.id.toString() !== val));
   };
 
@@ -73,7 +68,6 @@ export default function TagCombobox({
     if (value.find((t) => t.id.toString() === val)) {
       handleValueRemove(val);
     } else {
-      onTagAdd?.(val);
       setValue([...value, tags.find((t) => t.id.toString() === val)!]);
     }
   };
@@ -122,6 +116,7 @@ export default function TagCombobox({
       <Modal opened={opened} onClose={close} centered title="Create New Tag">
         <CreateTagForm
           onSubmitted={(tag) => {
+            console.log("Created Item");
             setValue([...value, tag]);
             close();
           }}

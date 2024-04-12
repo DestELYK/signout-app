@@ -3,15 +3,17 @@ import { IconArrowBackUp, IconDeviceFloppy } from "@tabler/icons-react";
 
 export interface EditButtonsProps {
   iconOnly?: boolean;
+  onRevert?: () => void;
+  onSave?: () => void;
 }
 
-export default function EditButtons({ iconOnly = false }: EditButtonsProps) {
+export default function EditButtons({ iconOnly = false, onRevert, onSave }: EditButtonsProps) {
   return iconOnly ? (
     <Group align="center" justify="end">
-      <ActionIcon color="red" variant="subtle" type="reset">
+      <ActionIcon color="red" variant="subtle" onClick={onRevert}>
         <IconArrowBackUp />
       </ActionIcon>
-      <ActionIcon color="blue" variant="subtle" type="submit">
+      <ActionIcon color="blue" variant="subtle" onClick={onSave}>
         <IconDeviceFloppy />
       </ActionIcon>
     </Group>
@@ -20,16 +22,16 @@ export default function EditButtons({ iconOnly = false }: EditButtonsProps) {
       <Button
         variant="outline"
         color="red"
-        type="reset"
         leftSection={<IconArrowBackUp />}
+        onClick={onRevert}
       >
         Revert
       </Button>
       <Button
         variant="outline"
         color="blue"
-        type="submit"
         leftSection={<IconDeviceFloppy />}
+        onClick={onSave}
       >
         Save
       </Button>

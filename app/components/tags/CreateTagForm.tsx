@@ -10,12 +10,15 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/tags";
 import { alphaValidator } from "~/utils/validators.client";
+
+const CONFIRM_ID = "create-tag-form_confirm";
 
 export type TagFormValues = { name: string; color: string; category: string };
 
@@ -42,8 +45,9 @@ export default function CreateTagForm({
       name: (value) => alphaValidator(value),
       color: (value) => {
         if (/[^A-Z#0-9 ]+/gi.test(value)) {
-          return "Invalid characters used"
-        }},
+          return "Invalid characters used";
+        }
+      },
       category: (value) => alphaValidator(value),
     },
   });
@@ -61,10 +65,13 @@ export default function CreateTagForm({
   }, [category]);
 
   useEffect(() => {
-    if (submitNewTag.state === "idle" && submitNewTag.data) {
+    if (submitNewTag.data) {
+      notifications.show({
+        message: `Created new tag: ${submitNewTag.data.name}`
+      })
       onSubmitted?.(submitNewTag.data);
     }
-  }, [submitNewTag.state]);
+  }, [submitNewTag.data]);
 
   return (
     <Box pos="relative">

@@ -14,15 +14,11 @@ import { useToggle } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
-import { Form, Link, useNavigate, useSubmit } from "@remix-run/react";
-import {
-  IconArrowBackUp,
-  IconDeviceFloppy,
-  IconEdit,
-} from "@tabler/icons-react";
+import { Link, useNavigate } from "@remix-run/react";
+import { IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
-import { LoanPatchValues } from "~/routes/loans.$loanId";
+import { LoanPatchValues, loader } from "~/routes/loans.$loanId";
 import {
   ItemFindOne,
   LoanFindOne,
@@ -50,8 +46,7 @@ export type LoanInfoViewFormValues = {
 
 export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   const navigate = useNavigate();
-  const fetcher = useTypedFetcher();
-  const submit = useSubmit();
+  const fetcher = useTypedFetcher<typeof loader>();
 
   const [person, setPerson] = useState<{
     id: number;
@@ -72,28 +67,32 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
     "notes",
   ] as const);
 
-  const form = useForm<LoanPatchValues>({
-    onValuesChange: (values: LoanPatchValues) => {
-      console.log(values);
-    },
-  });
+  const form = useForm<LoanPatchValues>();
 
-  const infoLoading = fetcher.state != "idle" || loading || !loan;
+  const infoLoading = loading || !loan;
 
   const outstanding =
     loan.items && loan.items.find((item) => !item.dateReturned) !== undefined;
 
-  useEffect(() => {
-    if (fetcher.data) {
-      notifications.show({
-        message: `Updated Loan #${loan.id}`,
-      });
-    }
-  }, [fetcher.data]);
+    useEffect(() => {
+      if (fetcher.data) {
+        notifications.show({
+          message: "Loan Updated"
+        })
+      }
+    }, [fetcher.data]);
 
   useEffect(() => {
-    reset();
+    if (loan) {
+      setPerson(loan.person);
+      setItems(loan.items);
+      setNotes(loan.notes);
+    }
   }, [loan]);
+
+  const editButton = (iconOnly = false) => (
+    <EditButtons iconOnly={iconOnly} onRevert={reset} onSave={handleSave} />
+  );
 
   function reset() {
     form.reset();
@@ -103,6 +102,12 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
     setPerson(loan.person);
     setItems(loan.items);
     setNotes(loan.notes);
+  }
+
+  function handleSave() {
+    if (form.isValid()) {
+      updateLoan(form.values);
+    }
   }
 
   function updateTags(tags: Tag[]) {
@@ -247,11 +252,12 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       onConfirm: () => {
         toggleEditStatus("none");
 
-        submit(JSON.stringify(values), {
+        fetcher.submit(JSON.stringify(values), {
           method: "PATCH",
           encType: "application/json",
           action: `/loans/${loan.id}`,
-          replace: true,
+          navigate: false,
+          fetcherKey: "LoanInfoView_update"
         });
       },
       onCancel: () => {
@@ -261,254 +267,239 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   }
 
   return (
-    <Form
-      onSubmit={form.onSubmit((values) => {
-        updateLoan(values);
-      })}
-      onReset={() => reset()}
-      style={{ width: "100%", height: "100%" }}
-      reloadDocument
-    >
-      <InfoView
-        {...loan}
-        title={`Loan #${loan.id}`}
-        onClose={() => navigate("/loans")}
-        loading={infoLoading}
-        rightSection={
-          editStatus == "none" ? (
-            <>
-              {loan.tags.map((t) => (
-                <Badge key={t.id} color={t.color}>
-                  {t.name}
-                </Badge>
-              ))}
-              <Badge color={outstanding ? "red" : "green"}>
-                {outstanding ? "Out" : "In"}
+    <InfoView
+      {...loan}
+      title={`Loan #${loan.id}`}
+      onClose={() => navigate("/loans")}
+      loading={infoLoading}
+      rightSection={
+        editStatus == "none" ? (
+          <>
+            {loan.tags.map((t) => (
+              <Badge key={t.id} color={t.color} autoContrast>
+                {t.name}
               </Badge>
-              <ActionIcon
-                variant="subtle"
-                onClick={() => toggleEditStatus("tags")}
-                disabled={editStatus != "none"}
-              >
-                <IconEdit />
-              </ActionIcon>
-            </>
-          ) : (
-            editStatus == "tags" && (
-              <>
-                <TagCombobox
-                  category="Loan Info"
-                  fieldInfo={{
-                    placeholder: "Search for tag...",
-                  }}
-                  autoFocus
-                  error={form.getInputProps("tagIds").error}
-                  initialValue={loan.tags}
-                  onTagsChange={(tags) => {
-                    updateTags(tags);
-                  }}
-                />
-                <EditButtons iconOnly />
-              </>
-            )
-          )
-        }
-      >
-        <Flex
-          direction="column"
-          w="100%"
-          style={{ flexGrow: "1" }}
-          gap="sm"
-          py="sm"
-        >
-          {/* Person */}
-          <Fieldset legend="Person">
-            <Flex
-              align="center"
-              direction="row"
-              justify="space-between"
-              wrap="nowrap"
+            ))}
+            <Badge color={outstanding ? "red" : "green"} autoContrast>
+              {outstanding ? "Out" : "In"}
+            </Badge>
+            <ActionIcon
+              variant="subtle"
+              onClick={() => toggleEditStatus("tags")}
+              disabled={editStatus != "none"}
             >
-              <Text
-                ta="center"
-                fw="bold"
-                truncate="end"
-                component={Link}
-                to={`/people/${person?.id}`}
-                style={{ cursor: "pointer" }}
-              >
-                {person ? fullName(person) : "Unknown"}
-              </Text>
-              <Group align="center" style={{ flexWrap: "nowrap" }}>
-                {person && person.role && (
-                  <Badge color={person.role.color}>{person.role.name}</Badge>
-                )}
-                {/* Edit Person */}
-                {editStatus == "none" && (
-                  <ActionIcon
-                    variant="subtle"
-                    onClick={() => {
-                      editPerson();
-                    }}
-                    disabled={editStatus != "none"}
+              <IconEdit />
+            </ActionIcon>
+          </>
+        ) : (
+          editStatus == "tags" && (
+            <>
+              <TagCombobox
+                category="Loan Info"
+                fieldInfo={{
+                  placeholder: "Search for tag...",
+                }}
+                autoFocus
+                error={form.getInputProps("tagIds").error}
+                initialValue={loan.tags}
+                onTagsChange={(tags) => {
+                  updateTags(tags);
+                }}
+              />
+              {editButton(true)}
+            </>
+          )
+        )
+      }
+    >
+      <Flex
+        direction="column"
+        w="100%"
+        style={{ flexGrow: "1" }}
+        gap="sm"
+        py="sm"
+      >
+        {/* Person */}
+        <Fieldset legend="Person">
+          <Flex
+            align="center"
+            direction="row"
+            justify="space-between"
+            wrap="nowrap"
+          >
+            <Text
+              ta="center"
+              fw="bold"
+              truncate="end"
+              component={Link}
+              to={`/people/${person?.id}`}
+              style={{ cursor: "pointer" }}
+            >
+              {person ? fullName(person) : "Unknown"}
+            </Text>
+            <Group align="center" style={{ flexWrap: "nowrap" }}>
+              {person && person.role && (
+                <Badge color={person.role.color} autoContrast>
+                  {person.role.name}
+                </Badge>
+              )}
+              {/* Edit Person */}
+              {editStatus == "none" && (
+                <ActionIcon
+                  variant="subtle"
+                  onClick={() => {
+                    editPerson();
+                  }}
+                  disabled={editStatus != "none"}
+                >
+                  <IconEdit />
+                </ActionIcon>
+              )}
+            </Group>
+          </Flex>
+          {editStatus == "person" && (
+            <Stack mt="sm">
+              <SearchPersonForm autoFocus onResult={updatePerson} />
+              {editButton()}
+            </Stack>
+          )}
+        </Fieldset>
+        {/* Items */}
+        <Fieldset legend="Items">
+          {items && items.length > 0 ? (
+            items.map((i) => {
+              // Finds the form value (if it exists)
+              const formValue = form.values.itemIds?.find(
+                (id) => id.id == i.itemId || id.newId == i.itemId
+              );
+
+              // Used when the item list gets modified so that the SearchItemForm doesn't get destroyed
+              const itemId = formValue?.newId ? formValue.id : i.itemId;
+
+              // Determines if this item is the one currently being edited
+              const editing =
+                (editStatus == "items" || editStatus == "items-returnedBy") &&
+                formValue != undefined;
+
+              return (
+                <Stack key={itemId} gap={0} mb="sm">
+                  <Flex
+                    direction="row"
+                    wrap="nowrap"
+                    align="center"
+                    justify="space-between"
                   >
-                    <IconEdit />
-                  </ActionIcon>
-                )}
-              </Group>
-            </Flex>
-            {editStatus == "person" && (
-              <Stack mt="sm">
-                <SearchPersonForm autoFocus onResult={updatePerson} />
-                <EditButtons />
-              </Stack>
-            )}
-          </Fieldset>
-          {/* Items */}
-          <Fieldset legend="Items">
-            {items && items.length > 0 ? (
-              items.map((i) => {
-                // Finds the form value (if it exists)
-                const formValue = form.values.itemIds?.find(
-                  (id) => id.id == i.itemId || id.newId == i.itemId
-                );
-
-                // Used when the item list gets modified so that the SearchItemForm doesn't get destroyed
-                const itemId = formValue?.newId ? formValue.id : i.itemId;
-
-                // Determines if this item is the one currently being edited
-                const editing =
-                  (editStatus == "items" || editStatus == "items-returnedBy") &&
-                  formValue != undefined;
-
-                return (
-                  <Stack key={itemId} gap={0} mb="sm">
-                    <Flex
-                      direction="row"
-                      wrap="nowrap"
-                      align="center"
-                      justify="space-between"
+                    <Text
+                      ta="center"
+                      fw="bold"
+                      truncate="end"
+                      component={Link}
+                      to={`/items/${i.itemId}`}
+                      style={{ cursor: "pointer" }}
                     >
-                      <Text
-                        ta="center"
-                        fw="bold"
-                        truncate="end"
-                        component={Link}
-                        to={`/items/${i.itemId}`}
-                        style={{ cursor: "pointer" }}
+                      {i.item.name}
+                    </Text>
+                    <Group style={{ flexWrap: "nowrap" }}>
+                      <Badge
+                        color={i.dateReturned ? "green" : "red"}
+                        autoContrast
                       >
-                        {i.item.name}
-                      </Text>
-                      <Group style={{ flexWrap: "nowrap" }}>
-                        <Badge color={i.dateReturned ? "green" : "red"}>
-                          {i.dateReturned ? "In" : "Out"}
-                        </Badge>
-                        {/* Edit Item */}
-                        {editStatus == "none" && (
-                          <ActionIcon
-                            variant="subtle"
-                            onClick={() => editItem(i)}
-                            disabled={editStatus != "none"}
-                          >
-                            <IconEdit />
-                          </ActionIcon>
-                        )}
-                      </Group>
-                    </Flex>
-                    {i.item.description && (
-                      <Text size="sm" lineClamp={2} truncate="end" fs="italic">
-                        {i.item.description}
-                      </Text>
-                    )}
-                    {i.dateReturned ? (
-                      <Text size="xs">
-                        Returned: {formatDate(i.dateReturned)} ({dateDiff(i.dateReturned)})
-                      </Text>
-                    ) : i.dateLoaned ? (
-                      <Text size="xs">
-                        Last Seen: {formatDate(i.dateLoaned)} ({dateDiff(i.dateLoaned)})
-                      </Text>
-                    ) : (
-                      <Text size="xs">Unknown</Text>
-                    )}
-                    {i.returnedBy && (
-                      <Text size="xs">
-                        Returned by: {fullName(i.returnedBy)}
-                      </Text>
-                    )}
-                    {editing && (
-                      <Stack mt="sm">
-                        {editStatus == "items" ? (
-                          <SearchItemForm
-                            autoFocus
-                            filterItems={(searchItems) =>
-                              searchItems.filter(
-                                (item) => item._count.loans == 0
-                              )
-                            }
-                            disableItem={(item) =>
-                              item.tags.find((t) =>
-                                ["Broken", "Lost", "Missing"].includes(t.name)
-                              ) != undefined
-                            }
-                            onResult={(item) => updateItem(i, item)}
-                          />
-                        ) : (
-                          <SearchPersonForm
-                            autoFocus
-                            onResult={(person) =>
-                              updateItem(i, undefined, person)
-                            }
-                          />
-                        )}
+                        {i.dateReturned ? "In" : "Out"}
+                      </Badge>
+                      {/* Edit Item */}
+                      {editStatus == "none" && (
+                        <ActionIcon
+                          variant="subtle"
+                          onClick={() => editItem(i)}
+                          disabled={editStatus != "none"}
+                        >
+                          <IconEdit />
+                        </ActionIcon>
+                      )}
+                    </Group>
+                  </Flex>
+                  {i.item.description && (
+                    <Text size="sm" lineClamp={2} truncate="end" fs="italic">
+                      {i.item.description}
+                    </Text>
+                  )}
+                  {i.dateReturned ? (
+                    <Text size="xs">
+                      Returned: {formatDate(i.dateReturned)} (
+                      {dateDiff(i.dateReturned)})
+                    </Text>
+                  ) : i.dateLoaned ? (
+                    <Text size="xs">
+                      Last Seen: {formatDate(i.dateLoaned)} (
+                      {dateDiff(i.dateLoaned)})
+                    </Text>
+                  ) : (
+                    <Text size="xs">Unknown</Text>
+                  )}
+                  {i.returnedBy && (
+                    <Text size="xs">Returned by: {fullName(i.returnedBy)}</Text>
+                  )}
+                  {editing && (
+                    <Stack mt="sm">
+                      {editStatus == "items" ? (
+                        <SearchItemForm
+                          autoFocus
+                          filterItems={(searchItems) =>
+                            searchItems.filter((item) => item._count.loans == 0)
+                          }
+                          disableItem={(item) =>
+                            item.tags.find((t) =>
+                              ["Broken", "Lost", "Missing"].includes(t.name)
+                            ) != undefined
+                          }
+                          onResult={(item) => updateItem(i, item)}
+                        />
+                      ) : (
+                        <SearchPersonForm
+                          autoFocus
+                          onResult={(person) =>
+                            updateItem(i, undefined, person)
+                          }
+                        />
+                      )}
 
-                        <EditButtons />
-                      </Stack>
-                    )}
-                  </Stack>
-                );
-              })
-            ) : (
-              <Text>No items</Text>
-            )}
-            {/* Sign In Items Button */}
-            {editStatus == "none" && (
-              <Button
-                mt="sm"
-                fullWidth
-                onClick={() => navigate(`/loans/signin?loanId=${loan.id}`)}
-                disabled={!outstanding}
-              >
-                Sign-In Items
-              </Button>
-            )}
-          </Fieldset>
-          {/* Notes */}
-          <Fieldset legend="Notes">
-            <Textarea
-              style={{ overflowY: "auto", flexGrow: "1" }}
-              size="fit-content"
-              autosize
-              minRows={7}
-              maxRows={15}
-              disabled={editStatus != "none" && editStatus != "notes"}
-              onBlur={() => {}}
-              value={notes}
-              onChange={(event) => updateNotes(event.target.value)}
-            />
-            {editStatus == "notes" && (
-              <Group justify="end" mt="sm">
-                <ActionIcon color="red" type="reset">
-                  <IconArrowBackUp />
-                </ActionIcon>
-                <ActionIcon color="blue" type="submit">
-                  <IconDeviceFloppy />
-                </ActionIcon>
-              </Group>
-            )}
-          </Fieldset>
-        </Flex>
-      </InfoView>
-    </Form>
+                      {editButton()}
+                    </Stack>
+                  )}
+                </Stack>
+              );
+            })
+          ) : (
+            <Text>No items</Text>
+          )}
+          {/* Sign In Items Button */}
+          {editStatus == "none" && (
+            <Button
+              mt="sm"
+              fullWidth
+              onClick={() => navigate(`/loans/signin?loanId=${loan.id}`)}
+              disabled={!outstanding}
+            >
+              Sign-In Items
+            </Button>
+          )}
+        </Fieldset>
+        {/* Notes */}
+        <Fieldset legend="Notes">
+          <Textarea
+            style={{ overflowY: "auto", flexGrow: "1" }}
+            size="fit-content"
+            autosize
+            minRows={7}
+            maxRows={15}
+            disabled={editStatus != "none" && editStatus != "notes"}
+            onBlur={() => {}}
+            value={notes}
+            onChange={(event) => updateNotes(event.target.value)}
+          />
+          {editStatus == "notes" && editButton()}
+        </Fieldset>
+      </Flex>
+    </InfoView>
   );
 }

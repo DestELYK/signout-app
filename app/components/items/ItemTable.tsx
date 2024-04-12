@@ -41,7 +41,7 @@ export default function ItemTable({
         <Group justify="space-around">
           {item.tags
             ? item.tags.map((t) => (
-                <Badge key={t.name} size="xs" color={t.color}>
+                <Badge key={t.name} size="xs" color={t.color} autoContrast>
                   {t.name}
                 </Badge>
               ))

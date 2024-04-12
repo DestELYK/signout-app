@@ -21,7 +21,7 @@ export default function PersonComboView({
       </Highlight>
       <Flex direction="row" gap="sm" justify="space-between">
         {person._count.loans > 0 ? (
-          <Badge color="red" style={{ justifySelf: "flex-start" }}>
+          <Badge color="red" style={{ justifySelf: "flex-start" }} autoContrast>
             {person._count.loans} loan
             {person._count.loans > 1 ? "s" : ""} out
           </Badge>

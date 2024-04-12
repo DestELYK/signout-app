@@ -58,13 +58,20 @@ export default function Page() {
   const fetcher = useTypedFetcher<typeof loanAction>();
 
   useEffect(() => {
-    if (fetcher.data && fetcher.data.error) {
-      notifications.show({
-        message: fetcher.data.error,
-        color: "red"
-      })
+    if (fetcher.data) {
+      if (fetcher.data.error) {
+        notifications.show({
+          message: fetcher.data.error,
+          color: "red",
+        });
+      } else if (fetcher.data.loan) {
+        notifications.show({
+          message: "Created New Loan",
+        });
+        navigate(`/loans/${fetcher.data.loan.id}`)
+      }
     }
-  }, [fetcher.data])
+  }, [fetcher.data]);
 
   /**
    * Form values

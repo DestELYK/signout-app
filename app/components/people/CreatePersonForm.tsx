@@ -10,6 +10,7 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
 import { Person, Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
 import { useEffect } from "react";
@@ -79,6 +80,9 @@ export default function CreatePersonForm({
   // updates on new person creation
   useEffect(() => {
     if (submitNewPerson.data) {
+      notifications.show({
+        message: `Created new person: ${fullName(submitNewPerson.data)}`
+      })
       onSubmitted?.(submitNewPerson.data);
     }
   }, [submitNewPerson.data]);

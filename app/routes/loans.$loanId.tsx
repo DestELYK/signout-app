@@ -1,18 +1,12 @@
 import { Card } from "@mantine/core";
 import { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useRouteError } from "@remix-run/react";
-import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import ErrorPage from "~/components/ErrorPage";
 import LoanInfoView from "~/components/loans/LoanInfoView";
 import { prisma } from "~/lib/prisma.server";
 import { loanFindOne } from "~/utils/types.server";
-
-// TODO - Show returned by if another person returned the item
-// TODO - Allow editing the person (changing who has the loan, in the case of incorrect person selected)
-// TODO - Allow editing individual items (in case of swapping items)
-// TODO - Allow adding tags to the loan
-// TODO - Create a base component for displaying single item (for use for items and people)
 
 export const meta: MetaFunction = ({params}) => {
   return [{ title: `Viewing Loan #${params.loanId}` }];
@@ -22,8 +16,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
 
   const loanId = parseInt(params.loanId);
-
-  console.log(loanId);
 
   if (!loanId) {
     throw new Response(null, {
@@ -144,7 +136,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
 
       console.log("Loan #%i updated", loanId);
 
-      return redirect(`/loans/${updatedLoan.id}`)
+      return typedjson(updatedLoan);
     default:
       throw new Response(null, {
         status: 405,

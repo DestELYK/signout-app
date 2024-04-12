@@ -21,7 +21,7 @@ export default function ItemComboView({
         {item.tags && item.tags.length > 0 ? (
           <Group>
             {item.tags.map((t) => (
-              <Badge key={t.name} miw="max-content" ml="auto" color={t.color}>
+              <Badge key={t.name} miw="max-content" ml="auto" color={t.color} autoContrast>
                 {t.name}
               </Badge>
             ))}

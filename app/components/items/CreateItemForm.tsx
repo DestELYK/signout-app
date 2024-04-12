@@ -5,11 +5,11 @@ import {
   Group,
   LoadingOverlay,
   Stack,
-  Text,
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
 import { Item, Tag } from "@prisma/client";
 import { Form } from "@remix-run/react";
 import { useEffect } from "react";
@@ -18,12 +18,20 @@ import { action } from "~/routes/items";
 import {
   qrCodeValidator,
   specialValidator,
-  tagValidator
+  tagValidator,
 } from "~/utils/validators.client";
 import QrButton from "../QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
-export type ItemFormValues = { name: string; qrCode?: string; tags: Tag[] };
+const DESCRIPTION_LIMIT = 40;
+const CONFIRM_ID = "create-item-form_confirm";
+
+export type ItemFormValues = {
+  name: string;
+  qrCode?: string;
+  description?: string;
+  tags: Tag[];
+};
 
 export type CreateItemFormProps = {
   onSubmitted?: (item: Item) => void;
@@ -31,17 +39,27 @@ export type CreateItemFormProps = {
   qrCode?: string;
 };
 
-export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItemFormProps) {
+export default function CreateItemForm({
+  onSubmitted,
+  name,
+  qrCode,
+}: CreateItemFormProps) {
   const form = useForm<ItemFormValues>({
     initialValues: {
       name: "",
       qrCode: "",
+      description: "",
       tags: [],
     },
     validate: {
       name: (value) => specialValidator(value),
       qrCode: (value) => {
         if (value && value.length !== 0) return qrCodeValidator(value);
+      },
+      description: (value) => {
+        if (value && value.length >= DESCRIPTION_LIMIT) {
+          return `Limit is ${DESCRIPTION_LIMIT} characters`;
+        } else if (value?.length !== 0) return specialValidator(value);
       },
       tags: (value) => tagValidator(value),
     },
@@ -54,14 +72,17 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
   useEffect(() => {
     name && form.setFieldValue("name", name);
     qrCode && form.setFieldValue("qrCode", qrCode);
-  }, [name, qrCode])
+  }, [name, qrCode]);
 
   // updates on new person creation
   useEffect(() => {
-    if (submitNewItem.state === "idle" && submitNewItem.data) {
+    if (submitNewItem.data) {
+      notifications.show({
+        message: `Created new item: ${submitNewItem.data.name}`
+      })
       onSubmitted?.(submitNewItem.data);
     }
-  }, [submitNewItem.state, submitNewItem.data]);
+  }, [submitNewItem.data]);
 
   return (
     <Box pos="relative">
@@ -71,19 +92,16 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
         method="POST"
         onSubmit={form.onSubmit((values) => {
           modals.openConfirmModal({
+            modalId: CONFIRM_ID,
             title: "Confirm Creation",
             centered: true,
-            children: (
-              <Text>
-                Are you sure you want to create a new item named {values.name}?
-              </Text>
-            ),
+            children: `Are you sure you want to create a new item called ${values.name}?`,
             labels: {
               confirm: "Yes",
               cancel: "No",
             },
             onConfirm: () => {
-              modals.closeAll();
+              modals.close(CONFIRM_ID);
 
               submitNewItem.submit(values, {
                 action: "/items",
@@ -93,7 +111,7 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
               });
             },
             onCancel: () => {
-              modals.closeAll();
+              modals.close(CONFIRM_ID);
             },
           });
         })}
@@ -119,6 +137,11 @@ export default function CreateItemForm({ onSubmitted, name, qrCode }: CreateItem
               }}
             />
           </Flex>
+          <TextInput
+            label="Description"
+            description="Enter a useful description of the item that can help identify it"
+            {...form.getInputProps("description")}
+          />
           <TagCombobox
             onTagsChange={(values) => {
               form.setFieldValue("tags", values);

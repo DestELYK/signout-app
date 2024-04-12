@@ -15,7 +15,8 @@ import {
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useToggle } from "@mantine/hooks";
-import { MetaFunction, useNavigate, useRouteError, useSearchParams, useSubmit } from "@remix-run/react";
+import { notifications } from "@mantine/notifications";
+import { MetaFunction, useNavigate, useRouteError, useSearchParams } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import ErrorPage from "~/components/ErrorPage";
@@ -61,7 +62,7 @@ export default function Page() {
   const loansFetcher = useTypedFetcher<typeof loansLoader>();
   const loan = useTypedFetcher<typeof loanLoader>();
 
-  const submit = useSubmit();
+  const loanSubmit = useTypedFetcher<typeof loanLoader>();
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -104,6 +105,15 @@ export default function Page() {
       })
     }
   }, [loan.data])
+
+  useEffect(() => {
+    if (loanSubmit.data) {
+      notifications.show({
+        message: `Signed in items for loan ${loanSubmit.data.id}`
+      })
+      navigate(`/loans/${loanSubmit.data.id}`);
+    }
+  }, [loanSubmit.data])
 
   const loanOptions =
     !loanId && loansFetcher.data ? (
@@ -289,10 +299,11 @@ export default function Page() {
 
           <form
             onSubmit={signinForm.onSubmit((values) => {
-              submit(values, {
+              loanSubmit.submit(values, {
                 action: `/loans/${loanId}`,
                 method: "PATCH",
                 encType: "application/json",
+                navigate: false
               });
             })}
           >

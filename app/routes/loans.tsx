@@ -157,7 +157,8 @@ export async function action({ request }: ActionFunctionArgs) {
         });
 
         console.debug("Created new loan: %s", result);
-        return redirect(`/loans/${result.id}`);
+
+        return typedjson({loan: result, error: undefined});
       default:
         throw new Response(null, {
           status: 405,
@@ -169,7 +170,7 @@ export async function action({ request }: ActionFunctionArgs) {
     let message = "Unknown Error";
     if (e instanceof Error) message = e.message;
 
-    return typedjson({ error: message });
+    return typedjson({ error: message, loan: undefined });
   }
 }
 
