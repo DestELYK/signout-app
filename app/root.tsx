@@ -79,10 +79,10 @@ export default function App() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript/>
+        <ColorSchemeScript defaultColorScheme='auto'/>
       </head>
       <body>
-        <MantineProvider forceColorScheme='light' theme={theme}>
+        <MantineProvider defaultColorScheme='auto' theme={theme}>
           <ModalsProvider>
             <Notifications/>
             <Outlet />
