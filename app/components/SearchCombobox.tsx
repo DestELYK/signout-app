@@ -43,7 +43,6 @@ export interface SearchFormProps<T extends { id: number; key?: string }> {
   value: SearchFormValues;
   autoFocus?: boolean;
   errors?: { name?: string; qrCode?: string };
-  onSelectedItem: (value?: string) => void;
   onQRCodeChanged?: (value: string) => boolean;
   onNameChanged?: (value: string) => boolean;
   onSubmit?: (value?: T) => void;
@@ -68,7 +67,6 @@ export default function SearchCombobox<T extends { id: number;}>({
   onQRCodeChanged,
   onNameChanged,
   onSubmit,
-  onSelectedItem,
   onCreateButton,
   disableItem = (item) => false,
 }: SearchFormProps<T>) {
@@ -92,8 +90,6 @@ export default function SearchCombobox<T extends { id: number;}>({
       disabled={disabled}
       onOptionSubmit={(value) => {
         if (value != "$create") {
-          onSelectedItem?.(value);
-
           const selected = items?.find((v) => v.id.toString() === value);
 
           combobox.closeDropdown();

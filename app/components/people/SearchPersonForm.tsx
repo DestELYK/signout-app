@@ -141,21 +141,13 @@ export default function SearchPersonForm({
 
           return value.length !== 0;
         }}
-        onSelectedItem={(value) => {
-          console.log("Selected person #%s", value)
-          const result = searchPeopleFetcher.data.find(
-            (p) => p.id.toString() === value
-          );
-
-          if (result) {
-            form.setValues({
-              name: fullName(result),
-              qrCode: result.qrCode || undefined,
-            });
-          }
-        }}
         onSubmit={(value) => {
           if (value) {
+            form.setValues({
+              name: fullName(value),
+              qrCode: value.qrCode || undefined,
+            });
+
             if (!onSubmit || onSubmit(value)) submit(value);
           } else {
             console.warn("Value is undefined");

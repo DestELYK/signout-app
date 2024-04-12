@@ -71,8 +71,6 @@ export default function SearchItemForm({
 
   useEffect(() => {
     if (itemFetcher.data) {
-      console.log("Item Updated: ", itemFetcher.data)
-
       form.setValues({
         name: itemFetcher.data.name,
         qrCode: itemFetcher.data.qrCode || undefined,
@@ -142,21 +140,13 @@ export default function SearchItemForm({
 
           return value.length !== 0;
         }}
-        onSelectedItem={(value) => {
-          console.log("Selected item #%s", value)
-          const result = searchItemsFetcher.data.find(
-            (i) => i.id.toString() === value
-          );
-
-          if (result) {
-            form.setValues({
-              name: result.name,
-              qrCode: result.qrCode || undefined,
-            });
-          }
-        }}
         onSubmit={(value) => {
           if (value) {
+            form.setValues({
+              name: value.name,
+              qrCode: value.qrCode || undefined,
+            });
+            
             if (!onSubmit || onSubmit(value)) submit(value);
           } else {
             console.warn("Value is undefined");
