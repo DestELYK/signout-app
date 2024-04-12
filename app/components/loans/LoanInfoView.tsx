@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Badge,
+  Box,
   Button,
   Fieldset,
   Flex,
@@ -74,16 +75,16 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   const outstanding =
     loan.items && loan.items.find((item) => !item.dateReturned) !== undefined;
 
-    useEffect(() => {
-      if (fetcher.data) {
-        notifications.show({
-          message: "Loan Updated"
-        })
-      }
-    }, [fetcher.data]);
+  useEffect(() => {
+    if (fetcher.data) {
+      notifications.show({
+        message: "Loan Updated",
+      });
+    }
+  }, [fetcher.data]);
 
   useEffect(() => {
-    if (loan) {
+    if (loan && editStatus == "none") {
       setPerson(loan.person);
       setItems(loan.items);
       setNotes(loan.notes);
@@ -206,7 +207,9 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
     resultItem?: ItemFindOne,
     resultPerson?: PersonFindOne
   ) {
-    if (!items) return;
+    const filteredItems = items
+      ? items.filter((i) => i.itemId !== item.itemId)
+      : [];
 
     if (resultItem) {
       form.setFieldValue("itemIds", [
@@ -217,7 +220,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       oldItem.itemId = resultItem.id;
       oldItem.item = resultItem;
 
-      setItems([...items.filter((i) => i.itemId !== item.itemId), oldItem]);
+      setItems([...filteredItems, oldItem]);
     } else if (resultPerson) {
       form.setFieldValue("itemIds", [
         { id: item.itemId, returnedById: resultPerson.id },
@@ -227,7 +230,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       oldItem.returnedById = resultPerson.id;
       oldItem.returnedBy = resultPerson;
 
-      setItems([...items.filter((i) => i.itemId !== item.itemId), oldItem]);
+      setItems([...filteredItems, oldItem]);
     }
   }
 
@@ -257,7 +260,6 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
           encType: "application/json",
           action: `/loans/${loan.id}`,
           navigate: false,
-          fetcherKey: "LoanInfoView_update"
         });
       },
       onCancel: () => {
@@ -344,7 +346,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                 </Badge>
               )}
               {/* Edit Person */}
-              {editStatus == "none" && (
+              {editStatus == "none" ? (
                 <ActionIcon
                   variant="subtle"
                   onClick={() => {
@@ -354,14 +356,13 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                 >
                   <IconEdit />
                 </ActionIcon>
+              ) : (
+                editButton(true)
               )}
             </Group>
           </Flex>
           {editStatus == "person" && (
-            <Stack mt="sm">
-              <SearchPersonForm autoFocus onResult={updatePerson} />
-              {editButton()}
-            </Stack>
+            <SearchPersonForm autoFocus onResult={updatePerson} />
           )}
         </Fieldset>
         {/* Items */}
@@ -407,7 +408,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                         {i.dateReturned ? "In" : "Out"}
                       </Badge>
                       {/* Edit Item */}
-                      {editStatus == "none" && (
+                      {editStatus == "none" ? (
                         <ActionIcon
                           variant="subtle"
                           onClick={() => editItem(i)}
@@ -415,6 +416,8 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                         >
                           <IconEdit />
                         </ActionIcon>
+                      ) : (
+                        editButton(true)
                       )}
                     </Group>
                   </Flex>
@@ -437,11 +440,24 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                     <Text size="xs">Unknown</Text>
                   )}
                   {i.returnedBy && (
-                    <Text size="xs">Returned by: {fullName(i.returnedBy)}</Text>
+                    <Text size="xs">
+                      Returned by:{" "}
+                      <Text
+                        span
+                        inherit
+                        fw="bold"
+                        {...(i.returnedById != loan.personId && {
+                          c: "error",
+                        })}
+                      >
+                        {fullName(i.returnedBy)}
+                      </Text>
+                    </Text>
                   )}
-                  {editing && (
-                    <Stack mt="sm">
-                      {editStatus == "items" ? (
+                  <Box mt="sm">
+                    {
+                      //#region Item Edit
+                      editing && editStatus == "items" ? (
                         <SearchItemForm
                           autoFocus
                           filterItems={(searchItems) =>
@@ -452,20 +468,24 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                               ["Broken", "Lost", "Missing"].includes(t.name)
                             ) != undefined
                           }
-                          onResult={(item) => updateItem(i, item)}
+                          onResult={(item) => {
+                            updateItem(i, item);
+                          }}
                         />
                       ) : (
-                        <SearchPersonForm
-                          autoFocus
-                          onResult={(person) =>
-                            updateItem(i, undefined, person)
-                          }
-                        />
-                      )}
-
-                      {editButton()}
-                    </Stack>
-                  )}
+                        editing &&
+                        editStatus == "items-returnedBy" && (
+                          <SearchPersonForm
+                            autoFocus
+                            onResult={(person) =>
+                              updateItem(i, undefined, person)
+                            }
+                          />
+                        )
+                      )
+                      //#endregion
+                    }
+                  </Box>
                 </Stack>
               );
             })
