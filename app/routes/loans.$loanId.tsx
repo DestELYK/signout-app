@@ -74,17 +74,15 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
             where: { id: parseInt(loanId) },
           })
         ).personId;
-
-        personId!;
       }
 
       const updatedLoan = await prisma.loan.update({
         where: { id: parseInt(loanId) },
         data: {
           ...(personId && { personId: personId }),
-          ...(notes && { notes: notes }),
-          ...(updatedDate && { updatedDate: updatedDate }),
-          ...(itemIds && {
+          ...(notes != undefined && { notes: notes }),
+          ...(updatedDate != undefined && { updatedDate: updatedDate }),
+          ...(itemIds != undefined && {
             items: {
               updateMany: itemIds.map((i) => {
                 return {
@@ -116,7 +114,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
               }),
             },
           }),
-          ...(tagIds && {
+          ...(tagIds != undefined && {
             tags: {
               set: tagIds.map((t) => {
                 return {
