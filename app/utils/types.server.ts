@@ -3,8 +3,9 @@ import { Prisma } from "@prisma/client";
 export const itemFindMany = Prisma.validator<Prisma.ItemDefaultArgs>()({
   select: {
     id: true,
-    name: true,
     qrCode: true,
+    name: true,
+    description: true,
     tags: {
       select: {
         name: true,
