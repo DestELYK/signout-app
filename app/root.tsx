@@ -1,8 +1,8 @@
-import '@mantine/charts/styles.css';
-import '@mantine/core/styles.css';
-import '@mantine/dates/styles.css';
-import '@mantine/notifications/styles.css';
-import '@mantine/tiptap/styles.css';
+import "@mantine/charts/styles.css";
+import "@mantine/core/styles.css";
+import "@mantine/dates/styles.css";
+import "@mantine/notifications/styles.css";
+import "@mantine/tiptap/styles.css";
 
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction } from "@remix-run/node";
@@ -13,13 +13,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useRouteError
+  useRouteError,
 } from "@remix-run/react";
 
-import { ColorSchemeScript, MantineProvider, createTheme } from '@mantine/core';
-import { ModalsProvider } from '@mantine/modals';
-import { Notifications } from '@mantine/notifications';
-import ErrorPage from './components/ErrorPage';
+import { ColorSchemeScript, MantineProvider, createTheme } from "@mantine/core";
+import { ModalsProvider } from "@mantine/modals";
+import { Notifications } from "@mantine/notifications";
+import ErrorPage from "./components/ErrorPage";
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
@@ -37,12 +37,12 @@ const theme = createTheme({
       "#3a92e5",
       "#2e7fcc",
       "#2471b7",
-      "#0c61a2"
-    ]
+      "#0c61a2",
+    ],
   },
   primaryColor: "blue",
-  fontFamily: "'Open Sans', sans-serif"
-})
+  fontFamily: "'Open Sans', sans-serif",
+});
 
 export function ErrorBoundary() {
   const error = useRouteError();
@@ -54,13 +54,13 @@ export function ErrorBoundary() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript/>
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
-      <body style={{width: "100dvw", height: "100dvh"}}>
-        <MantineProvider forceColorScheme='light' theme={theme}>
+      <body style={{ width: "100dvw", height: "100dvh", overflow: "hidden" }}>
+        <MantineProvider defaultColorScheme="auto" theme={theme}>
           <ModalsProvider>
-            <Notifications/>
-            <ErrorPage error={error}/>
+            <Notifications />
+            <ErrorPage error={error} />
             <ScrollRestoration />
             <Scripts />
             <LiveReload />
@@ -79,12 +79,12 @@ export default function App() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript defaultColorScheme='auto'/>
+        <ColorSchemeScript defaultColorScheme="auto" />
       </head>
-      <body>
-        <MantineProvider defaultColorScheme='auto' theme={theme}>
+      <body style={{ width: "100dvw", height: "100dvh", overflow: "hidden" }}>
+        <MantineProvider defaultColorScheme="auto" theme={theme}>
           <ModalsProvider>
-            <Notifications/>
+            <Notifications />
             <Outlet />
             <ScrollRestoration />
             <Scripts />
@@ -96,6 +96,5 @@ export default function App() {
   );
 }
 function rgb(arg0: number, arg1: number, arg2: number): string {
-  throw new Error('Function not implemented.');
+  throw new Error("Function not implemented.");
 }
-
