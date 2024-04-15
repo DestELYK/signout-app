@@ -3,7 +3,6 @@ import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { IconSearch } from "@tabler/icons-react";
 import { useEffect } from "react";
-import { isMobile } from "react-device-detect";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader as itemsLoader } from "~/routes/items";
 import { loader as itemLoader } from "~/routes/items.$itemId";
@@ -121,7 +120,6 @@ export default function SearchItemForm({
           },
           submitIcon: <IconSearch />,
         }}
-        qrDisabled={!isMobile}
         onQRCodeChanged={(value) => {
           console.log("QRCode updated with %s", value);
           form.setFieldValue("qrCode", value);

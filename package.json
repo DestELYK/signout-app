@@ -6,7 +6,8 @@
   "version": "0.1.0",
   "scripts": {
     "build": "remix build",
-    "dev": "npx prisma studio &remix dev --manual -c \"node --watch-path server.js --watch server.js\"",
+    "prisma": "npx prisma studio",
+    "dev": "remix dev --manual -c \"node --watch-path server.js --watch server.js\"",
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc"
@@ -39,7 +40,6 @@
     "morgan": "^1.10.0",
     "qr-scanner": "^1.4.2",
     "react": "^18.2.0",
-    "react-device-detect": "^2.2.3",
     "react-dom": "^18.2.0",
     "react-qr-code": "^2.0.12",
     "recharts": "^2.12.2",

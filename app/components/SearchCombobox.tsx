@@ -9,7 +9,7 @@ import {
   useCombobox
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import QrButton from "./QrButton";
 import { ScanResults } from "./Scanner";
 
@@ -70,20 +70,10 @@ export default function SearchCombobox<T extends { id: number;}>({
   onCreateButton,
   disableItem = (item) => false,
 }: SearchFormProps<T>) {
-  const [search, setSearch] = useState<SearchFormValues>({
-    name: "",
-    qrCode: "",
-  });
-
   const combobox = useCombobox();
 
   const qrCodeRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    console.log("Search updated with value: ", value)
-    setSearch(value);
-  }, [value]);
 
   return (
     <Combobox
@@ -111,7 +101,7 @@ export default function SearchCombobox<T extends { id: number;}>({
               {...(formData.label && { label: formData.label.qrCode })}
               size="sm"
               description={formData.description?.qrCode}
-              value={search.qrCode}
+              value={value.qrCode}
               error={errors?.qrCode}
               onFocus={() => {
                 combobox.openDropdown();
@@ -126,12 +116,10 @@ export default function SearchCombobox<T extends { id: number;}>({
                 <CloseButton
                   aria-label="Clear input"
                   onClick={() => {
-                    setSearch({ qrCode: "" });
-
                     onQRCodeChanged?.("");
                   }}
                   style={{
-                    display: search.qrCode ? undefined : "none",
+                    display: value.qrCode ? undefined : "none",
                   }}
                 />
               }
@@ -166,7 +154,7 @@ export default function SearchCombobox<T extends { id: number;}>({
             placeholder={formData.placeholder?.name}
             {...(formData.label && { label: formData.label.name })}
             error={errors?.name}
-            value={search.name}
+            value={value.name}
             onFocus={(s) => {
               combobox.openDropdown();
             }}
@@ -180,11 +168,10 @@ export default function SearchCombobox<T extends { id: number;}>({
               <CloseButton
                 aria-label="Clear input"
                 onClick={() => {
-                  setSearch({ name: "" });
                   onNameChanged?.("");
                 }}
                 style={{
-                  display: search.name ? undefined : "none",
+                  display: value.name ? undefined : "none",
                 }}
               />
             }
@@ -224,7 +211,7 @@ export default function SearchCombobox<T extends { id: number;}>({
                   <Group justify="center">
                     <IconPlus />
                     {formData.label?.createButton ||
-                      `Create ${search.name || "New Item"}...`}
+                      `Create ${value.name || "New Item"}...`}
                   </Group>
                 </Combobox.Option>
               ) : null}
