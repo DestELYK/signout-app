@@ -1,11 +1,11 @@
 import {
-  ActionIcon,
-  Card,
-  Flex,
-  Grid,
-  Text,
-  TextInput,
-  Title,
+    ActionIcon,
+    Card,
+    Flex,
+    Grid,
+    Text,
+    TextInput,
+    Title,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useToggle } from "@mantine/hooks";
@@ -15,7 +15,7 @@ import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import { prisma } from "~/lib/prisma.server";
 import { PersonFindOne, personFindOne } from "~/utils/types.server";
-import { fullName } from "~/utils/utils";
+import { formatFullName } from "~/utils/utils";
 
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -75,7 +75,7 @@ export default function Page() {
             </Grid>
           ) : (
             <Title order={3} w="100%" ta="center" fw="bold">
-              {fullName(person)}
+              {formatFullName(person)}
             </Title>
           )}
           {/* <CloseButton

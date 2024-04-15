@@ -19,16 +19,17 @@ import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
 import { MetaFunction, useNavigate, useRouteError } from "@remix-run/react";
-import { IconEdit, IconPlus } from "@tabler/icons-react";
+import { IconEdit, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import ErrorPage from "~/components/ErrorPage";
-import ItemTable from "~/components/items/ItemTable";
-import SearchItemForm from "~/components/items/SearchItemForm";
+import LoanedItemInfoView from "~/components/items/LoanedItemInfoView";
+import PersonInfoView from "~/components/people/PersonInfoView";
 import SearchPersonForm from "~/components/people/SearchPersonForm";
 import { ItemFindMany, PersonFindOne } from "~/utils/types.server";
-import { dateDiff, formatDate, fullName } from "~/utils/utils";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { action as loanAction } from "./loans";
+import SearchItemForm from "~/components/items/SearchItemForm";
 
 interface LoanFormValues {
   person: PersonFindOne | undefined;
@@ -68,7 +69,7 @@ export default function Page() {
         notifications.show({
           message: "Created New Loan",
         });
-        navigate(`/loans/${fetcher.data.loan.id}`)
+        navigate(`/loans/${fetcher.data.loan.id}`);
       }
     }
   }, [fetcher.data]);
@@ -157,10 +158,10 @@ export default function Page() {
           />
         </Flex>
       </Card.Section>
-      <Flex w="100%" h="100%" direction="column">
+      <Flex w="100%" h="100%" direction="column" gap="sm">
         <Fieldset
           legend="Person"
-          h="min-content"
+          p="sm"
           {...(loanForm.errors.items && { style: { borderColor: "red" } })}
         >
           <Box pos="relative" h="100%">
@@ -169,19 +170,23 @@ export default function Page() {
               overlayProps={{ radius: "sm", blur: 2 }}
             />
             {loanForm.values.person ? (
-              <Flex direction="row" w="100%">
-                <Text w="100%" size="sm">
-                  {`${loanForm.values.person.firstName} ${loanForm.values.person.lastName}`}
-                </Text>
-                <ActionIcon
-                  style={{ justifySelf: "end" }}
-                  size="sm"
-                  color="red"
-                  onClick={() => loanForm.setFieldValue("person", undefined)}
-                >
-                  <IconEdit />
-                </ActionIcon>
-              </Flex>
+              <PersonInfoView
+                personId={loanForm.values.person.id}
+                firstName={loanForm.values.person.firstName}
+                lastName={loanForm.values.person.lastName}
+                nickname={loanForm.values.person.nickname}
+                role={loanForm.values.person.role}
+                rightSection={
+                  <ActionIcon
+                    style={{ justifySelf: "end" }}
+                    size="sm"
+                    color="red"
+                    onClick={() => loanForm.setFieldValue("person", undefined)}
+                  >
+                    <IconEdit />
+                  </ActionIcon>
+                }
+              />
             ) : (
               <SearchPersonForm
                 onResult={(value) => {
@@ -196,7 +201,7 @@ export default function Page() {
                         children: (
                           <Stack>
                             <Text c="red">
-                              {fullName(value)} already has{" "}
+                              {formatFullName(value)} already has{" "}
                               {outstandingLoans.length} loans out!
                             </Text>
                             <List>
@@ -236,12 +241,7 @@ export default function Page() {
             )}
           </Box>
         </Fieldset>
-        <Text
-          my="sm"
-          size="xs"
-          c="red"
-          hidden={loanForm.errors.person == undefined}
-        >
+        <Text size="xs" c="red" hidden={loanForm.errors.person == undefined}>
           {loanForm.errors.person}
         </Text>
         <Fieldset
@@ -256,10 +256,38 @@ export default function Page() {
               overlayProps={{ radius: "sm", blur: 2 }}
             />
             <Flex direction="column" h="100%">
-              <ItemTable
+              <Flex direction="column" mb="auto">
+                {loanForm.values.items.length > 0 ? (
+                  loanForm.values.items.map((item) => (
+                    <LoanedItemInfoView
+                      key={item.id}
+                      id={item.id}
+                      qrCode={item.qrCode}
+                      name={item.name}
+                      description={item.description}
+                      tags={item.tags}
+                      rightSection={
+                        <ActionIcon
+                          size="input-sm"
+                          variant="outline"
+                          color="red"
+                          onClick={() => removeItem(item)}
+                        >
+                          <IconTrash />
+                        </ActionIcon>
+                      }
+                    />
+                  ))
+                ) : (
+                  <Text ta="center" m="auto">
+                    Add item below
+                  </Text>
+                )}
+              </Flex>
+              {/* <ItemTable
                 items={loanForm.values.items}
                 onRemoveItem={removeItem}
-              />
+              /> */}
               <Divider mb="md" />
               <SearchItemForm
                 filterItems={(items) =>

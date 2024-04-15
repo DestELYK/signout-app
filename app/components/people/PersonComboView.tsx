@@ -1,6 +1,6 @@
 import { Badge, Flex, Highlight } from "@mantine/core";
 import { PersonFindMany } from "~/utils/types.server";
-import { fullName } from "~/utils/utils";
+import { formatFullName } from "~/utils/utils";
 
 export default function PersonComboView({
   highlight,
@@ -17,7 +17,7 @@ export default function PersonComboView({
         highlight={highlight}
         {...(person._count.loans > 0 ? { c: "red" } : {})}
       >
-        {fullName(person)}
+        {formatFullName(person)}
       </Highlight>
       <Flex direction="row" gap="sm" justify="space-between">
         {person._count.loans > 0 ? (

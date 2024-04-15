@@ -16,8 +16,12 @@ import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/people";
-import { fullName } from "~/utils/utils";
-import { alphaValidator, qrCodeValidator } from "~/utils/validators.client";
+import { formatFullName } from "~/utils/utils";
+import {
+  blankValueValidator,
+  personNameValidator,
+  qrCodeValidator,
+} from "~/utils/validators.client";
 import QrButton from "../QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
@@ -42,21 +46,19 @@ export default function CreatePersonForm({
 }: CreatePersonFormProps) {
   const form = useForm<PersonFormValues>({
     initialValues: {
-      firstName: "",
-      lastName: "",
-      nickname: "",
-      qrCode: "",
+      firstName: name?.split(' ')[0] || "",
+      lastName: name?.split(' ')[1] || "",
+      nickname: name?.split(' ')[2] || "",
+      qrCode: qrCode || "",
       role: undefined,
     },
     validate: {
-      firstName: (value) => alphaValidator(value),
-      lastName: (value) => alphaValidator(value),
-      nickname: (value) => {
-        if (value && value.length !== 0) return alphaValidator(value);
-      },
-      qrCode: (value) => {
-        if (value && value.length !== 0) return qrCodeValidator(value);
-      },
+      firstName: (value) =>
+        blankValueValidator(value) || personNameValidator(value),
+      lastName: (value) =>
+        blankValueValidator(value) || personNameValidator(value),
+      nickname: (value) => value && personNameValidator(value),
+      qrCode: (value) => value && qrCodeValidator(value),
       role: (value) => {
         if (!value) return "A role needs to be selected";
       },
@@ -67,22 +69,12 @@ export default function CreatePersonForm({
 
   const loading = submitNewPerson.state !== "idle";
 
-  useEffect(() => {
-    if (name) {
-      form.setFieldValue("firstName", name.split(" ")[0]);
-      form.setFieldValue("lastName", name.split(" ")[1]);
-      form.setFieldValue("nickname", name.split(" ")[2]);
-    }
-
-    qrCode && form.setFieldValue("qrCode", qrCode);
-  }, [name, qrCode]);
-
   // updates on new person creation
   useEffect(() => {
     if (submitNewPerson.data) {
       notifications.show({
-        message: `Created new person: ${fullName(submitNewPerson.data)}`
-      })
+        message: `Created new person: ${formatFullName(submitNewPerson.data)}`,
+      });
       onSubmitted?.(submitNewPerson.data);
     }
   }, [submitNewPerson.data]);
@@ -100,7 +92,7 @@ export default function CreatePersonForm({
             children: (
               <Text>
                 Are you sure you want to create a new person named{" "}
-                {fullName(values)}?
+                {formatFullName(values)}?
               </Text>
             ),
             labels: {
@@ -159,11 +151,11 @@ export default function CreatePersonForm({
               }
             }}
             category="Person Role"
-            fieldInfo={{
-              label: "Role",
-              description: "Select the person's role",
-              placeholder: "Search for role...",
-            }}
+            // fieldInfo={{
+            //   label: "Role",
+            //   description: "Select the person's role",
+            //   placeholder: "Search for role...",
+            // }}
             limit={1}
             error={form.getInputProps("role").error}
           />

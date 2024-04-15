@@ -196,7 +196,7 @@ export default function Page() {
     ...data.loans.sort((a, b) => {
       if (a.items.find((i) => !i.dateReturned)) {
         if (b.items.find((i) => !i.dateReturned))
-          return b.createdDate.getTime() - a.createdDate.getTime();
+          return a.createdDate.getTime() - b.createdDate.getTime();
         else return -1000;
       } else {
         if (b.items.find((i) => !i.dateReturned)) return 1000;

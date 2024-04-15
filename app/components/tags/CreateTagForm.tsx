@@ -16,7 +16,12 @@ import { Form } from "@remix-run/react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/tags";
-import { alphaValidator } from "~/utils/validators.client";
+import {
+  blankValueValidator,
+  tagCategoryValidator,
+  tagColorValidator,
+  tagNameValidator,
+} from "~/utils/validators.client";
 
 const CONFIRM_ID = "create-tag-form_confirm";
 
@@ -42,13 +47,9 @@ export default function CreateTagForm({
       category: "",
     },
     validate: {
-      name: (value) => alphaValidator(value),
-      color: (value) => {
-        if (/[^A-Z#0-9 ]+/gi.test(value)) {
-          return "Invalid characters used";
-        }
-      },
-      category: (value) => alphaValidator(value),
+      name: (value) => blankValueValidator(value) || tagNameValidator(value),
+      color: (value) => blankValueValidator(value) || tagColorValidator(value),
+      category: (value) => tagCategoryValidator(value),
     },
   });
 
@@ -67,8 +68,8 @@ export default function CreateTagForm({
   useEffect(() => {
     if (submitNewTag.data) {
       notifications.show({
-        message: `Created new tag: ${submitNewTag.data.name}`
-      })
+        message: `Created new tag: ${submitNewTag.data.name}`,
+      });
       onSubmitted?.(submitNewTag.data);
     }
   }, [submitNewTag.data]);

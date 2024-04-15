@@ -16,14 +16,17 @@ import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { action } from "~/routes/items";
 import {
+  blankValueValidator,
+  itemDescriptionValidator,
+  itemNameValidator,
   qrCodeValidator,
-  specialValidator,
-  tagValidator,
 } from "~/utils/validators.client";
 import QrButton from "../QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
 const DESCRIPTION_LIMIT = 40;
+const TAG_MIN = 1;
+const TAG_MAX = 5;
 const CONFIRM_ID = "create-item-form_confirm";
 
 export type ItemFormValues = {
@@ -52,16 +55,17 @@ export default function CreateItemForm({
       tags: [],
     },
     validate: {
-      name: (value) => specialValidator(value),
-      qrCode: (value) => {
-        if (value && value.length !== 0) return qrCodeValidator(value);
+      name: (value) => blankValueValidator(value) || itemNameValidator(value),
+      qrCode: (value) => value && qrCodeValidator(value),
+      description: (value) =>
+        value && itemDescriptionValidator(value, DESCRIPTION_LIMIT),
+      tags: (value) => {
+        if (value.length < TAG_MIN) {
+          return `Under minimum number of tags (${TAG_MIN})`;
+        } else if (value.length > TAG_MAX) {
+          return `Over maximum number of tags (${TAG_MAX})`;
+        }
       },
-      description: (value) => {
-        if (value && value.length >= DESCRIPTION_LIMIT) {
-          return `Limit is ${DESCRIPTION_LIMIT} characters`;
-        } else if (value?.length !== 0) return specialValidator(value);
-      },
-      tags: (value) => tagValidator(value),
     },
   });
 
@@ -78,8 +82,8 @@ export default function CreateItemForm({
   useEffect(() => {
     if (submitNewItem.data) {
       notifications.show({
-        message: `Created new item: ${submitNewItem.data.name}`
-      })
+        message: `Created new item: ${submitNewItem.data.name}`,
+      });
       onSubmitted?.(submitNewItem.data);
     }
   }, [submitNewItem.data]);

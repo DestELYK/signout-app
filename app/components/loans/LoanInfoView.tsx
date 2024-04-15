@@ -6,6 +6,8 @@ import {
   Fieldset,
   Flex,
   Group,
+  ScrollArea,
+  Skeleton,
   Stack,
   Text,
   Textarea,
@@ -15,8 +17,8 @@ import { useToggle } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
-import { Link, useNavigate } from "@remix-run/react";
-import { IconEdit } from "@tabler/icons-react";
+import { useNavigate } from "@remix-run/react";
+import { IconArrowLeft, IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { LoanPatchValues, loader } from "~/routes/loans.$loanId";
@@ -26,12 +28,16 @@ import {
   LoanedItemInclude,
   PersonFindOne,
 } from "~/utils/types.server";
-import { dateDiff, formatDate, fullName } from "~/utils/utils";
+import { formatFullName } from "~/utils/utils";
 import EditButtons from "../EditButtons";
 import InfoView from "../InfoView";
+import LoanedItemInfoView from "../items/LoanedItemInfoView";
 import SearchItemForm from "../items/SearchItemForm";
+import PersonInfoView from "../people/PersonInfoView";
 import SearchPersonForm from "../people/SearchPersonForm";
 import TagCombobox from "../tags/TagCombobox";
+
+import classes from "./LoanInfoView.module.css";
 
 export interface LoanInfoViewProps {
   loan: LoanFindOne;
@@ -49,6 +55,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   const navigate = useNavigate();
   const fetcher = useTypedFetcher<typeof loader>();
 
+  const [tags, setTags] = useState<{ name: string; color: string }[]>([]);
   const [person, setPerson] = useState<{
     id: number;
     firstName: string;
@@ -57,7 +64,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
     role: { name: string; color: string };
   }>();
   const [items, setItems] = useState<LoanedItemInclude[]>();
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState<string>();
 
   const [editStatus, toggleEditStatus] = useToggle([
     "none",
@@ -70,7 +77,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
 
   const form = useForm<LoanPatchValues>();
 
-  const infoLoading = loading || !loan;
+  const infoLoading = loading || loan == undefined;
 
   const outstanding =
     loan.items && loan.items.find((item) => !item.dateReturned) !== undefined;
@@ -85,6 +92,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
 
   useEffect(() => {
     if (loan && editStatus == "none") {
+      setTags(loan.tags);
       setPerson(loan.person);
       setItems(loan.items);
       setNotes(loan.notes);
@@ -124,9 +132,9 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       if (items && items.find((item) => item.dateReturned)) {
         modals.openConfirmModal({
           title: "Update Items",
-          children: `Would you like to update who returned the items with ${fullName(
+          children: `Would you like to update who returned the items with ${formatFullName(
             person
-          )}`,
+          )}?`,
           labels: {
             confirm: "Yes",
             cancel: "No",
@@ -135,16 +143,20 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
             const newIds: { id: number; returnedById: number }[] = [];
 
             const newItems = items.map((item) => {
-              newIds.push({
-                id: item.itemId,
-                returnedById: person.id,
-              });
+              if (item.dateReturned) {
+                newIds.push({
+                  id: item.itemId,
+                  returnedById: person.id,
+                });
 
-              return {
-                ...item,
-                returnedById: person.id,
-                returnedBy: person,
-              };
+                return {
+                  ...item,
+                  returnedById: person.id,
+                  returnedBy: person,
+                };
+              } else {
+                return item;
+              }
             });
 
             form.setFieldValue("itemIds", newIds);
@@ -274,11 +286,16 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       title={`Loan #${loan.id}`}
       onClose={() => navigate("/loans")}
       loading={infoLoading}
+      leftSection={
+        <ActionIcon variant="subtle" onClick={() => navigate("/loans")}>
+          <IconArrowLeft />
+        </ActionIcon>
+      }
       rightSection={
         editStatus == "none" ? (
           <>
-            {loan.tags.map((t) => (
-              <Badge key={t.id} color={t.color} autoContrast>
+            {tags.map((t) => (
+              <Badge key={t.name} color={t.color} autoContrast>
                 {t.name}
               </Badge>
             ))}
@@ -301,6 +318,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                 fieldInfo={{
                   placeholder: "Search for tag...",
                 }}
+                unstyled
                 autoFocus
                 error={form.getInputProps("tagIds").error}
                 initialValue={loan.tags}
@@ -314,212 +332,180 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
         )
       }
     >
-      <Flex
-        direction="column"
-        w="100%"
-        style={{ flexGrow: "1" }}
-        gap="sm"
-        py="sm"
+      <ScrollArea.Autosize
+        h="100%"
+        scrollbars="y"
+        type="auto"
+        offsetScrollbars="y"
       >
-        {/* Person */}
-        <Fieldset legend="Person">
-          <Flex
-            align="center"
-            direction="row"
-            justify="space-between"
-            wrap="nowrap"
-          >
-            <Text
-              ta="center"
-              fw="bold"
-              truncate="end"
-              component={Link}
-              to={`/people/${person?.id}`}
-              style={{ cursor: "pointer" }}
-            >
-              {person ? fullName(person) : "Unknown"}
-            </Text>
-            <Group align="center" style={{ flexWrap: "nowrap" }}>
-              {person && person.role && (
-                <Badge color={person.role.color} autoContrast>
-                  {person.role.name}
-                </Badge>
-              )}
-              {/* Edit Person */}
-              {editStatus == "none" ? (
-                <ActionIcon
-                  variant="subtle"
-                  onClick={() => {
-                    editPerson();
-                  }}
-                  disabled={editStatus != "none"}
-                >
-                  <IconEdit />
-                </ActionIcon>
+        <Flex direction="column" w="100%" gap="sm">
+          {/* Person */}
+          {person != undefined ? (
+            <Fieldset legend="Person" px="sm">
+              {person ? (
+                <PersonInfoView
+                  personId={person.id}
+                  firstName={person.firstName}
+                  lastName={person.lastName}
+                  nickname={person.nickname}
+                  role={person.role}
+                  rightSection={
+                    editStatus == "none" ? (
+                      <ActionIcon
+                        variant="subtle"
+                        onClick={() => {
+                          editPerson();
+                        }}
+                        disabled={editStatus != "none"}
+                      >
+                        <IconEdit />
+                      </ActionIcon>
+                    ) : (
+                      editStatus == "person" && editButton(true)
+                    )
+                  }
+                />
               ) : (
-                editButton(true)
+                <Skeleton h={30} w="100%" />
               )}
-            </Group>
-          </Flex>
-          {editStatus == "person" && (
-            <SearchPersonForm autoFocus onResult={updatePerson} />
-          )}
-        </Fieldset>
-        {/* Items */}
-        <Fieldset legend="Items">
-          {items && items.length > 0 ? (
-            items.map((i) => {
-              // Finds the form value (if it exists)
-              const formValue = form.values.itemIds?.find(
-                (id) => id.id == i.itemId || id.newId == i.itemId
-              );
-
-              // Used when the item list gets modified so that the SearchItemForm doesn't get destroyed
-              const itemId = formValue?.newId ? formValue.id : i.itemId;
-
-              // Determines if this item is the one currently being edited
-              const editing =
-                (editStatus == "items" || editStatus == "items-returnedBy") &&
-                formValue != undefined;
-
-              return (
-                <Stack key={itemId} gap={0} mb="sm">
-                  <Flex
-                    direction="row"
-                    wrap="nowrap"
-                    align="center"
-                    justify="space-between"
-                  >
-                    <Text
-                      ta="center"
-                      fw="bold"
-                      truncate="end"
-                      component={Link}
-                      to={`/items/${i.itemId}`}
-                      style={{ cursor: "pointer" }}
-                    >
-                      {i.item.name}
-                    </Text>
-                    <Group style={{ flexWrap: "nowrap" }}>
-                      <Badge
-                        color={i.dateReturned ? "green" : "red"}
-                        autoContrast
-                      >
-                        {i.dateReturned ? "In" : "Out"}
-                      </Badge>
-                      {/* Edit Item */}
-                      {editStatus == "none" ? (
-                        <ActionIcon
-                          variant="subtle"
-                          onClick={() => editItem(i)}
-                          disabled={editStatus != "none"}
-                        >
-                          <IconEdit />
-                        </ActionIcon>
-                      ) : (
-                        editButton(true)
-                      )}
-                    </Group>
-                  </Flex>
-                  {i.item.description && (
-                    <Text size="sm" lineClamp={2} truncate="end" fs="italic">
-                      {i.item.description}
-                    </Text>
-                  )}
-                  {i.dateReturned ? (
-                    <Text size="xs">
-                      Returned: {formatDate(i.dateReturned)} (
-                      {dateDiff(i.dateReturned)})
-                    </Text>
-                  ) : i.dateLoaned ? (
-                    <Text size="xs">
-                      Last Seen: {formatDate(i.dateLoaned)} (
-                      {dateDiff(i.dateLoaned)})
-                    </Text>
-                  ) : (
-                    <Text size="xs">Unknown</Text>
-                  )}
-                  {i.returnedBy && (
-                    <Text size="xs">
-                      Returned by:{" "}
-                      <Text
-                        span
-                        inherit
-                        fw="bold"
-                        {...(i.returnedById != loan.personId && {
-                          c: "error",
-                        })}
-                      >
-                        {fullName(i.returnedBy)}
-                      </Text>
-                    </Text>
-                  )}
-                  <Box mt="sm">
-                    {
-                      //#region Item Edit
-                      editing && editStatus == "items" ? (
-                        <SearchItemForm
-                          autoFocus
-                          filterItems={(searchItems) =>
-                            searchItems.filter((item) => item._count.loans == 0)
-                          }
-                          disableItem={(item) =>
-                            item.tags.find((t) =>
-                              ["Broken", "Lost", "Missing"].includes(t.name)
-                            ) != undefined
-                          }
-                          onResult={(item) => {
-                            updateItem(i, item);
-                          }}
-                        />
-                      ) : (
-                        editing &&
-                        editStatus == "items-returnedBy" && (
-                          <SearchPersonForm
-                            autoFocus
-                            onResult={(person) =>
-                              updateItem(i, undefined, person)
-                            }
-                          />
-                        )
-                      )
-                      //#endregion
-                    }
-                  </Box>
-                </Stack>
-              );
-            })
+              {editStatus == "person" && (
+                <Box mt="sm">
+                  <SearchPersonForm autoFocus onResult={updatePerson} />
+                </Box>
+              )}
+            </Fieldset>
           ) : (
-            <Text>No items</Text>
+            <Skeleton h={100} w="100%" />
           )}
-          {/* Sign In Items Button */}
-          {editStatus == "none" && (
-            <Button
-              mt="sm"
-              fullWidth
-              onClick={() => navigate(`/loans/signin?loanId=${loan.id}`)}
-              disabled={!outstanding}
-            >
-              Sign-In Items
-            </Button>
+
+          {/* Items */}
+          {items != undefined ? (
+            <Fieldset legend="Items" px="sm">
+              {items.length > 0 ? (
+                items.map((i) => {
+                  // Finds the form value (if it exists)
+                  const formValue = form.values.itemIds?.find(
+                    (id) => id.id == i.itemId || id.newId == i.itemId
+                  );
+
+                  // Used when the item list gets modified so that the SearchItemForm doesn't get destroyed
+                  const itemId = formValue?.newId ? formValue.id : i.itemId;
+
+                  // Determines if this item is the one currently being edited
+                  const editing =
+                    (editStatus == "items" ||
+                      editStatus == "items-returnedBy") &&
+                    formValue != undefined;
+
+                  return (
+                    (editStatus == "none" ||
+                      !editStatus.startsWith("items") ||
+                      editing) && (
+                      <LoanedItemInfoView
+                        key={itemId}
+                        id={i.itemId}
+                        qrCode={i.item.qrCode}
+                        name={i.item.name}
+                        description={i.item.description}
+                        dateLoaned={i.dateLoaned}
+                        dateReturned={i.dateReturned}
+                        returnedBy={i.returnedBy}
+                        tags={i.item.tags}
+                        showDetails={!editing}
+                        showOutstanding={!editing}
+                        rightSection={
+                          editStatus == "none" ? (
+                            <ActionIcon
+                              variant="subtle"
+                              onClick={() => editItem(i)}
+                              disabled={editStatus != "none"}
+                            >
+                              <IconEdit />
+                            </ActionIcon>
+                          ) : (
+                            editing && editButton(true)
+                          )
+                        }
+                        children={
+                          <Stack mt="sm" gap="sm">
+                            {
+                              //#region Item Edit
+                              editing && editStatus == "items" ? (
+                                <SearchItemForm
+                                  autoFocus
+                                  filterItems={(searchItems) =>
+                                    searchItems.filter(
+                                      (item) => item._count.loans == 0
+                                    )
+                                  }
+                                  disableItem={(item) =>
+                                    item.tags.find((t) =>
+                                      ["Broken", "Lost", "Missing"].includes(
+                                        t.name
+                                      )
+                                    ) != undefined
+                                  }
+                                  onResult={(item) => {
+                                    updateItem(i, item);
+                                  }}
+                                />
+                              ) : (
+                                editing &&
+                                editStatus == "items-returnedBy" && (
+                                  <SearchPersonForm
+                                    autoFocus
+                                    onResult={(person) =>
+                                      updateItem(i, undefined, person)
+                                    }
+                                  />
+                                )
+                              )
+                              //#endregion
+                            }
+                          </Stack>
+                        }
+                      />
+                    )
+                  );
+                })
+              ) : (
+                <Text>No items</Text>
+              )}
+              {/* Sign In Items Button */}
+              {editStatus == "none" && (
+                <Button
+                  mt="sm"
+                  fullWidth
+                  onClick={() => navigate(`/loans/signin?loanId=${loan.id}`)}
+                  disabled={!outstanding || !items || items.length == 0}
+                >
+                  Sign-In Items
+                </Button>
+              )}
+            </Fieldset>
+          ) : (
+            <Skeleton h={300} w="100%" />
           )}
-        </Fieldset>
-        {/* Notes */}
-        <Fieldset legend="Notes">
-          <Textarea
-            style={{ overflowY: "auto", flexGrow: "1" }}
-            size="fit-content"
-            autosize
-            minRows={7}
-            maxRows={15}
-            disabled={editStatus != "none" && editStatus != "notes"}
-            onBlur={() => {}}
-            value={notes}
-            onChange={(event) => updateNotes(event.target.value)}
-          />
-          {editStatus == "notes" && editButton()}
-        </Fieldset>
-      </Flex>
+
+          {/* Notes */}
+          {notes != undefined ? (
+            <Fieldset legend="Notes" px="sm">
+              <Textarea
+                classNames={{ ...classes }}
+                maxLength={512}
+                disabled={editStatus != "none" && editStatus != "notes"}
+                onBlur={() => {}}
+                value={notes}
+                {...(editStatus == "notes" && { mb: "sm" })}
+                onChange={(event) => updateNotes(event.target.value)}
+              />
+              {editStatus == "notes" && editButton()}
+            </Fieldset>
+          ) : (
+            <Skeleton h={200} w="100%" />
+          )}
+        </Flex>
+      </ScrollArea.Autosize>
     </InfoView>
   );
 }

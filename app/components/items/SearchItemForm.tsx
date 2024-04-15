@@ -1,13 +1,12 @@
 import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { IconSearch } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader as itemsLoader } from "~/routes/items";
 import { loader as itemLoader } from "~/routes/items.$itemId";
 import { ItemFindMany, ItemFindOne } from "~/utils/types.server";
-import { qrCodeValidator, specialValidator } from "~/utils/validators.client";
+import { itemNameValidator, qrCodeValidator } from "~/utils/validators.client";
 import SearchCombobox, { SearchFormValues } from "../SearchCombobox";
 import CreateItemForm from "./CreateItemForm";
 import ItemComboView from "./ItemComboView";
@@ -38,8 +37,9 @@ export default function SearchItemForm({
 }: SearchItemFormProps) {
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
+    validateInputOnBlur: true,
     validateInputOnChange: true,
-    onValuesChange(values, previous) {
+    onValuesChange(values) {
       onChange?.(values);
     },
     initialValues: {
@@ -47,12 +47,8 @@ export default function SearchItemForm({
       name: "",
     },
     validate: {
-      qrCode: (value, values) => {
-        return qrCodeValidator(value);
-      },
-      name: (value, values) => {
-        return specialValidator(value);
-      },
+      qrCode: (value) => value && qrCodeValidator(value),
+      name: (value) => value && itemNameValidator(value),
     },
   });
 
@@ -61,11 +57,17 @@ export default function SearchItemForm({
 
   const [opened, { open, close }] = useDisclosure(false);
 
+  const loading = searchItemsFetcher.state === "loading";
+
   const items =
     searchItemsFetcher &&
     searchItemsFetcher.data &&
     searchItemsFetcher.data instanceof Array
-      ? filterItems(searchItemsFetcher.data)
+      ? filterItems(searchItemsFetcher.data).sort((a, b) => {
+          const diff = a._count.loans - b._count.loans;
+
+          return (diff * 1000) + a.name.localeCompare(b.name);
+        })
       : [];
 
   useEffect(() => {
@@ -76,9 +78,9 @@ export default function SearchItemForm({
       });
 
       search(form.values);
-    }
 
-    onResult?.(itemFetcher.data);
+      onResult?.(itemFetcher.data);
+    }
   }, [itemFetcher.data]);
 
   function search(search: SearchFormValues) {
@@ -113,30 +115,38 @@ export default function SearchItemForm({
         />
       </Modal>
       <SearchCombobox
+        loading={loading}
         formData={{
           placeholder: {
             name: "Enter item name",
             qrCode: "Enter QR Code",
           },
-          submitIcon: <IconSearch />,
         }}
         onQRCodeChanged={(value) => {
           console.log("QRCode updated with %s", value);
-          form.setFieldValue("qrCode", value);
-          form.isValid("qrCode") && value.length >= 2
-            ? search({ qrCode: value })
-            : search({qrCode: ''});
 
-          return value.length !== 0;
+          form.setFieldValue("qrCode", value);
+
+          if (form.isValid("qrCode")) {
+            value.length >= 2
+              ? search({ qrCode: value })
+              : search({ qrCode: "" });
+            return value.length !== 0;
+          } else {
+            return false;
+          }
         }}
         onNameChanged={(value) => {
           console.log("Name updated with %s", value);
-          form.setFieldValue("name", value);
-          form.isValid("name") && value.length >= 2
-            ? search({ name: value })
-            : search({name: ''});
 
-          return value.length !== 0;
+          form.setFieldValue("name", value);
+
+          if (form.isValid("name")) {
+            value.length >= 2 ? search({ name: value }) : search({ name: "" });
+            return value.length !== 0;
+          } else {
+            return false;
+          }
         }}
         onSubmit={(value) => {
           if (value) {
@@ -144,7 +154,7 @@ export default function SearchItemForm({
               name: value.name,
               qrCode: value.qrCode || undefined,
             });
-            
+
             if (!onSubmit || onSubmit(value)) submit(value);
           } else {
             console.warn("Value is undefined");

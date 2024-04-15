@@ -1,14 +1,16 @@
 import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { IconSearch } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader as peopleLoader } from "~/routes/people";
 import { loader as personLoader } from "~/routes/people.$personId";
 import { PersonFindMany, PersonFindOne } from "~/utils/types.server";
-import { fullName } from "~/utils/utils";
-import { alphaValidator, qrCodeValidator } from "~/utils/validators.client";
+import { formatFullName } from "~/utils/utils";
+import {
+  personNameValidator,
+  qrCodeValidator,
+} from "~/utils/validators.client";
 import SearchCombobox, { SearchFormValues } from "../SearchCombobox";
 import CreatePersonForm from "./CreatePersonForm";
 import PersonComboView from "./PersonComboView";
@@ -40,6 +42,7 @@ export default function SearchPersonForm({
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     validateInputOnChange: true,
+    validateInputOnBlur: true,
     onValuesChange(values, previous) {
       onChange?.(values);
     },
@@ -48,12 +51,8 @@ export default function SearchPersonForm({
       name: "",
     },
     validate: {
-      qrCode: (value, values) => {
-        return qrCodeValidator(value);
-      },
-      name: (value, values) => {
-        return alphaValidator(value);
-      },
+      qrCode: (value) => value && qrCodeValidator(value),
+      name: (value) => value && personNameValidator(value),
     },
   });
 
@@ -61,6 +60,8 @@ export default function SearchPersonForm({
   const personFetcher = useTypedFetcher<typeof personLoader>();
 
   const [opened, { open, close }] = useDisclosure(false);
+
+  const loading = searchPeopleFetcher.state === "loading";
 
   const people =
     searchPeopleFetcher &&
@@ -72,14 +73,14 @@ export default function SearchPersonForm({
   useEffect(() => {
     if (personFetcher.data) {
       form.setValues({
-        name: fullName(personFetcher.data),
+        name: formatFullName(personFetcher.data),
         qrCode: personFetcher.data.qrCode || undefined,
       });
 
       search(form.values);
-    }
 
-    onResult?.(personFetcher.data);
+      onResult?.(personFetcher.data);
+    }
   }, [personFetcher.data]);
 
   function search(search: SearchFormValues) {
@@ -114,35 +115,43 @@ export default function SearchPersonForm({
         />
       </Modal>
       <SearchCombobox
+        loading={loading}
         formData={{
           placeholder: {
             name: "Enter person's name",
             qrCode: "Enter QR Code",
           },
-          submitIcon: <IconSearch />,
         }}
         onQRCodeChanged={(value) => {
           console.log("QRCode updated with %s", value);
-          form.setFieldValue("qrCode", value);
-          form.isValid("qrCode") && value.length >= 2
-            ? search({ qrCode: value })
-            : search({qrCode: ''});
 
-          return value.length !== 0;
+          form.setFieldValue("qrCode", value);
+
+          if (form.isValid("qrCode")) {
+            value.length >= 2
+              ? search({ qrCode: value })
+              : search({ qrCode: "" });
+            return value.length !== 0;
+          } else {
+            return false;
+          }
         }}
         onNameChanged={(value) => {
           console.log("Name updated with %s", value);
-          form.setFieldValue("name", value);
-          form.isValid("name") && value.length >= 2
-            ? search({ name: value })
-            : search({name: ''});
 
-          return value.length !== 0;
+          form.setFieldValue("name", value);
+
+          if (form.isValid("name")) {
+            value.length >= 2 ? search({ name: value }) : search({ name: "" });
+            return value.length !== 0;
+          } else {
+            return false;
+          }
         }}
         onSubmit={(value) => {
           if (value) {
             form.setValues({
-              name: fullName(value),
+              name: formatFullName(value),
               qrCode: value.qrCode || undefined,
             });
 

@@ -1,7 +1,9 @@
 import {
+  Center,
   CheckIcon,
   Combobox,
   Group,
+  Loader,
   Modal,
   Pill,
   PillsInput,
@@ -25,8 +27,10 @@ export type TagComboboxProps = {
     label?: string;
     description?: string;
     placeholder?: string;
+    create?: string;
   };
   category: string;
+  unstyled?: boolean;
   autoFocus?: boolean;
   limit?: number;
   error?: string;
@@ -39,8 +43,10 @@ export default function TagCombobox({
   fieldInfo = {
     label: "Tags",
     placeholder: "Search for tag...",
+    create: "New Item",
   },
   category,
+  unstyled,
   autoFocus,
   limit = 5,
   error,
@@ -57,6 +63,8 @@ export default function TagCombobox({
   const [opened, { open, close }] = useDisclosure(false);
 
   const searchTagsFetcher = useTypedFetcher<typeof loader>();
+
+  const loading = searchTagsFetcher.state == "loading";
 
   const tags = searchTagsFetcher.data || [];
 
@@ -140,7 +148,7 @@ export default function TagCombobox({
             label={fieldInfo.label}
             description={fieldInfo.description}
             required
-            variant="unstyled"
+            {...(unstyled && { variant: "unstyled" })}
             error={error}
             onClick={() => {
               combobox.openDropdown();
@@ -182,12 +190,19 @@ export default function TagCombobox({
 
         <Combobox.Dropdown mah={200} style={{ overflowY: "auto" }}>
           <Combobox.Options>
-            {options.length > 0 ? (
+            {loading ? (
+              <Combobox.Empty>
+                <Center w="100%" h={60}>
+                  <Loader />
+                </Center>
+              </Combobox.Empty>
+            ) : options.length > 0 ? (
               options
             ) : (
               <Combobox.Empty>
-                Nothing found...
+                Nothing found
                 <Combobox.Option
+                  mt="sm"
                   value="$create"
                   variant="subtle"
                   onClick={() => {
@@ -196,7 +211,7 @@ export default function TagCombobox({
                 >
                   <Group justify="center">
                     <IconPlus />
-                    Create New Tag
+                    {`Create ${fieldInfo.create || search}...`}
                   </Group>
                 </Combobox.Option>
               </Combobox.Empty>

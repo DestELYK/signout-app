@@ -1,6 +1,6 @@
 import { Badge, Card, Group, Stack, Text, Title, rem } from "@mantine/core";
 import { LoanFindMany } from "~/utils/types.server";
-import { dateDiff, formatDate, fullName } from "~/utils/utils";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 export function LoanItemView({
   loan,
@@ -75,7 +75,7 @@ export function LoanItemView({
             lineClamp={1}
             style={{ justifySelf: "flex-start" }}
           >
-            {fullName(loan.person)}
+            {formatFullName(loan.person)}
           </Title>
           <Group style={{ justifySelf: "center" }}>
             <Badge color={loan.person.role.color} variant="dot" autoContrast>

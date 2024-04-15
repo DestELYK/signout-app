@@ -1,12 +1,14 @@
 import {
   Box,
+  Center,
   CloseButton,
   Combobox,
   Flex,
   Group,
+  Loader,
   Text,
   TextInput,
-  useCombobox
+  useCombobox,
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React, { useRef } from "react";
@@ -34,11 +36,11 @@ export interface SearchFormProps<T extends { id: number; key?: string }> {
       qrCode?: string;
       name?: string;
     };
-    submitIcon?: JSX.Element;
   };
   showCombobox?: boolean;
   disabled?: boolean;
   qrDisabled?: boolean;
+  loading?: boolean;
   items: T[];
   value: SearchFormValues;
   autoFocus?: boolean;
@@ -50,15 +52,15 @@ export interface SearchFormProps<T extends { id: number; key?: string }> {
   disableItem?: (value: T) => boolean;
 }
 
-export default function SearchCombobox<T extends { id: number;}>({
+export default function SearchCombobox<T extends { id: number }>({
   children,
   formData = {
     label: undefined,
     placeholder: { qrCode: "QRCode", name: "Name" },
-    submitIcon: <IconPlus />,
   },
   disabled,
   qrDisabled,
+  loading,
   showCombobox = true,
   items,
   value,
@@ -187,7 +189,13 @@ export default function SearchCombobox<T extends { id: number;}>({
       </Combobox.Target>
       {showCombobox ? (
         <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
-          {items && items.length > 0 ? (
+          {loading ? (
+            <Combobox.Empty>
+              <Center w="100%" h={60}>
+                <Loader />
+              </Center>
+            </Combobox.Empty>
+          ) : items && items.length > 0 ? (
             items.map((v) => (
               <Combobox.Option
                 value={v.id.toString()}

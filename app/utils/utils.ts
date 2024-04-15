@@ -1,3 +1,13 @@
+import dayjs from "dayjs";
+
+import isToday from 'dayjs/plugin/isToday.js';
+import isYesterday from 'dayjs/plugin/isYesterday.js';
+import relativeTime from 'dayjs/plugin/relativeTime.js';
+
+dayjs.extend(isToday);
+dayjs.extend(isYesterday);
+dayjs.extend(relativeTime);
+
 export const formatDate = (
   date: string | Date,
   options: Intl.DateTimeFormatOptions = {
@@ -13,36 +23,24 @@ export const formatDate = (
 
   if (typeof date === "string") date = new Date(date);
 
-  return date.toLocaleString("en-US", options);
+  return date.toLocaleString("en", options);
 };
 
 export const dateDiff = (date: string | Date) => {
-  if (date === undefined) return 0;
-
-  if (typeof date === "string") date = new Date(date);
-
   const now = new Date();
-  const dayDiff = now.getDay() - date.getDay();
 
-  let dateDiff = "";
-  switch (dayDiff) {
-    case 0:
-      dateDiff = "Today";
-      break;
-    case 1:
-      dateDiff = "Yesterday";
-      break;
-    case 7:
-      dateDiff = "Last Week";
-    default:
-      dateDiff = `${dayDiff} days`;
-      break;
+  const d = dayjs(date);
+
+  if (d.isToday()) {
+    return `Today`;
+  } else if (d.isYesterday()) {
+    return `Yesterday`;
+  } else {
+    return `${d.fromNow()}`
   }
-
-  return dateDiff;
 };
 
-export const fullName = ({
+export const formatFullName = ({
   firstName,
   lastName,
   nickname,

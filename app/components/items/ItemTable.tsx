@@ -1,7 +1,6 @@
 import { ActionIcon, Badge, Group, Table } from "@mantine/core";
 import { IconTrash } from "@tabler/icons-react";
 // @ts-ignore
-import { QRCode } from "react-qr-code";
 import { ItemFindMany } from "~/utils/types.server";
 
 
@@ -19,7 +18,7 @@ export default function ItemTable({
   const rows = items.map((item, index) => (
     <Table.Tr key={item.id}>
       <Table.Td>
-        {item.qrCode ? (
+        {/* {item.qrCode ? (
           <div
             style={{
               height: "auto",
@@ -34,7 +33,7 @@ export default function ItemTable({
               viewBox={`0 0 32 32`}
             />
           </div>
-        ) : null}
+        ) : null} */}
       </Table.Td>
       <Table.Td>
         {item.name}

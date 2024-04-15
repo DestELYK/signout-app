@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group } from "@mantine/core";
+import { ActionIcon, Button, Flex, Group } from "@mantine/core";
 import { IconArrowBackUp, IconDeviceFloppy } from "@tabler/icons-react";
 
 export interface EditButtonsProps {
@@ -9,14 +9,14 @@ export interface EditButtonsProps {
 
 export default function EditButtons({ iconOnly = false, onRevert, onSave }: EditButtonsProps) {
   return iconOnly ? (
-    <Group align="center" justify="end">
-      <ActionIcon color="red" variant="subtle" onClick={onRevert}>
+    <Flex direction="row" align="center" justify="end" wrap="nowrap" gap="xs">
+      <ActionIcon color="red" variant="outline" onClick={onRevert}>
         <IconArrowBackUp />
       </ActionIcon>
-      <ActionIcon color="blue" variant="subtle" onClick={onSave}>
+      <ActionIcon color="blue" variant="outline" onClick={onSave}>
         <IconDeviceFloppy />
       </ActionIcon>
-    </Group>
+    </Flex>
   ) : (
     <Group align="center" justify="end" grow>
       <Button

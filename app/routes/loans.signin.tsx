@@ -96,7 +96,7 @@ export default function Page() {
   }, [loanId, searchId]);
 
   useEffect(() => {
-    if (loan.data && (!loan.data.items || loan.data.items.filter((i) => !i.dateReturned).length == 0)) {
+    if (!loanSubmit.data && loan.data && (!loan.data.items || loan.data.items.filter((i) => !i.dateReturned).length == 0)) {
       setSearchParams((prev) => {
         prev.delete("loanId");
         return prev;
