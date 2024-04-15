@@ -57,8 +57,8 @@ export default function CreatePersonForm({
         blankValueValidator(value) || personNameValidator(value),
       lastName: (value) =>
         blankValueValidator(value) || personNameValidator(value),
-      nickname: (value) => value && personNameValidator(value),
-      qrCode: (value) => value && qrCodeValidator(value),
+      nickname: (value) => {if (value) return personNameValidator(value)},
+      qrCode: (value) => {if (value) return qrCodeValidator(value)},
       role: (value) => {
         if (!value) return "A role needs to be selected";
       },
@@ -72,6 +72,7 @@ export default function CreatePersonForm({
   // updates on new person creation
   useEffect(() => {
     if (submitNewPerson.data) {
+      console.log("New Person Created with id: ", submitNewPerson.data.id);
       notifications.show({
         message: `Created new person: ${formatFullName(submitNewPerson.data)}`,
       });
@@ -113,6 +114,10 @@ export default function CreatePersonForm({
               modals.closeAll();
             },
           });
+        }, (errors, values) => {
+          notifications.show({
+            message: `Failed to create new person. Errors: ${JSON.stringify(errors)}`
+          })
         })}
       >
         <Stack gap="sm">

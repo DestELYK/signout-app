@@ -74,7 +74,7 @@ export default function SearchPersonForm({
     if (personFetcher.data) {
       form.setValues({
         name: formatFullName(personFetcher.data),
-        qrCode: personFetcher.data.qrCode || undefined,
+        qrCode: personFetcher.data.qrCode || "",
       });
 
       search(form.values);
@@ -152,7 +152,7 @@ export default function SearchPersonForm({
           if (value) {
             form.setValues({
               name: formatFullName(value),
-              qrCode: value.qrCode || undefined,
+              qrCode: value.qrCode || "",
             });
 
             if (!onSubmit || onSubmit(value)) submit(value);

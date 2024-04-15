@@ -74,7 +74,7 @@ export default function SearchItemForm({
     if (itemFetcher.data) {
       form.setValues({
         name: itemFetcher.data.name,
-        qrCode: itemFetcher.data.qrCode || undefined,
+        qrCode: itemFetcher.data.qrCode || "",
       });
 
       search(form.values);
@@ -152,7 +152,7 @@ export default function SearchItemForm({
           if (value) {
             form.setValues({
               name: value.name,
-              qrCode: value.qrCode || undefined,
+              qrCode: value.qrCode || "",
             });
 
             if (!onSubmit || onSubmit(value)) submit(value);

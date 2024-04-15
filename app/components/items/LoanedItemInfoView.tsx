@@ -44,16 +44,18 @@ export default function LoanedItemInfoView({
 
   return (
     <>
-      <Modal
-        opened={previewOpened}
-        onClose={previewClose}
-        centered
-        withCloseButton={false}
-      >
-        <Center w="100%" h="100%">
-          <QRCodeView qrCode={qrCode} scale={10} showText showDownload/>
-        </Center>
-      </Modal>
+      {qrCode && (
+        <Modal
+          opened={previewOpened}
+          onClose={previewClose}
+          centered
+          withCloseButton={false}
+        >
+          <Center w="100%" h="100%">
+            <QRCodeView qrCode={qrCode} scale={10} showText showDownload />
+          </Center>
+        </Modal>
+      )}
       <Stack gap={0} mb="sm" w="100%">
         <Flex
           w="100%"
@@ -65,9 +67,11 @@ export default function LoanedItemInfoView({
         >
           <Flex direction="row" wrap="nowrap" align="center" gap="xs">
             {/* QR Code Image */}
-            <Box onClick={() => previewOpen()} style={{cursor: "pointer"}}>
-              <QRCodeView qrCode={qrCode} scale={1.5}/>
-            </Box>
+            {qrCode && (
+              <Box onClick={() => previewOpen()} style={{ cursor: "pointer" }}>
+                <QRCodeView qrCode={qrCode} scale={1.5} />
+              </Box>
+            )}
             <Stack gap={0}>
               {/* Item Name */}
               <Text
@@ -93,7 +97,7 @@ export default function LoanedItemInfoView({
           </Flex>
           <Flex direction="row" align="center" wrap="nowrap" gap="xs">
             {/* Outstanding Indicator */}
-            {(showOutstanding && dateLoaned) && (
+            {showOutstanding && dateLoaned && (
               <Badge color={dateReturned ? "green" : "red"} autoContrast>
                 {dateReturned ? "In" : "Out"}
               </Badge>

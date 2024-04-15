@@ -56,9 +56,12 @@ export default function CreateItemForm({
     },
     validate: {
       name: (value) => blankValueValidator(value) || itemNameValidator(value),
-      qrCode: (value) => value && qrCodeValidator(value),
-      description: (value) =>
-        value && itemDescriptionValidator(value, DESCRIPTION_LIMIT),
+      qrCode: (value) => {
+        if (value) return qrCodeValidator(value);
+      },
+      description: (value) => {
+        if (value) return itemDescriptionValidator(value, DESCRIPTION_LIMIT);
+      },
       tags: (value) => {
         if (value.length < TAG_MIN) {
           return `Under minimum number of tags (${TAG_MIN})`;
