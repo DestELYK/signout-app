@@ -1,11 +1,10 @@
 import {
-  Box,
   Button,
   Flex,
   Group,
   LoadingOverlay,
   Stack,
-  TextInput,
+  TextInput
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -74,7 +73,7 @@ export default function CreateItemForm({
 
   const submitNewItem = useTypedFetcher<typeof action>();
 
-  const loading = submitNewItem.state !== "idle";
+  const loading = submitNewItem.state === "submitting";
 
   useEffect(() => {
     name && form.setFieldValue("name", name);
@@ -92,7 +91,7 @@ export default function CreateItemForm({
   }, [submitNewItem.data]);
 
   return (
-    <Box pos="relative">
+    <>
       <LoadingOverlay visible={loading} zIndex={1000} />
       <Form
         action="/items"
@@ -125,6 +124,7 @@ export default function CreateItemForm({
       >
         <Stack gap="sm">
           <TextInput
+            disabled={loading}
             label="Name"
             required
             data-autofocus
@@ -132,6 +132,7 @@ export default function CreateItemForm({
           />
           <Flex direction="row">
             <TextInput
+              disabled={loading}
               w="100%"
               label="QR Code"
               description="Optional qr code entry (can be added later)"
@@ -139,17 +140,20 @@ export default function CreateItemForm({
               {...form.getInputProps("qrCode")}
             />
             <QrButton
+              disabled={loading}
               onResult={(result) => {
                 form.setFieldValue("qrCode", result.data);
               }}
             />
           </Flex>
           <TextInput
+            disabled={loading}
             label="Description"
             description="Enter a useful description of the item that can help identify it"
             {...form.getInputProps("description")}
           />
           <TagCombobox
+            disabled={loading}
             onTagsChange={(values) => {
               form.setFieldValue("tags", values);
             }}
@@ -164,10 +168,12 @@ export default function CreateItemForm({
           />
 
           <Group justify="end">
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              Create
+            </Button>
           </Group>
         </Stack>
       </Form>
-    </Box>
+    </>
   );
 }

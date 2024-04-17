@@ -1,12 +1,11 @@
 import {
-  Box,
   Button,
   ColorInput,
   Group,
   LoadingOverlay,
   Stack,
   Text,
-  TextInput,
+  TextInput
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -75,7 +74,7 @@ export default function CreateTagForm({
   }, [submitNewTag.data]);
 
   return (
-    <Box pos="relative">
+    <>
       <LoadingOverlay visible={loading} zIndex={1000} />
       <Form
         action="/tags"
@@ -112,6 +111,7 @@ export default function CreateTagForm({
       >
         <Stack gap="sm">
           <TextInput
+            disabled={loading}
             label="Name"
             data-autofocus
             required
@@ -120,15 +120,17 @@ export default function CreateTagForm({
           <ColorInput label="Color" required {...form.getInputProps("color")} />
           <TextInput
             label="Category"
-            disabled={category != undefined}
+            disabled={loading || category != undefined}
             required
             {...form.getInputProps("category")}
           />
           <Group justify="end">
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              Create
+            </Button>
           </Group>
         </Stack>
       </Form>
-    </Box>
+    </>
   );
 }

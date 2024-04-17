@@ -4,7 +4,7 @@ import {
   Flex,
   LoadingOverlay,
   Text,
-  Title,
+  Title
 } from "@mantine/core";
 import { formatDate } from "~/utils/utils";
 
@@ -63,7 +63,7 @@ export default function InfoView({
       </Card.Section>
       <LoadingOverlay
         visible={loading}
-        zIndex={1000}
+        zIndex={200}
         overlayProps={{ radius: "sm", blur: 2 }}
       />
       {children}

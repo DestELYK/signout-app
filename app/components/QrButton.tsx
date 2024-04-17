@@ -9,8 +9,10 @@ import Scanner, { ScanResults, State } from "./Scanner";
 const MODAL_ID = "qr-scanner";
 
 export default function QrButton({
+  disabled,
   onResult,
 }: {
+  disabled?: boolean;
   onResult: (result: ScanResults) => void;
 }) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -27,12 +29,7 @@ export default function QrButton({
 
   return (
     <>
-      <Modal
-        centered
-        fullScreen
-        opened={opened}
-        onClose={close}
-      >
+      <Modal centered fullScreen opened={opened} onClose={close}>
         <Scanner
           startOnLoad
           hideButton
@@ -63,14 +60,14 @@ export default function QrButton({
       <Tooltip label={hasCamera ? "Scan QR Code" : "No Camera"}>
         <ActionIcon
           size="input-sm"
-          disabled={!hasCamera}
+          disabled={disabled || !hasCamera}
           onClick={() => {
             open();
           }}
           variant="outline"
           style={{ justifySelf: "flex-end", alignSelf: "flex-end" }}
         >
-          {!hasCamera ? <IconQrcodeOff /> : <IconQrcode />}
+          {disabled || !hasCamera ? <IconQrcodeOff /> : <IconQrcode />}
         </ActionIcon>
       </Tooltip>
     </>

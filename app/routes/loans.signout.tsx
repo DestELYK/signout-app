@@ -24,12 +24,12 @@ import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import ErrorPage from "~/components/ErrorPage";
 import LoanedItemInfoView from "~/components/items/LoanedItemInfoView";
+import SearchItemForm from "~/components/items/SearchItemForm";
 import PersonInfoView from "~/components/people/PersonInfoView";
 import SearchPersonForm from "~/components/people/SearchPersonForm";
 import { ItemFindMany, PersonFindOne } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { action as loanAction } from "./loans";
-import SearchItemForm from "~/components/items/SearchItemForm";
 
 interface LoanFormValues {
   person: PersonFindOne | undefined;
@@ -39,6 +39,7 @@ interface LoanFormValues {
 
 // TODO - Allow adding tags to loan
 // TODO - saving form data
+// TODO - Fix item already added error when submitting
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loan Sign-Out" }];
@@ -57,6 +58,8 @@ export function ErrorBoundary() {
 export default function Page() {
   const navigate = useNavigate();
   const fetcher = useTypedFetcher<typeof loanAction>();
+
+  const loading = fetcher.state === "submitting";
 
   useEffect(() => {
     if (fetcher.data) {
@@ -145,205 +148,218 @@ export default function Page() {
   }
 
   return (
-    <Card withBorder h="100%" w="100%">
-      <Card.Section withBorder inheritPadding px="xs" mb="sm">
-        <Flex direction="row" justify="center" align="center">
-          <Title w="100%" order={4} ta="center" fw="bold">
-            Sign-Out Items
-          </Title>
-          <CloseButton
-            size="xl"
-            style={{ justifySelf: "flex-end" }}
-            onClick={() => navigate("/loans")}
-          />
-        </Flex>
-      </Card.Section>
-      <Flex w="100%" h="100%" direction="column" gap="sm">
-        <Fieldset
-          legend="Person"
-          p="sm"
-          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
-        >
-          <Box pos="relative" h="100%">
-            <LoadingOverlay
-              zIndex={1000}
-              overlayProps={{ radius: "sm", blur: 2 }}
+    <>
+      <LoadingOverlay visible={loading} zIndex={1000} />
+      <Card withBorder h="100%" w="100%">
+        <Card.Section withBorder inheritPadding px="xs" mb="sm">
+          <Flex direction="row" justify="center" align="center">
+            <Title w="100%" order={4} ta="center" fw="bold">
+              Sign-Out Items
+            </Title>
+            <CloseButton
+              size="xl"
+              style={{ justifySelf: "flex-end" }}
+              onClick={() => navigate("/loans")}
             />
-            {loanForm.values.person ? (
-              <PersonInfoView
-                personId={loanForm.values.person.id}
-                firstName={loanForm.values.person.firstName}
-                lastName={loanForm.values.person.lastName}
-                nickname={loanForm.values.person.nickname}
-                role={loanForm.values.person.role}
-                rightSection={
-                  <ActionIcon
-                    style={{ justifySelf: "end" }}
-                    size="sm"
-                    color="red"
-                    onClick={() => loanForm.setFieldValue("person", undefined)}
-                  >
-                    <IconEdit />
-                  </ActionIcon>
-                }
-              />
-            ) : (
-              <SearchPersonForm
-                onResult={(value) => {
-                  if (value) {
-                    const outstandingLoans = value.loans.filter(
-                      (loan) =>
-                        loan.items.find((i) => !i.dateReturned) != undefined
-                    );
-                    if (outstandingLoans.length > 0) {
-                      modals.openConfirmModal({
-                        title: "Outstanding Loans",
-                        children: (
-                          <Stack>
-                            <Text c="red">
-                              {formatFullName(value)} already has{" "}
-                              {outstandingLoans.length} loans out!
-                            </Text>
-                            <List>
-                              {outstandingLoans.map((loan) => (
-                                <List.Item>
-                                  <Text>
-                                    {formatDate(loan.createdDate)} -{" "}
-                                    {loan.items.length} items
-                                  </Text>
-                                  <Text>{dateDiff(loan.createdDate)}</Text>
-                                </List.Item>
-                              ))}
-                            </List>
-                            <Text>
-                              Are you sure you want to create a new loan for{" "}
-                              {value.firstName}?
-                            </Text>
-                          </Stack>
-                        ),
-                        labels: {
-                          confirm: "Yes",
-                          cancel: "No",
-                        },
-                        onConfirm: () => {
-                          loanForm.setFieldValue("person", value);
-                        },
-                        onCancel: () => {
-                          loanForm.setFieldValue("person", undefined);
-                        },
-                      });
-                    } else {
-                      loanForm.setFieldValue("person", value);
-                    }
-                  }
-                }}
-              />
-            )}
-          </Box>
-        </Fieldset>
-        <Text size="xs" c="red" hidden={loanForm.errors.person == undefined}>
-          {loanForm.errors.person}
-        </Text>
-        <Fieldset
-          legend="Items"
-          p="sm"
-          h="100%"
-          {...(loanForm.errors.items && { style: { borderColor: "red" } })}
-        >
-          <Box pos="relative" h="100%">
-            <LoadingOverlay
-              zIndex={1000}
-              overlayProps={{ radius: "sm", blur: 2 }}
-            />
-            <Flex direction="column" h="100%">
-              <Flex direction="column" mb="auto">
-                {loanForm.values.items.length > 0 ? (
-                  loanForm.values.items.map((item) => (
-                    <LoanedItemInfoView
-                      key={item.id}
-                      id={item.id}
-                      qrCode={item.qrCode}
-                      name={item.name}
-                      description={item.description}
-                      tags={item.tags}
-                      rightSection={
-                        <ActionIcon
-                          size="input-sm"
-                          variant="outline"
-                          color="red"
-                          onClick={() => removeItem(item)}
-                        >
-                          <IconTrash />
-                        </ActionIcon>
-                      }
-                    />
-                  ))
-                ) : (
-                  <Text ta="center" m="auto">
-                    Add item below
-                  </Text>
-                )}
-              </Flex>
-              {/* <ItemTable
-                items={loanForm.values.items}
-                onRemoveItem={removeItem}
-              /> */}
-              <Divider mb="md" />
-              <SearchItemForm
-                filterItems={(items) =>
-                  items.map((i) => {
-                    if (loanForm.values.items.find((i2) => i2.id == i.id)) {
-                      if (!i.tags.find((t) => t.name === "Added")) {
-                        i.tags.push({
-                          name: "Added",
-                          color: "red",
-                        });
-                      }
-                    } else {
-                      i.tags = i.tags.filter((t) => t.name !== "Added");
-                    }
-                    return i;
-                  })
-                }
-                disableItem={(i) =>
-                  i._count.loans > 0 ||
-                  loanForm.values.items.find((i2) => i2.id == i.id) != undefined
-                }
-                onResult={insertItem}
-              />
-            </Flex>
-          </Box>
-        </Fieldset>
-        <Text
-          my="sm"
-          size="xs"
-          c="red"
-          hidden={loanForm.errors.items == undefined}
-        >
-          {loanForm.errors.items}
-        </Text>
-        <Group mt="sm" justify="end">
-          <form
-            onSubmit={loanForm.onSubmit(
-              (values) => {
-                handleDataSubmit(JSON.stringify(values));
-              },
-              (errors, values) => {
-                notifications.show({
-                  id: "error",
-                  color: "red",
-                  message: "Failed to create loan",
-                  autoClose: 1000,
-                });
-              }
-            )}
+          </Flex>
+        </Card.Section>
+        <Flex w="100%" h="100%" direction="column" gap="sm">
+          <Fieldset
+            disabled={loading}
+            legend="Person"
+            p="sm"
+            {...(loanForm.errors.items && { style: { borderColor: "red" } })}
           >
-            <Button type="submit" rightSection={<IconPlus />}>
-              Create Loan
-            </Button>
-          </form>
-        </Group>
-      </Flex>
-    </Card>
+            <Box pos="relative" h="100%">
+              <LoadingOverlay
+                zIndex={1000}
+                overlayProps={{ radius: "sm", blur: 2 }}
+              />
+              {loanForm.values.person ? (
+                <PersonInfoView
+                  personId={loanForm.values.person.id}
+                  qrCode={loanForm.values.person.qrCode}
+                  firstName={loanForm.values.person.firstName}
+                  lastName={loanForm.values.person.lastName}
+                  nickname={loanForm.values.person.nickname}
+                  role={loanForm.values.person.role}
+                  rightSection={
+                    <ActionIcon
+                      style={{ justifySelf: "end" }}
+                      size="sm"
+                      color="red"
+                      onClick={() =>
+                        loanForm.setFieldValue("person", undefined)
+                      }
+                    >
+                      <IconEdit />
+                    </ActionIcon>
+                  }
+                />
+              ) : (
+                <SearchPersonForm
+                  onResult={(value) => {
+                    if (value) {
+                      const outstandingLoans = value.loans.filter(
+                        (loan) =>
+                          loan.items.find((i) => !i.dateReturned) != undefined
+                      );
+                      if (outstandingLoans.length > 0) {
+                        modals.openConfirmModal({
+                          title: "Outstanding Loans",
+                          children: (
+                            <Stack>
+                              <Text c="red">
+                                {formatFullName(value)} already has{" "}
+                                {outstandingLoans.length} loans out!
+                              </Text>
+                              <List>
+                                {outstandingLoans.map((loan) => (
+                                  <List.Item>
+                                    <Text>
+                                      {formatDate(loan.createdDate)} -{" "}
+                                      {loan.items.length} items
+                                    </Text>
+                                    <Text>{dateDiff(loan.createdDate)}</Text>
+                                  </List.Item>
+                                ))}
+                              </List>
+                              <Text>
+                                Are you sure you want to create a new loan for{" "}
+                                {value.firstName}?
+                              </Text>
+                            </Stack>
+                          ),
+                          labels: {
+                            confirm: "Yes",
+                            cancel: "No",
+                          },
+                          onConfirm: () => {
+                            loanForm.setFieldValue("person", value);
+                          },
+                          onCancel: () => {
+                            loanForm.setFieldValue("person", undefined);
+                          },
+                        });
+                      } else {
+                        loanForm.setFieldValue("person", value);
+                      }
+                    }
+                  }}
+                />
+              )}
+            </Box>
+          </Fieldset>
+          <Text size="xs" c="red" hidden={loanForm.errors.person == undefined}>
+            {loanForm.errors.person}
+          </Text>
+          <Fieldset
+            disabled={loading}
+            legend="Items"
+            p="sm"
+            h="100%"
+            {...(loanForm.errors.items && { style: { borderColor: "red" } })}
+          >
+            <Box pos="relative" h="100%">
+              <LoadingOverlay
+                zIndex={1000}
+                overlayProps={{ radius: "sm", blur: 2 }}
+              />
+              <Flex direction="column" h="100%">
+                <Flex direction="column" mb="auto">
+                  {loanForm.values.items.length > 0 ? (
+                    loanForm.values.items.map((item) => (
+                      <LoanedItemInfoView
+                        key={item.id}
+                        id={item.id}
+                        qrCode={item.qrCode}
+                        name={item.name}
+                        description={item.description}
+                        tags={item.tags}
+                        rightSection={
+                          <ActionIcon
+                            size="input-sm"
+                            variant="outline"
+                            color="red"
+                            onClick={() => removeItem(item)}
+                          >
+                            <IconTrash />
+                          </ActionIcon>
+                        }
+                      />
+                    ))
+                  ) : (
+                    <Text ta="center" m="auto">
+                      Add item below
+                    </Text>
+                  )}
+                </Flex>
+                {/* <ItemTable
+              items={loanForm.values.items}
+              onRemoveItem={removeItem}
+            /> */}
+                <Divider mb="md" />
+                <SearchItemForm
+                  filterItems={(items) =>
+                    items.map((i) => {
+                      if (loanForm.values.items.find((i2) => i2.id == i.id)) {
+                        if (!i.tags.find((t) => t.name === "Added")) {
+                          i.tags.push({
+                            name: "Added",
+                            color: "red",
+                          });
+                        }
+                      } else {
+                        i.tags = i.tags.filter((t) => t.name !== "Added");
+                      }
+                      return i;
+                    })
+                  }
+                  disableItem={(i) =>
+                    i._count.loans > 0 ||
+                    loanForm.values.items.find((i2) => i2.id == i.id) !=
+                      undefined
+                  }
+                  onResult={insertItem}
+                />
+              </Flex>
+            </Box>
+          </Fieldset>
+          <Text
+            my="sm"
+            size="xs"
+            c="red"
+            hidden={loanForm.errors.items == undefined}
+          >
+            {loanForm.errors.items}
+          </Text>
+          <Group mt="sm" justify="end">
+            <form
+              onSubmit={loanForm.onSubmit(
+                (values) => {
+                  handleDataSubmit(JSON.stringify(values));
+                },
+                (errors, values) => {
+                  notifications.show({
+                    id: "error",
+                    color: "red",
+                    message: "Failed to create loan",
+                    autoClose: 1000,
+                  });
+                }
+              )}
+            >
+              <Button
+                type="submit"
+                disabled={loading}
+                rightSection={<IconPlus />}
+              >
+                Create Loan
+              </Button>
+            </form>
+          </Group>
+        </Flex>
+      </Card>
+    </>
   );
 }

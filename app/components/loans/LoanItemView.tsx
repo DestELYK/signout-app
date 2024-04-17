@@ -59,7 +59,9 @@ export function LoanItemView({
           </Title>
           <Group justify="end">
             {loan.tags.map((tag, index) => (
-              <Badge key={index} color={tag.color} autoContrast>{tag.name}</Badge>
+              <Badge key={index} color={tag.color} autoContrast>
+                {tag.name}
+              </Badge>
             ))}
             <Badge color={outstanding ? "red" : "green"} autoContrast>
               {outstanding ? "Out" : "In"}

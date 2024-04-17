@@ -1,9 +1,9 @@
-import { Badge, Box, Center, Flex, Modal, Stack, Text } from "@mantine/core";
+import { Badge, Flex, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 import { useDisclosure } from "@mantine/hooks";
-import QRCodeView from "../QRCodeView";
+import QRCodePreview from "../QRCodePreview";
 
 export interface LoanedItemInfoViewProps {
   id: number;
@@ -43,98 +43,80 @@ export default function LoanedItemInfoView({
     useDisclosure(false);
 
   return (
-    <>
-      {qrCode && (
-        <Modal
-          opened={previewOpened}
-          onClose={previewClose}
-          centered
-          withCloseButton={false}
-        >
-          <Center w="100%" h="100%">
-            <QRCodeView qrCode={qrCode} scale={10} showText showDownload />
-          </Center>
-        </Modal>
-      )}
-      <Stack gap={0} mb="sm" w="100%">
-        <Flex
-          w="100%"
-          direction="row"
-          wrap="nowrap"
-          align="center"
-          justify="space-between"
-          mb="sm"
-        >
-          <Flex direction="row" wrap="nowrap" align="center" gap="xs">
-            {/* QR Code Image */}
-            {qrCode && (
-              <Box onClick={() => previewOpen()} style={{ cursor: "pointer" }}>
-                <QRCodeView qrCode={qrCode} scale={1.5} />
-              </Box>
-            )}
-            <Stack gap={0}>
-              {/* Item Name */}
-              <Text
-                fw="bold"
-                lineClamp={1}
-                component={Link}
-                to={`/items/${id}`}
-                style={{ cursor: "pointer" }}
-              >
-                {name}
-              </Text>
-              {/* Tags */}
-              <Flex direction="row" wrap="nowrap">
-                {tags &&
-                  tags.length > 0 &&
-                  tags.map((tag) => (
-                    <Badge key={tag.name} size="xs" color={tag.color}>
-                      {tag.name}
-                    </Badge>
-                  ))}
-              </Flex>
-            </Stack>
-          </Flex>
-          <Flex direction="row" align="center" wrap="nowrap" gap="xs">
-            {/* Outstanding Indicator */}
-            {showOutstanding && dateLoaned && (
-              <Badge color={dateReturned ? "green" : "red"} autoContrast>
-                {dateReturned ? "In" : "Out"}
-              </Badge>
-            )}
-            {rightSection}
-          </Flex>
+    <Stack gap={0} mb="sm" w="100%">
+      <Flex
+        w="100%"
+        direction="row"
+        wrap="nowrap"
+        align="center"
+        justify="space-between"
+        mb="sm"
+      >
+        <Flex direction="row" wrap="nowrap" align="center" gap="xs">
+          {/* QR Code Image */}
+          {qrCode && <QRCodePreview qrCode={qrCode} />}
+          <Stack gap={0}>
+            {/* Item Name */}
+            <Text
+              fw="bold"
+              lineClamp={1}
+              component={Link}
+              to={`/items/${id}`}
+              style={{ cursor: "pointer" }}
+            >
+              {name}
+            </Text>
+            {/* Tags */}
+            <Flex direction="row" wrap="nowrap">
+              {tags &&
+                tags.length > 0 &&
+                tags.map((tag) => (
+                  <Badge key={tag.name} size="xs" color={tag.color}>
+                    {tag.name}
+                  </Badge>
+                ))}
+            </Flex>
+          </Stack>
         </Flex>
-        {/* Description */}
-        {showDetails && description && (
-          <Text size="sm" lineClamp={1} mb="sm" fs="italic">
-            {description}
-          </Text>
-        )}
-        {/* Date Returned */}
-        {showDetails &&
-          (dateReturned ? (
-            <Text size="xs" lineClamp={1}>
-              Returned: {formatDate(dateReturned)} ({dateDiff(dateReturned)})
-            </Text>
-          ) : (
-            dateLoaned && (
-              <Text size="xs" lineClamp={1}>
-                Last Seen: {formatDate(dateLoaned)} ({dateDiff(dateLoaned)})
-              </Text>
-            )
-          ))}
-        {/* Returned By */}
-        {returnedBy && (
+        <Flex direction="row" align="center" wrap="nowrap" gap="xs">
+          {/* Outstanding Indicator */}
+          {showOutstanding && dateLoaned && (
+            <Badge color={dateReturned ? "green" : "red"} autoContrast>
+              {dateReturned ? "In" : "Out"}
+            </Badge>
+          )}
+          {rightSection}
+        </Flex>
+      </Flex>
+      {/* Description */}
+      {showDetails && description && (
+        <Text size="sm" lineClamp={1} mb="sm" fs="italic">
+          {description}
+        </Text>
+      )}
+      {/* Date Returned */}
+      {showDetails &&
+        (dateReturned ? (
           <Text size="xs" lineClamp={1}>
-            Returned by:{" "}
-            <Text span inherit fw="bold">
-              {formatFullName(returnedBy)}
-            </Text>
+            Returned: {formatDate(dateReturned)} ({dateDiff(dateReturned)})
           </Text>
-        )}
-        {children}
-      </Stack>
-    </>
+        ) : (
+          dateLoaned && (
+            <Text size="xs" lineClamp={1}>
+              Last Seen: {formatDate(dateLoaned)} ({dateDiff(dateLoaned)})
+            </Text>
+          )
+        ))}
+      {/* Returned By */}
+      {returnedBy && (
+        <Text size="xs" lineClamp={1}>
+          Returned by:{" "}
+          <Text span inherit fw="bold">
+            {formatFullName(returnedBy)}
+          </Text>
+        </Text>
+      )}
+      {children}
+    </Stack>
   );
 }

@@ -1,9 +1,11 @@
-import { Badge, Flex, Group, Text } from "@mantine/core";
+import { Badge, Flex, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
 import { formatFullName } from "~/utils/utils";
+import QRCodePreview from "../QRCodePreview";
 
 export interface PersonInfoViewProps {
   personId: number;
+  qrCode?: string | null;
   firstName: string;
   lastName: string;
   nickname?: string | null;
@@ -13,6 +15,7 @@ export interface PersonInfoViewProps {
 
 export default function PersonInfoView({
   personId,
+  qrCode,
   firstName,
   lastName,
   nickname,
@@ -22,23 +25,42 @@ export default function PersonInfoView({
   const fullName = formatFullName({ firstName, lastName, nickname });
 
   return (
-    <Flex align="center" direction="row" justify="space-between" wrap="nowrap">
-      <Text
-        ta="center"
-        fw="bold"
-        component={Link}
-        to={`/people/${personId}`}
+    <Stack gap={0} w="100%">
+      <Flex
+        w="100%"
+        direction="row"
+        wrap="nowrap"
+        align="center"
+        justify="space-between"
       >
-        {fullName}
-      </Text>
-      <Group align="center" style={{ flexWrap: "nowrap" }}>
-        {role && (
-          <Badge color={role.color} autoContrast>
-            {role.name}
-          </Badge>
-        )}
-        {rightSection}
-      </Group>
-    </Flex>
+        <Flex direction="row" wrap="nowrap" align="center" gap="xs">
+          {/* QR Code Image */}
+          {qrCode && <QRCodePreview qrCode={qrCode} />}
+          <Stack gap={0}>
+            <Text
+              ta="center"
+              fw="bold"
+              component={Link}
+              to={`/people/${personId}`}
+            >
+              {fullName}
+            </Text>
+            {qrCode && role && (
+              <Badge color={role.color} autoContrast>
+                {role.name}
+              </Badge>
+            )}
+          </Stack>
+        </Flex>
+        <Flex direction="row" wrap="nowrap" align="center" gap="xs">
+          {!qrCode && role && (
+            <Badge color={role.color} autoContrast>
+              {role.name}
+            </Badge>
+          )}
+          {rightSection}
+        </Flex>
+      </Flex>
+    </Stack>
   );
 }

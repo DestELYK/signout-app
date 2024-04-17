@@ -1,12 +1,13 @@
 import {
-  Box,
   Button,
   Card,
+  Center,
   Checkbox,
   CloseButton,
   Fieldset,
   Flex,
   Group,
+  Loader,
   LoadingOverlay,
   ScrollArea,
   Stepper,
@@ -16,7 +17,12 @@ import {
 import { useForm } from "@mantine/form";
 import { useToggle } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { MetaFunction, useNavigate, useRouteError, useSearchParams } from "@remix-run/react";
+import {
+  MetaFunction,
+  useNavigate,
+  useRouteError,
+  useSearchParams,
+} from "@remix-run/react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import ErrorPage from "~/components/ErrorPage";
@@ -28,11 +34,11 @@ import { loader as loansLoader } from "./loans";
 import { LoanPatchValues, loader as loanLoader } from "./loans.$loanId";
 
 // TODO - Add returned by person field
-// TODO - Limit number of loans shown (hide until user searches)
-// TODO - Modify how loan items are displayed
 // TODO - Allow loans to be listed as a grid
-// TODO - Stack items
+// TODO - More information per item
 // TODO - show no items selected error
+
+// TODO - Maybe change to '/loans/$loanId/signin' ?
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loan Sign-In" }];
@@ -74,6 +80,11 @@ export default function Page() {
 
   const loanId = searchParams.get("loanId");
 
+  const loading =
+    loansFetcher.state !== "idle" ||
+    loan.state !== "idle" ||
+    loanSubmit.state !== "idle";
+
   useEffect(() => {
     if (loanId) {
       loan.load(`/loans/${loanId}`);
@@ -96,24 +107,38 @@ export default function Page() {
   }, [loanId, searchId]);
 
   useEffect(() => {
-    if (!loanSubmit.data && loan.data && (!loan.data.items || loan.data.items.filter((i) => !i.dateReturned).length == 0)) {
-      setSearchParams((prev) => {
-        prev.delete("loanId");
-        return prev;
-      }, {
-        replace: true
-      })
+    if (
+      !loanSubmit.data &&
+      loan.data &&
+      (!loan.data.items ||
+        loan.data.items.filter((i) => !i.dateReturned).length == 0)
+    ) {
+      setSearchParams(
+        (prev) => {
+          prev.delete("loanId");
+          return prev;
+        },
+        {
+          replace: true,
+        }
+      );
     }
-  }, [loan.data])
+  }, [loan.data]);
 
   useEffect(() => {
     if (loanSubmit.data) {
+      const message = signinForm.values.itemIds
+        ? `${signinForm.values.itemIds.length} item${
+            signinForm.values.itemIds.length > 1 ? "s" : ""
+          } signed-in for loan ${loanSubmit.data.id}`
+        : `Signed-In item(s) for loan ${loanId}`;
+
       notifications.show({
-        message: `Signed in items for loan ${loanSubmit.data.id}`
-      })
-      navigate(`/loans/${loanSubmit.data.id}`);
+        message: message,
+      });
+      navigate(`/loans/${loanSubmit.data.id}`, { replace: true });
     }
-  }, [loanSubmit.data])
+  }, [loanSubmit.data]);
 
   const loanOptions =
     !loanId && loansFetcher.data ? (
@@ -125,10 +150,15 @@ export default function Page() {
               key={l.id}
               loan={l}
               onClick={() => {
-                setSearchParams((prev) => {
-                  prev.set("loanId", l.id.toString());
-                  return prev;
-                });
+                setSearchParams(
+                  (prev) => {
+                    prev.set("loanId", l.id.toString());
+                    return prev;
+                  },
+                  {
+                    replace: true,
+                  }
+                );
               }}
             />
           ))
@@ -186,21 +216,23 @@ export default function Page() {
           h="100%"
           label="Select Loan"
           description="Select an outstanding loan"
+          disabled={loading}
         >
-          <Box pos="relative">
-            <LoadingOverlay visible={false} zIndex={1000} />
+          <>
             <Fieldset
               legend={`${capitalizeFirstLetter(searchType)} Search`}
               w="100%"
               p="sm"
               h="fit-content"
+              disabled={loading}
             >
-              <Box pos="relative">
+              <>
                 <div hidden={searchType != "person"}>
                   {/* Searching for Person */}
                   <SearchPersonForm
                     submitOnSelect
                     canCreate={false}
+                    disabled={loading}
                     filterItems={(items) =>
                       items.filter((i) => i._count.loans > 0)
                     }
@@ -217,6 +249,7 @@ export default function Page() {
                   <SearchItemForm
                     submitOnSelect
                     canCreate={false}
+                    disabled={loading}
                     filterItems={(items) =>
                       items.filter((i) => i._count.loans > 0)
                     }
@@ -227,27 +260,36 @@ export default function Page() {
                     }}
                   />
                 </div>
-              </Box>
+              </>
               <Flex direction="row" w="100%" justify="end" mt="sm">
                 <Button
                   variant="subtle"
                   onClick={() => {
                     toggleSearchType();
                   }}
+                  disabled={loading}
                 >
                   {`Search for ${searchType == "person" ? "item" : "person"}`}
                 </Button>
               </Flex>
             </Fieldset>
-            <Fieldset h="100%" legend="Loans">
-              <ScrollArea.Autosize
-                mah="calc(100dvh - 34rem)"
-                style={{ overflowY: "auto" }}
-              >
-                {loanOptions}
-              </ScrollArea.Autosize>
+
+            <Fieldset h="100%" legend="Loans" disabled={loading}>
+              {loansFetcher.state === "loading" ? (
+                <Center h={300}>
+                  <Loader />
+                </Center>
+              ) : (
+                <ScrollArea.Autosize
+                  mah="calc(100dvh - 34rem)"
+                  type="auto"
+                  scrollbars="y"
+                >
+                  {loanOptions}
+                </ScrollArea.Autosize>
+              )}
             </Fieldset>
-          </Box>
+          </>
         </Stepper.Step>
         {/* END */}
 
@@ -256,61 +298,80 @@ export default function Page() {
           h="100%"
           label="Select Item(s)"
           description="Select Item(s) to Sign-In"
+          disabled={loading}
         >
-          <Fieldset legend="Items">
-            <Box pos="relative">
-              <LoadingOverlay visible={loan.state !== "idle"} zIndex={1000} />
-              {loan.data && loan.data.items && loan.data.items.length > 0 ? (
-                <Checkbox.Group
-                  label="Select items for signing in"
-                  description="All items selected will be marked as returned"
-                  value={signinForm.values.itemIds?.map((itemId) =>
-                    itemId.id.toString()
-                  )}
-                  onChange={(values) =>
-                    signinForm.setFieldValue(
-                      "itemIds",
-                      values.map((v) => {
-                        return { id: parseInt(v) };
-                      })
-                    )
-                  }
-                >
-                  <Group mt="sm">
-                    {loan.data.items
-                      .filter((i) => !i.dateReturned)
-                      .map((item, index) => {
-                        return (
-                          <Checkbox
-                            key={item.item.id}
-                            value={item.item.id.toString()}
-                            label={item.item.name}
-                            checked
-                          />
-                        );
-                      })}
-                  </Group>
-                </Checkbox.Group>
-              ) : (
-                <Text>No Items</Text>
-              )}
-            </Box>
+          <Fieldset legend="Items" disabled={loading}>
+            {loan.state === "loading" ? (
+              <Center h={300}>
+                <Loader />
+              </Center>
+            ) : loan.data && loan.data.items && loan.data.items.length > 0 ? (
+              <Checkbox.Group
+                label="Select items for signing in"
+                description="All items selected will be marked as returned"
+                value={signinForm.values.itemIds?.map((itemId) =>
+                  itemId.id.toString()
+                )}
+                onChange={(values) =>
+                  signinForm.setFieldValue(
+                    "itemIds",
+                    values.map((v) => {
+                      return { id: parseInt(v) };
+                    })
+                  )
+                }
+              >
+                <Group mt="sm">
+                  {loan.data.items
+                    .filter((i) => !i.dateReturned)
+                    .map((item, index) => {
+                      return (
+                        <Checkbox
+                          key={item.item.id}
+                          value={item.item.id.toString()}
+                          label={item.item.name}
+                          checked
+                        />
+                      );
+                    })}
+                </Group>
+              </Checkbox.Group>
+            ) : (
+              <Text>No Items</Text>
+            )}
           </Fieldset>
 
           <form
             onSubmit={signinForm.onSubmit((values) => {
+              setActive(2);
               loanSubmit.submit(values, {
                 action: `/loans/${loanId}`,
                 method: "PATCH",
                 encType: "application/json",
-                navigate: false
+                navigate: false,
               });
             })}
           >
             <Group w="100%" justify="end">
-              <Button type="submit">Submit</Button>
+              <Button type="submit" disabled={loading}>
+                Submit
+              </Button>
             </Group>
           </form>
+        </Stepper.Step>
+        {/* END */}
+
+        {/* Third Page - Submitting */}
+        <Stepper.Step
+          h="100%"
+          label="Item Sign-In"
+          description="Submitting items for sign-in"
+          disabled={loading}
+        >
+          <LoadingOverlay visible={true} zIndex={200} />
+          <Center h="100%">
+            <Text size="lg">Submitting Items for sign-in...</Text>
+          </Center>
         </Stepper.Step>
         {/* END */}
       </Stepper>

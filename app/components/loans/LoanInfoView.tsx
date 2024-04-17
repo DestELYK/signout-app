@@ -58,6 +58,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
   const [tags, setTags] = useState<{ name: string; color: string }[]>([]);
   const [person, setPerson] = useState<{
     id: number;
+    qrCode?: string | null;
     firstName: string;
     lastName: string;
     nickname: string | null;
@@ -287,7 +288,12 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
       onClose={() => navigate("/loans")}
       loading={infoLoading}
       leftSection={
-        <ActionIcon variant="subtle" onClick={() => navigate("/loans")}>
+        <ActionIcon
+          variant="subtle"
+          onClick={() =>
+            navigate(-1)
+          }
+        >
           <IconArrowLeft />
         </ActionIcon>
       }
@@ -332,12 +338,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
         )
       }
     >
-      <ScrollArea.Autosize
-        h="100%"
-        scrollbars="y"
-        type="auto"
-        offsetScrollbars="y"
-      >
+      <ScrollArea.Autosize h="100%" scrollbars="y" type="auto">
         <Flex direction="column" w="100%" gap="sm">
           {/* Person */}
           {person != undefined ? (
@@ -345,6 +346,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
               {person ? (
                 <PersonInfoView
                   personId={person.id}
+                  qrCode={person.qrCode}
                   firstName={person.firstName}
                   lastName={person.lastName}
                   nickname={person.nickname}
@@ -476,7 +478,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                 <Button
                   mt="sm"
                   fullWidth
-                  onClick={() => navigate(`/loans/signin?loanId=${loan.id}`)}
+                  onClick={() => navigate(`/loans/signin?loanId=${loan.id}`, {replace: true})}
                   disabled={!outstanding || !items || items.length == 0}
                 >
                   Sign-In Items

@@ -35,6 +35,7 @@ export type TagComboboxProps = {
   limit?: number;
   error?: string;
   initialValue?: Tag[];
+  disabled?: boolean;
 };
 
 export default function TagCombobox({
@@ -51,6 +52,7 @@ export default function TagCombobox({
   limit = 5,
   error,
   initialValue = [],
+  disabled,
 }: TagComboboxProps) {
   const [value, setValue] = useState<Tag[]>(initialValue);
   const [search, setSearch] = useState("");
@@ -133,6 +135,7 @@ export default function TagCombobox({
         />
       </Modal>
       <Combobox
+        disabled={disabled}
         store={combobox}
         onOptionSubmit={(value) => {
           if (value === "$create") {

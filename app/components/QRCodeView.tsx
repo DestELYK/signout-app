@@ -24,6 +24,7 @@ export default function QRCodeView({
       QRCode.toCanvas(qrCodeRef.current, qrCode, {
         scale: scale,
         margin: 0,
+        width: scale * 25
       });
     }
   }, [qrCode, qrCodeRef]);

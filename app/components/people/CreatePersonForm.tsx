@@ -1,12 +1,11 @@
 import {
-  Box,
   Button,
   Flex,
   Group,
   LoadingOverlay,
   Stack,
   Text,
-  TextInput,
+  TextInput
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -46,9 +45,9 @@ export default function CreatePersonForm({
 }: CreatePersonFormProps) {
   const form = useForm<PersonFormValues>({
     initialValues: {
-      firstName: name?.split(' ')[0] || "",
-      lastName: name?.split(' ')[1] || "",
-      nickname: name?.split(' ')[2] || "",
+      firstName: name?.split(" ")[0] || "",
+      lastName: name?.split(" ")[1] || "",
+      nickname: name?.split(" ")[2] || "",
       qrCode: qrCode || "",
       role: undefined,
     },
@@ -57,8 +56,12 @@ export default function CreatePersonForm({
         blankValueValidator(value) || personNameValidator(value),
       lastName: (value) =>
         blankValueValidator(value) || personNameValidator(value),
-      nickname: (value) => {if (value) return personNameValidator(value)},
-      qrCode: (value) => {if (value) return qrCodeValidator(value)},
+      nickname: (value) => {
+        if (value) return personNameValidator(value);
+      },
+      qrCode: (value) => {
+        if (value) return qrCodeValidator(value);
+      },
       role: (value) => {
         if (!value) return "A role needs to be selected";
       },
@@ -67,7 +70,7 @@ export default function CreatePersonForm({
 
   const submitNewPerson = useTypedFetcher<typeof action>();
 
-  const loading = submitNewPerson.state !== "idle";
+  const loading = submitNewPerson.state === "submitting";
 
   // updates on new person creation
   useEffect(() => {
@@ -81,53 +84,60 @@ export default function CreatePersonForm({
   }, [submitNewPerson.data]);
 
   return (
-    <Box pos="relative">
+    <>
       <LoadingOverlay visible={loading} zIndex={1000} />
       <Form
         action="/items"
         method="POST"
-        onSubmit={form.onSubmit((values) => {
-          modals.openConfirmModal({
-            title: "Confirm Creation",
-            centered: true,
-            children: (
-              <Text>
-                Are you sure you want to create a new person named{" "}
-                {formatFullName(values)}?
-              </Text>
-            ),
-            labels: {
-              confirm: "Yes",
-              cancel: "No",
-            },
-            onConfirm: () => {
-              modals.closeAll();
+        onSubmit={form.onSubmit(
+          (values) => {
+            modals.openConfirmModal({
+              title: "Confirm Creation",
+              centered: true,
+              children: (
+                <Text>
+                  Are you sure you want to create a new person named{" "}
+                  {formatFullName(values)}?
+                </Text>
+              ),
+              labels: {
+                confirm: "Yes",
+                cancel: "No",
+              },
+              onConfirm: () => {
+                modals.closeAll();
 
-              submitNewPerson.submit(values, {
-                action: "/people",
-                method: "POST",
-                navigate: false,
-                encType: "application/json",
-              });
-            },
-            onCancel: () => {
-              modals.closeAll();
-            },
-          });
-        }, (errors, values) => {
-          notifications.show({
-            message: `Failed to create new person. Errors: ${JSON.stringify(errors)}`
-          })
-        })}
+                submitNewPerson.submit(values, {
+                  action: "/people",
+                  method: "POST",
+                  navigate: false,
+                  encType: "application/json",
+                });
+              },
+              onCancel: () => {
+                modals.closeAll();
+              },
+            });
+          },
+          (errors, values) => {
+            notifications.show({
+              message: `Failed to create new person. Errors: ${JSON.stringify(
+                errors
+              )}`,
+            });
+          }
+        )}
       >
         <Stack gap="sm">
           <TextInput
+            disabled={loading}
             label="First Name"
             required
             data-autofocus
             {...form.getInputProps("firstName")}
           />
           <TextInput
+            disabled={loading}
             label="Last Name"
             required
             {...form.getInputProps("lastName")}
@@ -135,6 +145,7 @@ export default function CreatePersonForm({
           <TextInput label="Nickname" {...form.getInputProps("nickname")} />
           <Flex direction="row">
             <TextInput
+              disabled={loading}
               w="100%"
               label="QR Code"
               description="Optional qr code entry (can be added later)"
@@ -142,12 +153,14 @@ export default function CreatePersonForm({
               {...form.getInputProps("qrCode")}
             />
             <QrButton
+              disabled={loading}
               onResult={(result) => {
                 form.setFieldValue("qrCode", result.data);
               }}
             />
           </Flex>
           <TagCombobox
+            disabled={loading}
             onTagsChange={(values) => {
               if (values.length == 1) {
                 form.setFieldValue("role", values[0]);
@@ -166,10 +179,12 @@ export default function CreatePersonForm({
           />
 
           <Group justify="end">
-            <Button type="submit">Create</Button>
+            <Button type="submit" disabled={loading}>
+              Create
+            </Button>
           </Group>
         </Stack>
       </Form>
-    </Box>
+    </>
   );
 }
