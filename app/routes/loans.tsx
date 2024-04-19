@@ -18,9 +18,10 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  useSearchParams
+  useSearchParams,
 } from "@remix-run/react";
-import { Suspense, useState } from "react";
+import dayjs from "dayjs";
+import { Suspense, useRef, useState } from "react";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
 import { LoanItemView } from "~/components/loans/LoanItemView";
 import { prisma } from "~/lib/prisma.server";
@@ -85,6 +86,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
       orderBy: [
         {
           createdDate: "desc",
+        },
+        {
+          id: "asc",
         },
       ],
     }),
@@ -158,7 +162,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
         console.debug("Created new loan: %s", result);
 
-        return typedjson({loan: result, error: undefined});
+        return typedjson({ loan: result, error: undefined });
       default:
         throw new Response(null, {
           status: 405,
@@ -180,6 +184,7 @@ export default function Page() {
   const params = useParams();
   const mediaMatch = useMediaQuery("(min-width: 62em)");
   const path = useLocation();
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const loanId = params.loanId?.length !== 0 ? params.loanId : undefined;
 
@@ -194,21 +199,39 @@ export default function Page() {
 
   const filteredLoans = [
     ...data.loans.sort((a, b) => {
-      if (a.items.find((i) => !i.dateReturned)) {
-        if (b.items.find((i) => !i.dateReturned))
-          return a.createdDate.getTime() - b.createdDate.getTime();
-        else return -1000;
-      } else {
-        if (b.items.find((i) => !i.dateReturned)) return 1000;
-        else return b.createdDate.getTime() - a.createdDate.getTime();
+      let value = 0;
+      if (a.id !== b.id) {
+        const aReturned = a.items.find((i) => i.dateReturned);
+        const bReturned = b.items.find((i) => i.dateReturned);
+
+        if (aReturned && bReturned) {
+          value = dayjs(bReturned.dateReturned).diff(aReturned.dateReturned);
+        } else if (aReturned && !bReturned) {
+          value = 1;
+        } else if (!aReturned && bReturned) {
+          value = -1;
+        } else if (!aReturned && !bReturned) {
+          const aLongTerm =
+            a.tags.find((t) => t.name === "Long-Term") != undefined;
+          const bLongTerm =
+            b.tags.find((t) => t.name === "Long-Term") !== undefined;
+
+          if ((aLongTerm && bLongTerm) || (!aLongTerm && !bLongTerm)) {
+            value = dayjs(b.createdDate).diff(a.createdDate);
+          } else if (aLongTerm && !bLongTerm) {
+            value = 1;
+          } else if (!aLongTerm && bLongTerm) {
+            value = -1;
+          }
+        }
       }
+
+      return value;
     }),
   ].slice(
     (activePage - 1) * ITEMS_PER_PAGE,
     (activePage - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
   );
-
-  // const outstandingLoans = loans.filter((loan) => loan._count.items > 0);
 
   const loanList = (
     <LoanListView {...(loanId && { activeId: loanId })}>
@@ -218,6 +241,7 @@ export default function Page() {
             mah="calc(100dvh - 10rem)"
             type="auto"
             scrollbars="y"
+            viewportRef={scrollRef}
           >
             {filteredLoans.map((loan) => (
               <LoanItemView
@@ -242,12 +266,16 @@ export default function Page() {
             total={
               data
                 ? data.count > ITEMS_PER_PAGE
-                  ? data.count / ITEMS_PER_PAGE
+                  ? Math.ceil(data.count / ITEMS_PER_PAGE)
                   : data.count
                 : 0
             }
             value={activePage}
-            onChange={setPage}
+            onChange={(value) => {
+              setPage(value);
+
+              scrollRef.current?.scrollTo({top: 0, behavior: 'smooth'});
+            }}
           >
             <Group gap={5} justify="center">
               <Pagination.Previous />

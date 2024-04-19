@@ -18,7 +18,7 @@ model Person {
   firstName String
   lastName  String
   nickname  String?
-  role      Tag     @relation(fields: [tagId], references: [id])
+  tags      Tag[]
   notes     String  @default("")
   qrCode    String?
 
@@ -27,8 +27,6 @@ model Person {
 
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
-
-  tagId Int
 
   @@unique([firstName, lastName, nickname])
 }

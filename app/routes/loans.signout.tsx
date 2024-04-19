@@ -182,7 +182,7 @@ export default function Page() {
                   firstName={loanForm.values.person.firstName}
                   lastName={loanForm.values.person.lastName}
                   nickname={loanForm.values.person.nickname}
-                  role={loanForm.values.person.role}
+                  tags={loanForm.values.person.tags}
                   rightSection={
                     <ActionIcon
                       style={{ justifySelf: "end" }}

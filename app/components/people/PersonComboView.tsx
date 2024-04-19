@@ -1,4 +1,4 @@
-import { Badge, Flex, Highlight } from "@mantine/core";
+import { Badge, Flex, Group, Highlight } from "@mantine/core";
 import { PersonFindMany } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 
@@ -26,14 +26,19 @@ export default function PersonComboView({
             {person._count.loans > 1 ? "s" : ""} out
           </Badge>
         ) : null}
-        <Badge
-          style={{ justifySelf: "flex-end" }}
-          miw="max-content"
-          ml="auto"
-          color={person.role.color}
-        >
-          {person.role.name}
-        </Badge>
+        <Group>
+          {person.tags.map((tag) => (
+            <Badge
+              style={{ justifySelf: "flex-end" }}
+              miw="max-content"
+              ml="auto"
+              color={tag.color}
+              autoContrast
+            >
+              {tag.name}
+            </Badge>
+          ))}
+        </Group>
       </Flex>
     </>
   );

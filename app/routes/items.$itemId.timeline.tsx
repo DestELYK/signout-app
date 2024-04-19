@@ -31,7 +31,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
           },
           returnedBy: {
             include: {
-              role: true,
+              tags: true,
             },
           },
         },

@@ -15,6 +15,7 @@ export default function ItemComboView({
         <Badge
           style={{ justifySelf: "flex-start" }}
           color={item._count.loans > 0 ? "red" : "green"}
+          autoContrast
         >
           {item._count.loans > 0 ? "Out" : "In"}
         </Badge>

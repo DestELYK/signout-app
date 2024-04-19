@@ -80,9 +80,11 @@ export function LoanItemView({
             {formatFullName(loan.person)}
           </Title>
           <Group style={{ justifySelf: "center" }}>
-            <Badge color={loan.person.role.color} variant="dot" autoContrast>
-              {loan.person.role.name}
-            </Badge>
+            {loan.person.tags.map((tag) => (
+              <Badge color={tag.color} variant="dot" autoContrast>
+                {tag.name}
+              </Badge>
+            ))}
           </Group>
         </Group>
       </Card.Section>

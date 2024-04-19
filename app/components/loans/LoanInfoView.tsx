@@ -62,7 +62,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
     firstName: string;
     lastName: string;
     nickname: string | null;
-    role: { name: string; color: string };
+    tags: { name: string; color: string }[];
   }>();
   const [items, setItems] = useState<LoanedItemInclude[]>();
   const [notes, setNotes] = useState<string>();
@@ -350,7 +350,7 @@ export default function LoanInfoView({ loan, loading }: LoanInfoViewProps) {
                   firstName={person.firstName}
                   lastName={person.lastName}
                   nickname={person.nickname}
-                  role={person.role}
+                  tags={person.tags}
                   rightSection={
                     editStatus == "none" ? (
                       <ActionIcon

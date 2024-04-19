@@ -31,7 +31,7 @@ export const itemFindOne = Prisma.validator<Prisma.ItemDefaultArgs>()({
           include: {
             person: {
               include: {
-                role: true,
+                tags: true,
               },
             },
             tags: true,
@@ -39,7 +39,7 @@ export const itemFindOne = Prisma.validator<Prisma.ItemDefaultArgs>()({
         },
         returnedBy: {
           include: {
-            role: true,
+            tags: true,
           },
         },
       },
@@ -66,7 +66,7 @@ export const personFindMany = Prisma.validator<Prisma.PersonDefaultArgs>()({
     firstName: true,
     lastName: true,
     nickname: true,
-    role: {
+    tags: {
       select: {
         name: true,
         color: true,
@@ -95,7 +95,7 @@ export type PersonFindMany = Prisma.PersonGetPayload<typeof personFindMany>;
 
 export const personFindOne = Prisma.validator<Prisma.PersonDefaultArgs>()({
   include: {
-    role: true,
+    tags: true,
     loans: {
       include: {
         items: {
@@ -143,7 +143,7 @@ export const loanedItemInclude =
       },
       returnedBy: {
         include: {
-          role: true,
+          tags: true,
         },
       },
     },
@@ -163,7 +163,7 @@ export const loanFindMany = Prisma.validator<Prisma.LoanDefaultArgs>()({
         firstName: true,
         lastName: true,
         nickname: true,
-        role: {
+        tags: {
           select: {
             name: true,
             color: true,
@@ -209,7 +209,7 @@ export const loanFindOne = Prisma.validator<Prisma.LoanDefaultArgs>()({
   include: {
     person: {
       include: {
-        role: true
+        tags: true
       }
     },
     items: loanedItemInclude,

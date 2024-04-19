@@ -71,7 +71,7 @@ export default function LoanedItemInfoView({
               {tags &&
                 tags.length > 0 &&
                 tags.map((tag) => (
-                  <Badge key={tag.name} size="xs" color={tag.color}>
+                  <Badge key={tag.name} size="xs" color={tag.color} autoContrast>
                     {tag.name}
                   </Badge>
                 ))}

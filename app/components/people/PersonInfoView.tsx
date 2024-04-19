@@ -9,7 +9,7 @@ export interface PersonInfoViewProps {
   firstName: string;
   lastName: string;
   nickname?: string | null;
-  role?: { name: string; color: string } | null;
+  tags?: { name: string; color: string }[] | null;
   rightSection?: React.ReactNode;
 }
 
@@ -19,7 +19,7 @@ export default function PersonInfoView({
   firstName,
   lastName,
   nickname,
-  role,
+  tags,
   rightSection,
 }: PersonInfoViewProps) {
   const fullName = formatFullName({ firstName, lastName, nickname });
@@ -45,19 +45,19 @@ export default function PersonInfoView({
             >
               {fullName}
             </Text>
-            {qrCode && role && (
-              <Badge color={role.color} autoContrast>
-                {role.name}
+            {qrCode && tags && tags.map(tag=>(
+              <Badge color={tag.color} autoContrast>
+                {tag.name}
               </Badge>
-            )}
+            ))}
           </Stack>
         </Flex>
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
-          {!qrCode && role && (
-            <Badge color={role.color} autoContrast>
-              {role.name}
+          {!qrCode && tags && tags.map(tag => (
+            <Badge color={tag.color} autoContrast>
+              {tag.name}
             </Badge>
-          )}
+          ))}
           {rightSection}
         </Flex>
       </Flex>
