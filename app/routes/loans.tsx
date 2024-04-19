@@ -1,14 +1,4 @@
-import {
-  Card,
-  Center,
-  Container,
-  Flex,
-  Group,
-  Loader,
-  Pagination,
-  ScrollArea,
-  Title,
-} from "@mantine/core";
+import { Card, Center, Container, Flex, Title } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
@@ -18,11 +8,10 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  useSearchParams,
 } from "@remix-run/react";
 import dayjs from "dayjs";
-import { Suspense, useRef, useState } from "react";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
+import ListView from "~/components/ListView";
 import { LoanItemView } from "~/components/loans/LoanItemView";
 import { prisma } from "~/lib/prisma.server";
 import {
@@ -31,7 +20,6 @@ import {
   loanFindMany,
   loanFindOne,
 } from "~/utils/types.server";
-import { LoanListView } from "../components/loans/LoanListView";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loans" }];
@@ -178,114 +166,63 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 }
 
-const ITEMS_PER_PAGE = 15;
-
 export default function Page() {
   const params = useParams();
   const mediaMatch = useMediaQuery("(min-width: 62em)");
   const path = useLocation();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const loanId = params.loanId?.length !== 0 ? params.loanId : undefined;
 
   const isNestedRoute = path.pathname.replace("/loans", "") !== "";
 
   const navigate = useNavigate();
-  const searchParams = useSearchParams({ outstanding: "" });
 
   const data = useTypedLoaderData<typeof loader>();
 
-  const [activePage, setPage] = useState(1);
+  const sortedLoans = data.loans.sort((a, b) => {
+    let value = 0;
+    if (a.id !== b.id) {
+      const aReturned = a.items.find((i) => i.dateReturned);
+      const bReturned = b.items.find((i) => i.dateReturned);
 
-  const filteredLoans = [
-    ...data.loans.sort((a, b) => {
-      let value = 0;
-      if (a.id !== b.id) {
-        const aReturned = a.items.find((i) => i.dateReturned);
-        const bReturned = b.items.find((i) => i.dateReturned);
+      if (aReturned && bReturned) {
+        value = dayjs(bReturned.dateReturned).diff(aReturned.dateReturned);
+      } else if (aReturned && !bReturned) {
+        value = 1;
+      } else if (!aReturned && bReturned) {
+        value = -1;
+      } else if (!aReturned && !bReturned) {
+        const aLongTerm =
+          a.tags.find((t) => t.name === "Long-Term") != undefined;
+        const bLongTerm =
+          b.tags.find((t) => t.name === "Long-Term") !== undefined;
 
-        if (aReturned && bReturned) {
-          value = dayjs(bReturned.dateReturned).diff(aReturned.dateReturned);
-        } else if (aReturned && !bReturned) {
+        if ((aLongTerm && bLongTerm) || (!aLongTerm && !bLongTerm)) {
+          value = dayjs(b.createdDate).diff(a.createdDate);
+        } else if (aLongTerm && !bLongTerm) {
           value = 1;
-        } else if (!aReturned && bReturned) {
+        } else if (!aLongTerm && bLongTerm) {
           value = -1;
-        } else if (!aReturned && !bReturned) {
-          const aLongTerm =
-            a.tags.find((t) => t.name === "Long-Term") != undefined;
-          const bLongTerm =
-            b.tags.find((t) => t.name === "Long-Term") !== undefined;
-
-          if ((aLongTerm && bLongTerm) || (!aLongTerm && !bLongTerm)) {
-            value = dayjs(b.createdDate).diff(a.createdDate);
-          } else if (aLongTerm && !bLongTerm) {
-            value = 1;
-          } else if (!aLongTerm && bLongTerm) {
-            value = -1;
-          }
         }
       }
+    }
 
-      return value;
-    }),
-  ].slice(
-    (activePage - 1) * ITEMS_PER_PAGE,
-    (activePage - 1) * ITEMS_PER_PAGE + ITEMS_PER_PAGE
-  );
+    return value;
+  });
 
   const loanList = (
-    <LoanListView {...(loanId && { activeId: loanId })}>
-      <Suspense fallback={<Loader />}>
-        {filteredLoans.length ? (
-          <ScrollArea.Autosize
-            mah="calc(100dvh - 10rem)"
-            type="auto"
-            scrollbars="y"
-            viewportRef={scrollRef}
-          >
-            {filteredLoans.map((loan) => (
-              <LoanItemView
-                key={loan.id}
-                active={loanId === loan.id.toString()}
-                loan={loan}
-                onClick={() => {
-                  navigate(`/loans/${loan.id}`);
-                }}
-              />
-            ))}
-          </ScrollArea.Autosize>
-        ) : (
-          <div className="h-full w-full">No Outstanding Loans</div>
-        )}
-        {data.count > ITEMS_PER_PAGE && (
-          <Pagination.Root
-            w="100%"
-            mt="md"
-            px="sm"
-            style={{ flexWrap: "nowrap" }}
-            total={
-              data
-                ? data.count > ITEMS_PER_PAGE
-                  ? Math.ceil(data.count / ITEMS_PER_PAGE)
-                  : data.count
-                : 0
-            }
-            value={activePage}
-            onChange={(value) => {
-              setPage(value);
-
-              scrollRef.current?.scrollTo({top: 0, behavior: 'smooth'});
-            }}
-          >
-            <Group gap={5} justify="center">
-              <Pagination.Previous />
-              <Pagination.Items />
-              <Pagination.Next />
-            </Group>
-          </Pagination.Root>
-        )}
-      </Suspense>
-    </LoanListView>
+    <ListView items={sortedLoans} itemsPerPage={15}>
+      {(item) => (
+        <LoanItemView
+          key={item.id}
+          active={loanId === item.id.toString()}
+          loan={item}
+          onClick={() => {
+            navigate(`/loans/${item.id}`);
+          }}
+        />
+      )}
+    </ListView>
   );
 
   return (

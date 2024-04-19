@@ -81,7 +81,7 @@ export function LoanItemView({
           </Title>
           <Group style={{ justifySelf: "center" }}>
             {loan.person.tags.map((tag) => (
-              <Badge color={tag.color} variant="dot" autoContrast>
+              <Badge key={tag.name} color={tag.color} variant="dot" autoContrast>
                 {tag.name}
               </Badge>
             ))}

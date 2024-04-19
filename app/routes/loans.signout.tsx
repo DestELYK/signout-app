@@ -40,6 +40,7 @@ interface LoanFormValues {
 // TODO - Allow adding tags to loan
 // TODO - saving form data
 // TODO - Fix item already added error when submitting
+// TODO - Allow custom sign-out date
 
 export const meta: MetaFunction = () => {
   return [{ title: "Loan Sign-Out" }];

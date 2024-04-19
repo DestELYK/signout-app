@@ -54,7 +54,7 @@ export default function PersonInfoView({
         </Flex>
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
           {!qrCode && tags && tags.map(tag => (
-            <Badge color={tag.color} autoContrast>
+            <Badge key={tag.name} color={tag.color} autoContrast>
               {tag.name}
             </Badge>
           ))}
