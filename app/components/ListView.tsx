@@ -1,15 +1,13 @@
 import {
     ActionIcon,
-    Button,
     Card,
     Collapse,
     Flex,
     Group,
     Pagination,
     ScrollArea,
-    Stack,
     Text,
-    Title,
+    Title
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { Link } from "@remix-run/react";
@@ -19,14 +17,18 @@ import { useRef, useState } from "react";
 const ITEMS_PER_PAGE = 15;
 
 export interface ListViewProps<T extends { id: number }> {
+  title: string;
   itemsPerPage: number;
   items: T[];
+  bottomSection?: React.ReactNode;
   children: (item: T) => React.ReactNode;
 }
 
 export default function ListView<T extends { id: number }>({
+  title,
   itemsPerPage = ITEMS_PER_PAGE,
   items,
+  bottomSection,
   children,
 }: ListViewProps<T>) {
   const [filterOpened, { toggle: toggleFilter }] = useDisclosure(false);
@@ -68,7 +70,7 @@ export default function ListView<T extends { id: number }>({
             lineClamp={1}
             style={{ justifySelf: "flex-start" }}
           >
-            Loans
+            {title}
           </Title>
         </Flex>
       </Card.Section>
@@ -113,16 +115,7 @@ export default function ListView<T extends { id: number }>({
         </Pagination.Root>
       )}
       <Card.Section withBorder inheritPadding p="lg" mt="xs">
-        <Stack style={{ justifySelf: "flex-end" }}>
-          <Group grow>
-            <Button component={Link} to={"/loans/signout"}>
-              Sign-Out Items
-            </Button>
-            <Button component={Link} to="/loans/signin">
-              Sign-In Items
-            </Button>
-          </Group>
-        </Stack>
+        {bottomSection}
       </Card.Section>
     </Card>
   );
