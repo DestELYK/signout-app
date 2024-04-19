@@ -4,7 +4,7 @@ import {
   Group,
   LoadingOverlay,
   Stack,
-  TextInput
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -82,11 +82,17 @@ export default function CreateItemForm({
 
   // updates on new person creation
   useEffect(() => {
-    if (submitNewItem.data) {
+    if (submitNewItem.data?.error) {
+      form.setFieldError("name", submitNewItem.data.error);
       notifications.show({
-        message: `Created new item: ${submitNewItem.data.name}`,
+        message: `Error: ${submitNewItem.data.error}`,
+        color: "red",
       });
-      onSubmitted?.(submitNewItem.data);
+    } else if (submitNewItem.data?.item) {
+      notifications.show({
+        message: `Created new item: ${submitNewItem.data.item.name}`,
+      });
+      onSubmitted?.(submitNewItem.data.item);
     }
   }, [submitNewItem.data]);
 

@@ -62,13 +62,11 @@ export default function SearchItemForm({
   const items =
     searchItemsFetcher &&
     searchItemsFetcher.data &&
-    searchItemsFetcher.data instanceof Array
-      ? filterItems(searchItemsFetcher.data).sort((a, b) => {
-          const diff = a._count.loans - b._count.loans;
+    filterItems(searchItemsFetcher.data.items).sort((a, b) => {
+      const diff = a._count.loans - b._count.loans;
 
-          return (diff * 1000) + a.name.localeCompare(b.name);
-        })
-      : [];
+      return diff * 1000 + a.name.localeCompare(b.name);
+    });
 
   useEffect(() => {
     if (itemFetcher.data) {
@@ -93,7 +91,7 @@ export default function SearchItemForm({
 
       searchItemsFetcher.load(`/items?${searchParams}`);
     } else {
-      searchItemsFetcher.data = [];
+      searchItemsFetcher.data.items = [];
     }
   }
 
@@ -104,7 +102,7 @@ export default function SearchItemForm({
 
   return (
     <>
-      <Modal opened={opened} onClose={close} title={"Create New Item"}>
+      <Modal opened={opened} onClose={close} title={"Create New Item"} centered>
         <CreateItemForm
           onSubmitted={(item) => {
             submit(item);

@@ -1,6 +1,5 @@
 import {
   Card,
-  CardSection,
   Flex,
   LoadingOverlay,
   Text,
@@ -68,7 +67,7 @@ export default function InfoView({
       />
       {children}
       {/* Footer Date Created & Updated */}
-      <CardSection withBorder inheritPadding py="xs" mt="sm">
+      <Card.Section withBorder inheritPadding py="xs" mt="sm">
         <Text size="xs" ta="center">
           Created:{" "}
           <span style={{ fontWeight: "bold" }}>{formatDate(createdDate)}</span>
@@ -77,7 +76,7 @@ export default function InfoView({
           Last Updated:{" "}
           <span style={{ fontWeight: "bold" }}>{formatDate(updatedDate)}</span>
         </Text>
-      </CardSection>
+      </Card.Section>
     </Card>
   );
 }

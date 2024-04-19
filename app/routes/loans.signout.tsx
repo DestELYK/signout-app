@@ -308,6 +308,7 @@ export default function Page() {
                           i.tags.push({
                             name: "Added",
                             color: "red",
+                            category: "_"
                           });
                         }
                       } else {

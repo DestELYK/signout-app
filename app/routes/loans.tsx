@@ -1,8 +1,17 @@
-import { Card, Center, Container, Flex, Title } from "@mantine/core";
+import {
+  Button,
+  Card,
+  Center,
+  Container,
+  Flex,
+  Group,
+  Title,
+} from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import {
+  Link,
   MetaFunction,
   Outlet,
   useLocation,
@@ -12,7 +21,7 @@ import {
 import dayjs from "dayjs";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
 import ListView from "~/components/ListView";
-import { LoanItemView } from "~/components/loans/LoanItemView";
+import { LoanListView } from "~/components/loans/LoanListView";
 import { prisma } from "~/lib/prisma.server";
 import {
   ItemFindMany,
@@ -211,9 +220,23 @@ export default function Page() {
   });
 
   const loanList = (
-    <ListView items={sortedLoans} itemsPerPage={15}>
+    <ListView
+      title="Loans"
+      items={sortedLoans}
+      itemsPerPage={15}
+      bottomSection={
+        <Group grow>
+          <Button component={Link} to={"/loans/signout"}>
+            Sign-Out Items
+          </Button>
+          <Button component={Link} to="/loans/signin">
+            Sign-In Items
+          </Button>
+        </Group>
+      }
+    >
       {(item) => (
-        <LoanItemView
+        <LoanListView
           key={item.id}
           active={loanId === item.id.toString()}
           loan={item}

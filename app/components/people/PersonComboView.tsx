@@ -29,6 +29,7 @@ export default function PersonComboView({
         <Group>
           {person.tags.map((tag) => (
             <Badge
+              key={tag.name}
               style={{ justifySelf: "flex-end" }}
               miw="max-content"
               ml="auto"

@@ -67,7 +67,6 @@ export default function Index() {
               size="3rem"
               component={Link}
               to="/items"
-              disabled
             >
               View Items
             </Button>
@@ -77,7 +76,6 @@ export default function Index() {
               size="3rem"
               component={Link}
               to="/people"
-              disabled
             >
               View People
             </Button>

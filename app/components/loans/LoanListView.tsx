@@ -2,7 +2,7 @@ import { Badge, Card, Group, Stack, Text, Title, rem } from "@mantine/core";
 import { LoanFindMany } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
-export function LoanItemView({
+export function LoanListView({
   loan,
   active,
   onClick,

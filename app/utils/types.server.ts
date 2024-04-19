@@ -10,10 +10,28 @@ export const itemFindMany = Prisma.validator<Prisma.ItemDefaultArgs>()({
       select: {
         name: true,
         color: true,
+        category: true,
       },
     },
     createdDate: true,
     updatedDate: true,
+    loans: {
+      select: {
+        dateLoaned: true,
+        loan: {
+          select: {
+            id: true,
+            person: {
+              select: {
+                firstName: true,
+                lastName: true,
+                nickname: true,
+              }
+            }
+          }
+        }
+      }
+    },
     _count: {
       select: {
         loans: { where: { dateReturned: null } },

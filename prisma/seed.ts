@@ -210,7 +210,7 @@ async function main() {
                   updatedDate: item.dateReturned
                     ? new Date(item.dateReturned)
                     : undefined,
-                  returnedById: loan.personId,
+                  returnedById: item.dateReturned ? loan.personId : undefined,
                 },
               });
             } catch (e) {

@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import ErrorPage from "~/components/ErrorPage";
 import SearchItemForm from "~/components/items/SearchItemForm";
-import { LoanItemView } from "~/components/loans/LoanItemView";
+import { LoanListView } from "~/components/loans/LoanListView";
 import SearchPersonForm from "~/components/people/SearchPersonForm";
 import { capitalizeFirstLetter } from "~/utils/utils";
 import { loader as loansLoader } from "./loans";
@@ -146,7 +146,7 @@ export default function Page() {
         loansFetcher.data.loans
           .filter((l) => l._count.items > 0)
           .map((l) => (
-            <LoanItemView
+            <LoanListView
               key={l.id}
               loan={l}
               onClick={() => {
