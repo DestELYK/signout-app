@@ -5,35 +5,27 @@ import {
   LoadingOverlay,
   Stack,
   Text,
-  TextInput
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { Person, Tag } from "@prisma/client";
-import { Form } from "@remix-run/react";
+import { useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
-import { useTypedFetcher } from "remix-typedjson";
+import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { action } from "~/routes/people";
+import { PersonWithTags, PostPersonFormData } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 import {
   blankValueValidator,
   personNameValidator,
   qrCodeValidator,
 } from "~/utils/validators.client";
-import QrButton from "../QrButton";
+import QrButton from "../qrCode/QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
-export type PersonFormValues = {
-  firstName: string;
-  lastName: string;
-  nickname?: string;
-  qrCode?: string;
-  role?: Tag;
-};
-
 export type CreatePersonFormProps = {
-  onSubmitted?: (person: Person) => void;
+  onSubmitted?: (person: PersonWithTags) => void;
   name?: string;
   qrCode?: string;
 };
@@ -43,7 +35,8 @@ export default function CreatePersonForm({
   name,
   qrCode,
 }: CreatePersonFormProps) {
-  const form = useForm<PersonFormValues>({
+  const navigate = useNavigate();
+  const form = useForm<PostPersonFormData>({
     initialValues: {
       firstName: name?.split(" ")[0] || "",
       lastName: name?.split(" ")[1] || "",
@@ -68,123 +61,139 @@ export default function CreatePersonForm({
     },
   });
 
-  const submitNewPerson = useTypedFetcher<typeof action>();
+  const submitNewPerson = useFetcherWithErrorHandler<typeof action>(
+    (data) => {
+      if (data.person) {
+        notifications.show({
+          message: (
+            <>
+              Created new person: <b>{formatFullName(data.person)}</b>.{" "}
+              <Text span inherit c="blue">
+                Click to view
+              </Text>
+              .
+            </>
+          ),
+          onClick: () => {
+            notifications.clean();
+            navigate(`/people/${data.person.id}`);
+          },
+        });
+
+        onSubmitted?.(data.person);
+      }
+    },
+    (error) => {
+      form.setErrors({
+        firstName: error,
+        lastName: error,
+        nickname: error,
+      });
+    }
+  );
 
   const loading = submitNewPerson.state === "submitting";
 
   // updates on new person creation
   useEffect(() => {
-    if (submitNewPerson.data) {
-      console.log("New Person Created with id: ", submitNewPerson.data.id);
+    if (submitNewPerson.data?.error) {
       notifications.show({
-        message: `Created new person: ${formatFullName(submitNewPerson.data)}`,
+        message: `Error: ${submitNewPerson.data.error}`,
+        color: "error",
       });
-      onSubmitted?.(submitNewPerson.data);
+    } else if (submitNewPerson.data?.person) {
     }
   }, [submitNewPerson.data]);
+
+  function handleSubmit() {
+    if (!form.validate().hasErrors) {
+      modals.openConfirmModal({
+        title: "Confirm Creation",
+        centered: true,
+        children: `Are you sure you want to create a new person named ${formatFullName(
+          form.values
+        )}?`,
+        labels: {
+          confirm: "Yes",
+          cancel: "No",
+        },
+        onConfirm: () => {
+          modals.closeAll();
+
+          submitNewPerson.submit(form.values, {
+            action: "/people",
+            method: "POST",
+            navigate: false,
+            encType: "application/json",
+          });
+        },
+        onCancel: () => {
+          modals.closeAll();
+        },
+      });
+    }
+  }
 
   return (
     <>
       <LoadingOverlay visible={loading} zIndex={1000} />
-      <Form
-        action="/items"
-        method="POST"
-        onSubmit={form.onSubmit(
-          (values) => {
-            modals.openConfirmModal({
-              title: "Confirm Creation",
-              centered: true,
-              children: (
-                <Text>
-                  Are you sure you want to create a new person named{" "}
-                  {formatFullName(values)}?
-                </Text>
-              ),
-              labels: {
-                confirm: "Yes",
-                cancel: "No",
-              },
-              onConfirm: () => {
-                modals.closeAll();
-
-                submitNewPerson.submit(values, {
-                  action: "/people",
-                  method: "POST",
-                  navigate: false,
-                  encType: "application/json",
-                });
-              },
-              onCancel: () => {
-                modals.closeAll();
-              },
-            });
-          },
-          (errors, values) => {
-            notifications.show({
-              message: `Failed to create new person. Errors: ${JSON.stringify(
-                errors
-              )}`,
-            });
-          }
-        )}
-      >
-        <Stack gap="sm">
+      <Stack gap="sm">
+        <TextInput
+          disabled={loading}
+          label="First Name"
+          required
+          data-autofocus
+          {...form.getInputProps("firstName")}
+        />
+        <TextInput
+          disabled={loading}
+          label="Last Name"
+          required
+          {...form.getInputProps("lastName")}
+        />
+        <TextInput label="Nickname" {...form.getInputProps("nickname")} />
+        <Flex direction="row">
           <TextInput
             disabled={loading}
-            label="First Name"
-            required
-            data-autofocus
-            {...form.getInputProps("firstName")}
+            w="100%"
+            label="QR Code"
+            description="Optional qr code entry (can be added later)"
+            placeholder="Optional"
+            {...form.getInputProps("qrCode")}
           />
-          <TextInput
+          <QrButton
             disabled={loading}
-            label="Last Name"
-            required
-            {...form.getInputProps("lastName")}
-          />
-          <TextInput label="Nickname" {...form.getInputProps("nickname")} />
-          <Flex direction="row">
-            <TextInput
-              disabled={loading}
-              w="100%"
-              label="QR Code"
-              description="Optional qr code entry (can be added later)"
-              placeholder="Optional"
-              {...form.getInputProps("qrCode")}
-            />
-            <QrButton
-              disabled={loading}
-              onResult={(result) => {
-                form.setFieldValue("qrCode", result.data);
-              }}
-            />
-          </Flex>
-          <TagCombobox
-            disabled={loading}
-            onTagsChange={(values) => {
-              if (values.length == 1) {
-                form.setFieldValue("role", values[0]);
-              } else {
-                form.setFieldValue("role", undefined);
-              }
+            onResult={(result) => {
+              form.setFieldValue("qrCode", result.data);
             }}
-            category="Person Role"
-            // fieldInfo={{
-            //   label: "Role",
-            //   description: "Select the person's role",
-            //   placeholder: "Search for role...",
-            // }}
-            limit={1}
-            error={form.getInputProps("role").error}
           />
+        </Flex>
+        <TagCombobox
+          required
+          disabled={loading}
+          onTagsChange={(values) => {
+            if (values.length == 1) {
+              form.setFieldValue("role", values[0]);
+            } else {
+              form.setFieldValue("role", undefined);
+            }
+          }}
+          category="Person Role"
+          // fieldInfo={{
+          //   label: "Role",
+          //   description: "Select the person's role",
+          //   placeholder: "Search for role...",
+          // }}
+          limit={1}
+          error={form.getInputProps("role").error}
+        />
 
-          <Group justify="end">
-            <Button type="submit" disabled={loading}>
-              Create
-            </Button>
-          </Group>
-        </Stack>
-      </Form>
+        <Group justify="end">
+          <Button disabled={loading} onClick={() => handleSubmit()}>
+            Create
+          </Button>
+        </Group>
+      </Stack>
     </>
   );
 }

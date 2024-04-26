@@ -1,9 +1,8 @@
-import { Badge, Flex, Stack, Text } from "@mantine/core";
+import { Badge, Flex, Group, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
-import { useDisclosure } from "@mantine/hooks";
-import QRCodePreview from "../QRCodePreview";
+import QRCodePreview from "../qrCode/QRCodePreview";
 
 export interface LoanedItemInfoViewProps {
   id: number;
@@ -39,9 +38,6 @@ export default function LoanedItemInfoView({
   showOutstanding = true,
   children,
 }: LoanedItemInfoViewProps) {
-  const [previewOpened, { open: previewOpen, close: previewClose }] =
-    useDisclosure(false);
-
   return (
     <Stack gap={0} mb="sm" w="100%">
       <Flex
@@ -54,7 +50,7 @@ export default function LoanedItemInfoView({
       >
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
           {/* QR Code Image */}
-          {qrCode && <QRCodePreview qrCode={qrCode} />}
+          <QRCodePreview qrCode={qrCode} />
           <Stack gap={0}>
             {/* Item Name */}
             <Text
@@ -67,15 +63,20 @@ export default function LoanedItemInfoView({
               {name}
             </Text>
             {/* Tags */}
-            <Flex direction="row" wrap="nowrap">
+            <Group gap="xs">
               {tags &&
                 tags.length > 0 &&
                 tags.map((tag) => (
-                  <Badge key={tag.name} size="xs" color={tag.color} autoContrast>
+                  <Badge
+                    key={tag.name}
+                    size="xs"
+                    color={tag.color}
+                    autoContrast
+                  >
                     {tag.name}
                   </Badge>
                 ))}
-            </Flex>
+            </Group>
           </Stack>
         </Flex>
         <Flex direction="row" align="center" wrap="nowrap" gap="xs">

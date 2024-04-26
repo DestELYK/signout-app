@@ -1,28 +1,40 @@
 import { Badge, Group, Highlight, Text } from "@mantine/core";
-import { ItemFindMany } from "~/utils/types.server";
+import { Tag } from "@prisma/client";
+
+export interface ItemComboViewProps {
+  highlight: string | string[];
+  outstanding?: boolean;
+  name: string;
+  tags: Tag[];
+}
 
 export default function ItemComboView({
   highlight,
-  item,
-}: {
-  highlight: string;
-  item: ItemFindMany;
-}) {
+  outstanding,
+  name,
+  tags,
+}: ItemComboViewProps) {
   return (
     <>
-      <Highlight highlight={highlight}>{item.name}</Highlight>
+      <Highlight highlight={highlight}>{name}</Highlight>
       <Group gap="sm" justify="space-between">
         <Badge
           style={{ justifySelf: "flex-start" }}
-          color={item._count.loans > 0 ? "red" : "green"}
+          color={outstanding ? "red" : "green"}
           autoContrast
         >
-          {item._count.loans > 0 ? "Out" : "In"}
+          {outstanding ? "Out" : "In"}
         </Badge>
-        {item.tags && item.tags.length > 0 ? (
+        {tags && tags.length > 0 ? (
           <Group>
-            {item.tags.map((t) => (
-              <Badge key={t.name} miw="max-content" ml="auto" color={t.color} autoContrast>
+            {tags.map((t) => (
+              <Badge
+                key={t.name}
+                miw="max-content"
+                ml="auto"
+                color={t.color}
+                autoContrast
+              >
                 {t.name}
               </Badge>
             ))}

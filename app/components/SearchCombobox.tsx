@@ -12,8 +12,8 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React, { useRef } from "react";
-import QrButton from "./QrButton";
-import { ScanResults } from "./Scanner";
+import QrButton from "./qrCode/QrButton";
+import { ScanResults } from "./qrCode/Scanner";
 
 export interface SearchFormValues {
   qrCode?: string;
@@ -47,7 +47,7 @@ export interface SearchFormProps<T extends { id: number; key?: string }> {
   errors?: { name?: string; qrCode?: string };
   onQRCodeChanged?: (value: string) => boolean;
   onNameChanged?: (value: string) => boolean;
-  onSubmit?: (value?: T) => void;
+  onSubmit?: (value?: T) => boolean | undefined;
   onCreateButton?: () => boolean;
   disableItem?: (value: T) => boolean;
 }
@@ -84,11 +84,13 @@ export default function SearchCombobox<T extends { id: number }>({
         if (value != "$create") {
           const selected = items?.find((v) => v.id.toString() === value);
 
-          combobox.closeDropdown();
-          qrCodeRef.current?.blur();
-          nameRef.current?.blur();
+          console.log("Selected Item: %s", value);
 
-          onSubmit?.(selected);
+          if (onSubmit?.(selected)) {
+            combobox.closeDropdown();
+            qrCodeRef.current?.blur();
+            nameRef.current?.blur();
+          }
         }
       }}
       store={combobox}

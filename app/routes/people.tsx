@@ -1,9 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { error } from "console";
+import { Outlet } from "@remix-run/react";
 import { typedjson } from "remix-typedjson";
+import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
-import { personFindMany } from "~/utils/types.server";
+import { PostPersonFormData, personWithTags } from "~/utils/types.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -12,12 +13,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const lastName = url.searchParams.get("lastName");
   const nickname = url.searchParams.get("nickname");
   const qrCode = url.searchParams.get("qrCode");
-  const query = url.searchParams.get("query");
-
-  let filter: Prisma.PersonWhereInput = {};
+  const query = url.searchParams.get("q") || url.searchParams.get("query");
 
   try {
-    filter = query
+    const filter: Prisma.PersonWhereInput = query
       ? ({
           OR: [
             {
@@ -52,31 +51,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           ...(nickname && { nickname: nickname }),
           ...(qrCode && { qrCode: qrCode }),
         };
-  } catch (e) {
-    console.error("Failed to create filter for /people", error);
-  }
 
-  return typedjson(
-    await prisma.person.findMany({
-      where: filter,
-      select: personFindMany.select,
-      orderBy: [
-        {
-          firstName: "asc",
-        },
-        {
-          lastName: "asc",
-        },
-        {
-          nickname: "asc",
-        },
-      ],
-    })
-  );
+    return typedjson({
+      people: await prisma.person.findMany({
+        where: filter,
+        include: personWithTags.include,
+        orderBy: [
+          {
+            id: "desc",
+          },
+        ],
+      }),
+      error: undefined,
+    });
+  } catch (e) {
+    const error = handleError(e, "no people returned");
+
+    if (error) {
+      return typedjson({ error: error, people: undefined });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
+  }
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.json();
+  const formData: PostPersonFormData = await request.json();
 
   try {
     switch (request.method) {
@@ -97,34 +99,45 @@ export async function action({ request }: ActionFunctionArgs) {
 
         const qrCode = formData.qrCode;
 
-        const role: { id: number } = formData.role;
+        const role = formData.role;
 
         if (!role) {
           throw new Error("There must be a role");
         }
 
-        return typedjson(
-          await prisma.person.create({
+        return typedjson({
+          person: await prisma.person.create({
             data: {
               firstName: firstName,
               lastName: lastName,
               ...(nickname && { nickname: nickname }),
               ...(qrCode && { qrCode: qrCode }),
-              role: {
+              tags: {
                 connect: role,
               },
             },
-          })
-        );
+            include: personWithTags.include,
+          }),
+          error: undefined,
+        });
       default:
         throw new Response(null, {
           status: 405,
         });
     }
   } catch (e) {
-    console.error(e);
-    throw new Response(null, {
-      status: 500,
-    });
+    const error = handleError(e, "no item was created");
+
+    if (error) {
+      return typedjson({ error: error, person: undefined });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
   }
+}
+
+export default function Page() {
+  return <Outlet />;
 }

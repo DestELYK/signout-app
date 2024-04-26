@@ -1,6 +1,6 @@
-import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson } from "remix-typedjson";
+import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -9,32 +9,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const category = url.searchParams.get("category");
   const query = url.searchParams.get("q") || url.searchParams.get("query");
 
-  let filter: Prisma.TagWhereInput = {};
-
   try {
-    filter = {
-      ...(category && { category: category }),
-      ...(query && {
-        name: {
-          contains: query,
-        },
-      }),
-    };
+    const tags = await prisma.tag.findMany({
+      where: {
+        ...(category && { category: category }),
+        ...(query && {
+          name: {
+            contains: query,
+          },
+        }),
+      },
+    });
+
+    return typedjson({ tags: tags, error: undefined });
   } catch (e) {
-    console.error("Failed to create filter", e);
+    const error = handleError(e, "no tag was returned");
+
+    if (error) {
+      return typedjson({ error: error, tags: undefined });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
   }
-
-  const tags = await prisma.tag.findMany({
-    where: filter,
-  });
-
-  console.log(
-    "Found %i tags with filter %s",
-    tags.length,
-    JSON.stringify(filter)
-  );
-
-  return typedjson(tags);
 };
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -62,24 +60,30 @@ export async function action({ request }: ActionFunctionArgs) {
           throw new Error("Category must be provided");
         }
 
-        return typedjson(
-          await prisma.tag.create({
+        return typedjson({
+          tag: await prisma.tag.create({
             data: {
               name: name,
               color: color,
-              category: category
+              category: category,
             },
-          })
-        );
+          }),
+          error: undefined,
+        });
       default:
         throw new Response(null, {
           status: 405,
         });
     }
   } catch (e) {
-    console.error(e);
-    throw new Response(null, {
-      status: 500,
-    });
+    const error = handleError(e, "no tag was created");
+
+    if (error) {
+      return typedjson({ error: error, tag: undefined });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { Badge, Flex, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
 import { formatFullName } from "~/utils/utils";
-import QRCodePreview from "../QRCodePreview";
+import QRCodePreview from "../qrCode/QRCodePreview";
 
 export interface PersonInfoViewProps {
   personId: number;
@@ -35,7 +35,7 @@ export default function PersonInfoView({
       >
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
           {/* QR Code Image */}
-          {qrCode && <QRCodePreview qrCode={qrCode} />}
+          <QRCodePreview qrCode={qrCode} />
           <Stack gap={0}>
             <Text
               ta="center"
@@ -45,19 +45,23 @@ export default function PersonInfoView({
             >
               {fullName}
             </Text>
-            {qrCode && tags && tags.map(tag=>(
-              <Badge color={tag.color} autoContrast>
-                {tag.name}
-              </Badge>
-            ))}
+            {qrCode &&
+              tags &&
+              tags.map((tag) => (
+                <Badge key={tag.name} color={tag.color} autoContrast>
+                  {tag.name}
+                </Badge>
+              ))}
           </Stack>
         </Flex>
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
-          {!qrCode && tags && tags.map(tag => (
-            <Badge key={tag.name} color={tag.color} autoContrast>
-              {tag.name}
-            </Badge>
-          ))}
+          {!qrCode &&
+            tags &&
+            tags.map((tag) => (
+              <Badge key={tag.name} color={tag.color} autoContrast>
+                {tag.name}
+              </Badge>
+            ))}
           {rightSection}
         </Flex>
       </Flex>

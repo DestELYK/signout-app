@@ -15,9 +15,10 @@ import { IconPlus } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader } from "~/routes/tags";
-import CreateTagForm, { TagFormValues } from "./CreateTagForm";
+import { PostTagFormData } from "~/utils/types.server";
+import CreateTagForm from "./CreateTagForm";
 
-export type OnTagSubmit = (values: TagFormValues) => void;
+export type OnTagSubmit = (values: PostTagFormData) => void;
 export type OnTagSearch = (value: string, category: string) => void;
 
 export type TagComboboxProps = {
@@ -34,8 +35,9 @@ export type TagComboboxProps = {
   autoFocus?: boolean;
   limit?: number;
   error?: string;
-  initialValue?: Tag[];
+  value?: Tag[];
   disabled?: boolean;
+  required?: boolean;
 };
 
 export default function TagCombobox({
@@ -51,10 +53,12 @@ export default function TagCombobox({
   autoFocus,
   limit = 5,
   error,
-  initialValue = [],
+  value,
   disabled,
+
+  required,
 }: TagComboboxProps) {
-  const [value, setValue] = useState<Tag[]>(initialValue);
+  const [tags, setTags] = useState<Tag[]>(value || []);
   const [search, setSearch] = useState("");
 
   const combobox = useCombobox({
@@ -68,21 +72,25 @@ export default function TagCombobox({
 
   const loading = searchTagsFetcher.state == "loading";
 
-  const tags = searchTagsFetcher.data || [];
+  const data = (searchTagsFetcher.data && searchTagsFetcher.data.tags) || [];
 
   const handleValueRemove = (val: string) => {
-    setValue(value.filter((t) => t.id.toString() !== val));
+    const newTags = tags.filter((t) => t.id.toString() !== val);
+    setTags(newTags);
+    onTagsChange?.(newTags);
   };
 
   const handleValueSelect = (val: string) => {
-    if (value.find((t) => t.id.toString() === val)) {
+    if (tags.find((t) => t.id.toString() === val)) {
       handleValueRemove(val);
     } else {
-      setValue([...value, tags.find((t) => t.id.toString() === val)!]);
+      const newTags = [...tags, data.find((t) => t.id.toString() === val)!];
+      setTags(newTags);
+      onTagsChange?.(newTags);
     }
   };
 
-  const values = value.map((t: Tag) => (
+  const values = tags.map((t: Tag) => (
     <Pill
       key={t.id}
       withRemoveButton
@@ -92,42 +100,42 @@ export default function TagCombobox({
     </Pill>
   ));
 
-  const options = tags
-    ? tags
-        .filter((t) =>
-          t.name.toLowerCase().includes(search.trim().toLowerCase())
-        )
-        .map((t) => (
-          <Combobox.Option
-            value={t.id.toString()}
-            key={t.id.toString()}
-            active={value.find((v) => v.id == t.id) != undefined}
-            disabled={!value.find((v) => v.id == t.id) && value.length >= limit}
-          >
-            <Group gap="sm">
-              {value.find((v) => v.id == t.id) ? <CheckIcon size={12} /> : null}
-              <span>{t.name}</span>
-            </Group>
-          </Combobox.Option>
-        ))
-    : [];
-
-  useEffect(() => {
-    onTagsChange?.(value);
-  }, [value]);
+  const options = data
+    .filter((t) => t.name.toLowerCase().includes(search.trim().toLowerCase()))
+    .map((t) => (
+      <Combobox.Option
+        value={t.id.toString()}
+        key={t.id.toString()}
+        active={tags.find((v) => v.id == t.id) != undefined}
+        disabled={!tags.find((v) => v.id == t.id) && tags.length >= limit}
+      >
+        <Group gap="sm">
+          {tags.find((v) => v.id == t.id) ? <CheckIcon size={12} /> : null}
+          <span>{t.name}</span>
+        </Group>
+      </Combobox.Option>
+    ));
 
   useEffect(() => {
     onTagSearch?.(search, category);
     searchTagsFetcher.load(`/tags?category=${category}&q=${search}`);
   }, [search]);
 
+  useEffect(() => {
+    setTags(value || []);
+  }, [value]);
+
+  function updateTags(tags: Tag[]) {
+    setTags(tags);
+    onTagsChange?.(tags);
+  }
+
   return (
     <>
       <Modal opened={opened} onClose={close} centered title="Create New Tag">
         <CreateTagForm
           onSubmitted={(tag) => {
-            console.log("Created Item");
-            setValue([...value, tag]);
+            updateTags([...data, tag]);
             close();
           }}
           category={category}
@@ -150,7 +158,7 @@ export default function TagCombobox({
           <PillsInput
             label={fieldInfo.label}
             description={fieldInfo.description}
-            required
+            required={required}
             {...(unstyled && { variant: "unstyled" })}
             error={error}
             onClick={() => {
@@ -168,10 +176,10 @@ export default function TagCombobox({
                     if (
                       event.key === "Backspace" &&
                       search.length === 0 &&
-                      value.length > 0
+                      tags.length > 0
                     ) {
                       event.preventDefault();
-                      handleValueRemove(value[value.length - 1].id.toString());
+                      handleValueRemove(tags[tags.length - 1].id.toString());
                     }
                   }}
                   value={search}

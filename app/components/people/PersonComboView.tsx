@@ -1,33 +1,39 @@
 import { Badge, Flex, Group, Highlight } from "@mantine/core";
-import { PersonFindMany } from "~/utils/types.server";
+import { Tag } from "@prisma/client";
 import { formatFullName } from "~/utils/utils";
+
+export interface PersonComboViewProps {
+  highlight: string;
+  fullName: { firstName: string; lastName: string; nickname?: string | null };
+  outStandingLoans: number;
+  tags: Tag[];
+}
 
 export default function PersonComboView({
   highlight,
-  person,
-}: {
-  highlight: string;
-  person: PersonFindMany;
-}) {
+  fullName,
+  outStandingLoans,
+  tags,
+}: PersonComboViewProps) {
   return (
     <>
       <Highlight
         w="100%"
         truncate="end"
         highlight={highlight}
-        {...(person._count.loans > 0 ? { c: "red" } : {})}
+        {...(outStandingLoans > 0 ? { c: "red" } : {})}
       >
-        {formatFullName(person)}
+        {formatFullName(fullName)}
       </Highlight>
       <Flex direction="row" gap="sm" justify="space-between">
-        {person._count.loans > 0 ? (
+        {outStandingLoans > 0 ? (
           <Badge color="red" style={{ justifySelf: "flex-start" }} autoContrast>
-            {person._count.loans} loan
-            {person._count.loans > 1 ? "s" : ""} out
+            {outStandingLoans} loan
+            {outStandingLoans > 1 ? "s" : ""} out
           </Badge>
         ) : null}
         <Group>
-          {person.tags.map((tag) => (
+          {tags.map((tag) => (
             <Badge
               key={tag.name}
               style={{ justifySelf: "flex-end" }}

@@ -1,4 +1,4 @@
-import { Center, ScrollArea, Text, Timeline } from "@mantine/core";
+import { Text, Timeline } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 import {
@@ -9,66 +9,99 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useEffect, useRef } from "react";
-import { useTypedLoaderData } from "remix-typedjson";
+import {
+  typedjson,
+  useTypedLoaderData,
+  useTypedRouteLoaderData,
+} from "remix-typedjson";
 import invariant from "tiny-invariant";
 import { dateDiff, formatDate } from "~/utils/utils";
+import { loader as itemLoader } from "./items.$itemId";
 
-export async function loader({ params }: LoaderFunctionArgs) {
+export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.itemId, "Expected params.itemId");
 
-  return await prisma.item.findFirstOrThrow({
-    where: { id: parseInt(params.itemId) },
-    select: {
-      id: true,
-      name: true,
-      loans: {
-        include: {
-          loan: {
-            include: {
-              person: true,
-              tags: true,
+  return typedjson({
+    loans: await prisma.loanedItem.findMany({
+      where: {
+        itemId: parseInt(params.itemId),
+      },
+      select: {
+        dateLoaned: true,
+        dateReturned: true,
+        loan: {
+          select: {
+            id: true,
+            tags: true,
+            person: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                nickname: true,
+              },
             },
           },
-          returnedBy: {
-            include: {
-              tags: true,
-            },
-          },
-        },
-        orderBy: {
-          dateLoaned: "asc",
         },
       },
-      tags: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
+    }),
   });
-}
+
+  // return {await prisma.item.findFirstOrThrow({
+  //   where: { id: parseInt(params.itemId) },
+  //   select: {
+  //     id: true,
+  //     name: true,
+  //     loans: {
+  //       include: {
+  //         loan: {
+  //           include: {
+  //             person: true,
+  //             tags: true,
+  //           },
+  //         },
+  //         returnedBy: {
+  //           include: {
+  //             tags: true,
+  //           },
+  //         },
+  //       },
+  //       orderBy: {
+  //         dateLoaned: "asc",
+  //       },
+  //     },
+  //     tags: true,
+  //   },
+  //   orderBy: {
+  //     name: "asc",
+  //   },
+  // })};
+};
 
 export default function Page() {
-  const item = useTypedLoaderData<typeof loader>();
+  const parentData =
+    useTypedRouteLoaderData<typeof itemLoader>(`/items.$itemId`);
+  const data = useTypedLoaderData<typeof loader>();
   const viewportRef = useRef<HTMLDivElement>(null);
 
-  const returnedLoans = item.loans.filter((l) => l.dateReturned);
+  const returnedLoans = data.loans.filter((l) => l.dateReturned);
 
   const orderedLoans: {
     id: number;
     dateLoaned: Date;
     dateReturned?: Date;
     lost?: boolean;
-  }[] = item && [
-    ...item.loans.map((l) => {
+  }[] = data && [
+    ...data.loans.map((l) => {
       return {
-        id: l.loanId,
+        id: l.loan.id,
         person: l.loan.person,
         dateLoaned: l.dateLoaned,
       };
     }),
     ...returnedLoans.map((l) => {
       return {
-        id: l.loanId,
+        id: l.loan.id,
         person: l.loan.person,
         dateLoaned: l.dateLoaned,
         dateReturned: l.dateReturned,
@@ -84,7 +117,11 @@ export default function Page() {
     }
   });
 
-  if (item && item.tags.find((t) => t.name === "Lost")) {
+  if (
+    parentData &&
+    parentData.item &&
+    parentData.item.tags.find((t) => t.name === "Lost")
+  ) {
     const lastItem = orderedLoans[orderedLoans.length - 1];
 
     orderedLoans.push({
@@ -141,18 +178,8 @@ export default function Page() {
   }, [timelineItems]);
 
   return (
-    <Center w="100%" h="100%">
-      <ScrollArea
-        w="100%"
-        h="calc(100dvh - 1rem)"
-        scrollbars="y"
-        type="auto"
-        ref={viewportRef}
-      >
-        <Timeline active={orderedLoans.length} bulletSize={32} lineWidth={4}>
-          {timelineItems}
-        </Timeline>
-      </ScrollArea>
-    </Center>
+    <Timeline active={orderedLoans.length} bulletSize={32} lineWidth={4}>
+      {timelineItems}
+    </Timeline>
   );
 }

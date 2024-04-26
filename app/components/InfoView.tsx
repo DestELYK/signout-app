@@ -1,37 +1,39 @@
 import {
   Card,
+  Collapse,
   Flex,
   LoadingOverlay,
-  Text,
-  Title
+  Title,
+  useMantineColorScheme,
 } from "@mantine/core";
-import { formatDate } from "~/utils/utils";
+import { ClientOnly } from "remix-utils/client-only";
+import { ToggleSchemeButton } from "./ToggleSchemeButton.client";
 
 export interface InfoViewProps {
   title: string;
-  children: React.ReactNode;
-  createdDate: Date;
-  updatedDate: Date;
   loading?: boolean;
+  collapseOpen?: boolean;
   leftSection?: React.ReactNode;
   rightSection?: React.ReactNode;
-  onClose?: () => void;
+  collapseSection?: React.ReactNode;
+  children: React.ReactNode;
 }
 
 export default function InfoView({
   title,
-  children,
-  createdDate,
-  updatedDate,
   loading,
+  collapseOpen = false,
   leftSection,
   rightSection,
-  onClose,
+  collapseSection,
+  children,
 }: InfoViewProps) {
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+
   return (
-    <Card padding="sm" radius="sm" withBorder w="100%" h="100%">
+    <Card w="100%" h="100%" bg="none">
       {/* Header */}
-      <Card.Section withBorder inheritPadding py="xs" mb="sm">
+      <Card.Section withBorder inheritPadding mb="sm">
         <Flex
           direction="row"
           align="center"
@@ -47,7 +49,10 @@ export default function InfoView({
             justify="start"
           >
             {leftSection}
-            <Title order={4}>{title}</Title>
+
+            <Title py="sm" order={4} fw="bold" lineClamp={1}>
+              {title}
+            </Title>
           </Flex>
           <Flex
             direction="row"
@@ -57,8 +62,16 @@ export default function InfoView({
             justify="end"
           >
             {rightSection}
+            <ClientOnly fallback={null}>
+              {() => <ToggleSchemeButton />}
+            </ClientOnly>
           </Flex>
         </Flex>
+        {collapseSection && (
+          <Collapse in={collapseOpen} pb="sm">
+            {collapseSection}
+          </Collapse>
+        )}
       </Card.Section>
       <LoadingOverlay
         visible={loading}
@@ -66,17 +79,6 @@ export default function InfoView({
         overlayProps={{ radius: "sm", blur: 2 }}
       />
       {children}
-      {/* Footer Date Created & Updated */}
-      <Card.Section withBorder inheritPadding py="xs" mt="sm">
-        <Text size="xs" ta="center">
-          Created:{" "}
-          <span style={{ fontWeight: "bold" }}>{formatDate(createdDate)}</span>
-        </Text>
-        <Text size="xs" ta="center">
-          Last Updated:{" "}
-          <span style={{ fontWeight: "bold" }}>{formatDate(updatedDate)}</span>
-        </Text>
-      </Card.Section>
     </Card>
   );
 }

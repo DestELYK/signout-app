@@ -5,7 +5,7 @@ import "@mantine/notifications/styles.css";
 import "@mantine/tiptap/styles.css";
 
 import { cssBundleHref } from "@remix-run/css-bundle";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -13,12 +13,29 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
+  useNavigate,
+  useNavigation,
   useRouteError,
 } from "@remix-run/react";
 
-import { ColorSchemeScript, MantineProvider, createTheme } from "@mantine/core";
+import {
+  Box,
+  ColorSchemeScript,
+  Flex,
+  MantineProvider,
+  SegmentedControl,
+  createTheme
+} from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
+import {
+  IconClipboard,
+  IconDeviceImac,
+  IconHome,
+  IconUser,
+} from "@tabler/icons-react";
+import { useRef } from "react";
 import ErrorPage from "./components/ErrorPage";
 
 export const links: LinksFunction = () => [
@@ -44,6 +61,10 @@ const theme = createTheme({
   fontFamily: "'Open Sans', sans-serif",
 });
 
+export const meta: MetaFunction = () => {
+  return [{ name: "theme-color", content: "#ffffff" }];
+};
+
 export function ErrorBoundary() {
   const error = useRouteError();
 
@@ -54,10 +75,10 @@ export function ErrorBoundary() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript defaultColorScheme="auto" />
+        <ColorSchemeScript defaultColorScheme="light" />
       </head>
       <body style={{ width: "100dvw", height: "100dvh", overflow: "hidden" }}>
-        <MantineProvider defaultColorScheme="auto" theme={theme}>
+        <MantineProvider defaultColorScheme="light" theme={theme}>
           <ModalsProvider>
             <Notifications />
             <ErrorPage error={error} />
@@ -72,6 +93,34 @@ export function ErrorBoundary() {
 }
 
 export default function App() {
+  const navigation = useNavigation();
+  const navigate = useNavigate();
+  const bodyRef = useRef<HTMLBodyElement>(null);
+  const location = useLocation();
+  let value = "home";
+
+  if (location.pathname === "/") {
+    value = "home";
+  } else if (location.pathname.startsWith("/loans")) {
+    value = "loans";
+  } else if (location.pathname.startsWith("/items")) {
+    value = "items";
+  } else if (location.pathname.startsWith("/people")) {
+    value = "people";
+  }
+
+
+  function onChange(value: string) {
+    switch (value) {
+      case "home":
+        navigate("/");
+        break;
+      default:
+        navigate(`/${value}`);
+        break;
+    }
+  }
+
   return (
     <html lang="en">
       <head>
@@ -79,13 +128,45 @@ export default function App() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
-        <ColorSchemeScript defaultColorScheme="auto" />
+        <ColorSchemeScript defaultColorScheme="light" />
       </head>
-      <body style={{ width: "100dvw", height: "100dvh", overflow: "hidden" }}>
-        <MantineProvider defaultColorScheme="auto" theme={theme}>
+      <body>
+        <MantineProvider defaultColorScheme="light" theme={theme}>
           <ModalsProvider>
             <Notifications />
-            <Outlet />
+            <Flex
+              direction="column"
+              h="100dvh"
+              w="100vw"
+              style={{ overflow: "hidden" }}
+            >
+              <Box h="calc(100% - 58px)">
+                <Outlet />
+              </Box>
+              <SegmentedControl
+                fullWidth
+                data={[
+                  {
+                    value: "home",
+                    label: <IconHome size={32} />,
+                  },
+                  {
+                    value: "loans",
+                    label: <IconClipboard size={32} />,
+                  },
+                  {
+                    value: "items",
+                    label: <IconDeviceImac size={32} />,
+                  },
+                  {
+                    value: "people",
+                    label: <IconUser size={32} />,
+                  },
+                ]}
+                value={value}
+                onChange={onChange}
+              />
+            </Flex>
             <ScrollRestoration />
             <Scripts />
             <LiveReload />

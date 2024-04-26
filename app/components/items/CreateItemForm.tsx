@@ -1,42 +1,35 @@
 import {
-  Button,
-  Flex,
-  Group,
-  LoadingOverlay,
-  Stack,
-  TextInput,
+    Button,
+    Flex,
+    Group,
+    LoadingOverlay,
+    Stack,
+    Text,
+    TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { Item, Tag } from "@prisma/client";
-import { Form } from "@remix-run/react";
+import { useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
-import { useTypedFetcher } from "remix-typedjson";
+import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { action } from "~/routes/items";
+import { ItemWithTags, PostItemFormData } from "~/utils/types.server";
 import {
-  blankValueValidator,
-  itemDescriptionValidator,
-  itemNameValidator,
-  qrCodeValidator,
+    blankValueValidator,
+    itemDescriptionValidator,
+    itemNameValidator,
+    qrCodeValidator,
 } from "~/utils/validators.client";
-import QrButton from "../QrButton";
+import QrButton from "../qrCode/QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
 const DESCRIPTION_LIMIT = 40;
 const TAG_MIN = 1;
 const TAG_MAX = 5;
-const CONFIRM_ID = "create-item-form_confirm";
-
-export type ItemFormValues = {
-  name: string;
-  qrCode?: string;
-  description?: string;
-  tags: Tag[];
-};
 
 export type CreateItemFormProps = {
-  onSubmitted?: (item: Item) => void;
+  onSubmitted?: (item: ItemWithTags) => void;
   name?: string;
   qrCode?: string;
 };
@@ -46,7 +39,9 @@ export default function CreateItemForm({
   name,
   qrCode,
 }: CreateItemFormProps) {
-  const form = useForm<ItemFormValues>({
+  const navigate = useNavigate();
+
+  const form = useForm<PostItemFormData>({
     initialValues: {
       name: "",
       qrCode: "",
@@ -71,115 +66,126 @@ export default function CreateItemForm({
     },
   });
 
-  const submitNewItem = useTypedFetcher<typeof action>();
+  const submitNewItem = useFetcherWithErrorHandler<typeof action>(
+    (data) => {
+      if (data.item) {
+        notifications.show({
+          message: (
+            <>
+              Created new item: <b>{data.item.name}</b>.{" "}
+              <Text span inherit c="blue">
+                Click to view
+              </Text>
+              .
+            </>
+          ),
+          onClick: () => {
+            notifications.clean();
+            navigate(`/items/${data.item.id}`);
+          },
+          autoClose: 10000,
+        });
+
+        onSubmitted?.(data.item);
+      }
+    },
+    (error) => {
+      form.setFieldError("name", error);
+    }
+  );
 
   const loading = submitNewItem.state === "submitting";
 
   useEffect(() => {
     name && form.setFieldValue("name", name);
-    qrCode && form.setFieldValue("qrCode", qrCode);
-  }, [name, qrCode]);
+  }, [name]);
 
-  // updates on new person creation
   useEffect(() => {
-    if (submitNewItem.data?.error) {
-      form.setFieldError("name", submitNewItem.data.error);
-      notifications.show({
-        message: `Error: ${submitNewItem.data.error}`,
-        color: "red",
+    qrCode && form.setFieldValue("qrCode", qrCode);
+  }, [qrCode]);
+
+  function handleSubmit() {
+    if (!form.validate().hasErrors) {
+      modals.openConfirmModal({
+        title: "Confirm Creation",
+        centered: true,
+        children: `Are you sure you want to create a new item called ${form.values.name}?`,
+        labels: {
+          confirm: "Yes",
+          cancel: "No",
+        },
+        onConfirm: () => {
+          modals.closeAll();
+
+          submitNewItem.submit(form.values, {
+            action: "/items",
+            method: "POST",
+            navigate: false,
+            encType: "application/json",
+          });
+        },
+        onCancel: () => {
+          modals.closeAll();
+        },
       });
-    } else if (submitNewItem.data?.item) {
-      notifications.show({
-        message: `Created new item: ${submitNewItem.data.item.name}`,
-      });
-      onSubmitted?.(submitNewItem.data.item);
     }
-  }, [submitNewItem.data]);
+  }
 
   return (
     <>
       <LoadingOverlay visible={loading} zIndex={1000} />
-      <Form
-        action="/items"
-        method="POST"
-        onSubmit={form.onSubmit((values) => {
-          modals.openConfirmModal({
-            modalId: CONFIRM_ID,
-            title: "Confirm Creation",
-            centered: true,
-            children: `Are you sure you want to create a new item called ${values.name}?`,
-            labels: {
-              confirm: "Yes",
-              cancel: "No",
-            },
-            onConfirm: () => {
-              modals.close(CONFIRM_ID);
-
-              submitNewItem.submit(values, {
-                action: "/items",
-                method: "POST",
-                navigate: false,
-                encType: "application/json",
-              });
-            },
-            onCancel: () => {
-              modals.close(CONFIRM_ID);
-            },
-          });
-        })}
-      >
-        <Stack gap="sm">
+      <Stack gap="sm">
+        <TextInput
+          disabled={loading}
+          label="Name"
+          required
+          data-autofocus
+          {...form.getInputProps("name")}
+        />
+        <Flex direction="row">
           <TextInput
             disabled={loading}
-            label="Name"
-            required
-            data-autofocus
-            {...form.getInputProps("name")}
+            w="100%"
+            label="QR Code"
+            description="Optional qr code entry (can be added later)"
+            placeholder="Optional"
+            {...form.getInputProps("qrCode")}
           />
-          <Flex direction="row">
-            <TextInput
-              disabled={loading}
-              w="100%"
-              label="QR Code"
-              description="Optional qr code entry (can be added later)"
-              placeholder="Optional"
-              {...form.getInputProps("qrCode")}
-            />
-            <QrButton
-              disabled={loading}
-              onResult={(result) => {
-                form.setFieldValue("qrCode", result.data);
-              }}
-            />
-          </Flex>
-          <TextInput
+          <QrButton
             disabled={loading}
-            label="Description"
-            description="Enter a useful description of the item that can help identify it"
-            {...form.getInputProps("description")}
-          />
-          <TagCombobox
-            disabled={loading}
-            onTagsChange={(values) => {
-              form.setFieldValue("tags", values);
+            onResult={(result) => {
+              form.setFieldValue("qrCode", result.data);
             }}
-            category="Item Type"
-            limit={3}
-            fieldInfo={{
-              label: "Tags",
-              placeholder: "Search for tags...",
-              description: "Select at least 1 tag for item",
-            }}
-            error={form.getInputProps("tags").error}
           />
+        </Flex>
+        <TextInput
+          disabled={loading}
+          label="Description"
+          description="Enter a useful description of the item that can help identify it"
+          {...form.getInputProps("description")}
+        />
+        <TagCombobox
+          required
+          disabled={loading}
+          onTagsChange={(values) => {
+            form.setFieldValue("tags", values);
+          }}
+          category="Item Type"
+          limit={3}
+          fieldInfo={{
+            label: "Tags",
+            placeholder: "Search for tags...",
+            description: "Select at least 1 tag for item",
+          }}
+          error={form.getInputProps("tags").error}
+        />
 
-          <Group justify="end">
-            <Button type="submit" disabled={loading}>
-              Create
-            </Button>
-          </Group>
-        </Stack>
-      </Form>
+        <Group justify="end">
+          <Button disabled={loading} onClick={() => handleSubmit()}>
+            Create
+          </Button>
+        </Group>
+      </Stack>
     </>
   );
 }

@@ -5,16 +5,17 @@ import {
   LoadingOverlay,
   Stack,
   Text,
-  TextInput
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
-import { Form } from "@remix-run/react";
+import { useNavigate } from "@remix-run/react";
 import { useEffect } from "react";
-import { useTypedFetcher } from "remix-typedjson";
+import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { action } from "~/routes/tags";
+import { PostTagFormData } from "~/utils/types.server";
 import {
   blankValueValidator,
   tagCategoryValidator,
@@ -22,12 +23,8 @@ import {
   tagNameValidator,
 } from "~/utils/validators.client";
 
-const CONFIRM_ID = "create-tag-form_confirm";
-
-export type TagFormValues = { name: string; color: string; category: string };
-
 export type CreateTagFormProps = {
-  onSubmit?: (values: TagFormValues) => void;
+  onSubmit?: (values: PostTagFormData) => void;
   onSubmitted?: (tag: Tag) => void;
   name?: string;
   category?: string;
@@ -39,7 +36,8 @@ export default function CreateTagForm({
   name,
   category,
 }: CreateTagFormProps) {
-  const form = useForm<TagFormValues>({
+  const navigate = useNavigate();
+  const form = useForm<PostTagFormData>({
     initialValues: {
       name: "",
       color: "#ffffff",
@@ -52,7 +50,34 @@ export default function CreateTagForm({
     },
   });
 
-  const submitNewTag = useTypedFetcher<typeof action>();
+  const submitNewTag = useFetcherWithErrorHandler<typeof action>(
+    (data) => {
+      if (data.tag) {
+        notifications.show({
+          message: (
+            <>
+              Created new person: <b>{data.tag.name}</b>.{" "}
+              <Text span inherit c="blue">
+                Click to view
+              </Text>
+              .
+            </>
+          ),
+          onClick: () => {
+            notifications.clean();
+            navigate(`/tags/${data.tag.id}`);
+          },
+        });
+        onSubmitted?.(data.tag);
+      }
+    },
+    (error) => {
+      form.setErrors({
+        name: error,
+        color: error,
+      });
+    }
+  );
 
   const loading = submitNewTag.state !== "idle";
 
@@ -64,73 +89,63 @@ export default function CreateTagForm({
     category && form.setFieldValue("category", category);
   }, [category]);
 
-  useEffect(() => {
-    if (submitNewTag.data) {
-      notifications.show({
-        message: `Created new tag: ${submitNewTag.data.name}`,
+  function handleSubmit() {
+    if (!form.validate().hasErrors) {
+      modals.openConfirmModal({
+        id: "person-create-confirm",
+        title: "Confirm Creation",
+        centered: true,
+        children: (
+          <Text>
+            Are you sure you want to create a new tag named {form.values.name}?
+          </Text>
+        ),
+        labels: {
+          confirm: "Yes",
+          cancel: "No",
+        },
+        onConfirm: () => {
+          modals.close("person-create-confirm");
+          submitNewTag.submit(form.values, {
+            action: "/tags",
+            method: "POST",
+            navigate: false,
+            encType: "application/json",
+          });
+
+          onSubmit?.(form.values);
+        },
+        onCancel: () => {
+          modals.close("person-create-confirm");
+        },
       });
-      onSubmitted?.(submitNewTag.data);
     }
-  }, [submitNewTag.data]);
+  }
 
   return (
     <>
       <LoadingOverlay visible={loading} zIndex={1000} />
-      <Form
-        action="/tags"
-        method="POST"
-        onSubmit={form.onSubmit((values) => {
-          modals.openConfirmModal({
-            id: "person-create-confirm",
-            title: "Confirm Creation",
-            centered: true,
-            children: (
-              <Text>
-                Are you sure you want to create a new tag named {values.name}?
-              </Text>
-            ),
-            labels: {
-              confirm: "Yes",
-              cancel: "No",
-            },
-            onConfirm: () => {
-              modals.close("person-create-confirm");
-              submitNewTag.submit(values, {
-                action: "/tags",
-                method: "POST",
-                navigate: false,
-                encType: "application/json",
-              });
-              onSubmit?.(values);
-            },
-            onCancel: () => {
-              modals.close("person-create-confirm");
-            },
-          });
-        })}
-      >
-        <Stack gap="sm">
-          <TextInput
-            disabled={loading}
-            label="Name"
-            data-autofocus
-            required
-            {...form.getInputProps("name")}
-          />
-          <ColorInput label="Color" required {...form.getInputProps("color")} />
-          <TextInput
-            label="Category"
-            disabled={loading || category != undefined}
-            required
-            {...form.getInputProps("category")}
-          />
-          <Group justify="end">
-            <Button type="submit" disabled={loading}>
-              Create
-            </Button>
-          </Group>
-        </Stack>
-      </Form>
+      <Stack gap="sm">
+        <TextInput
+          disabled={loading}
+          label="Name"
+          data-autofocus
+          required
+          {...form.getInputProps("name")}
+        />
+        <ColorInput label="Color" required {...form.getInputProps("color")} />
+        <TextInput
+          label="Category"
+          disabled={loading || category != undefined}
+          required
+          {...form.getInputProps("category")}
+        />
+        <Group justify="end">
+          <Button disabled={loading} onClick={() => handleSubmit()}>
+            Create
+          </Button>
+        </Group>
+      </Stack>
     </>
   );
 }

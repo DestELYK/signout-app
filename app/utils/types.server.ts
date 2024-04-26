@@ -1,138 +1,83 @@
 import { Prisma } from "@prisma/client";
 
-export const itemFindMany = Prisma.validator<Prisma.ItemDefaultArgs>()({
-  select: {
-    id: true,
-    qrCode: true,
-    name: true,
-    description: true,
-    tags: {
-      select: {
-        name: true,
-        color: true,
-        category: true,
-      },
-    },
-    createdDate: true,
-    updatedDate: true,
-    loans: {
-      select: {
-        dateLoaned: true,
-        loan: {
-          select: {
-            id: true,
-            person: {
-              select: {
-                firstName: true,
-                lastName: true,
-                nickname: true,
-              }
-            }
-          }
-        }
-      }
-    },
-    _count: {
-      select: {
-        loans: { where: { dateReturned: null } },
-      },
-    },
-  },
-});
-export type ItemFindMany = Prisma.ItemGetPayload<typeof itemFindMany>;
+//#region POST Types
 
-export const itemFindOne = Prisma.validator<Prisma.ItemDefaultArgs>()({
+export type PostLoanFormData = {
+  person: { id: number };
+  items: { id: number }[];
+  tags: { id: number }[];
+};
+
+export type PostPersonFormData = {
+  firstName: string;
+  lastName: string;
+  nickname?: string;
+  qrCode?: string;
+  role?: { id: number };
+};
+
+export type PostItemFormData = {
+  name: string;
+  qrCode?: string;
+  description?: string;
+  tags: { id: number }[];
+};
+
+export type PostTagFormData = { name: string; color: string; category: string };
+
+//#endregion
+
+//#region PATCH Types
+//#endregion
+
+//#region Database Types
+
+export const loanWithTags = Prisma.validator<Prisma.LoanDefaultArgs>()({
   include: {
-    loans: {
+    person: {
       include: {
-        loan: {
-          include: {
-            person: {
-              include: {
-                tags: true,
-              },
-            },
-            tags: true,
-          },
-        },
-        returnedBy: {
-          include: {
-            tags: true,
-          },
-        },
-      },
-    },
-    tags: true,
-    _count: {
-      select: {
-        loans: {
-          where: {
-            dateReturned: null,
-          },
-        },
-      },
-    },
-  },
-});
-
-export type ItemFindOne = Prisma.ItemGetPayload<typeof itemFindOne>;
-
-export const personFindMany = Prisma.validator<Prisma.PersonDefaultArgs>()({
-  select: {
-    id: true,
-    qrCode: true,
-    firstName: true,
-    lastName: true,
-    nickname: true,
-    tags: {
-      select: {
-        name: true,
-        color: true,
-      },
-    },
-    createdDate: true,
-    updatedDate: true,
-    _count: {
-      select: {
-        loans: {
-          where: {
-            items: {
-              some: {
-                dateReturned: null,
-              },
-            },
-          },
-        },
-        returnedItems: true,
-      },
-    },
-  },
-});
-
-export type PersonFindMany = Prisma.PersonGetPayload<typeof personFindMany>;
-
-export const personFindOne = Prisma.validator<Prisma.PersonDefaultArgs>()({
-  include: {
-    tags: true,
-    loans: {
-      include: {
-        items: {
-          include: {
-            item: {
-              include: {
-                tags: true,
-              },
-            },
-          },
-        },
         tags: true,
       },
     },
-    returnedItems: {
-      include: {
-        item: true,
+    tags: true,
+    _count: {
+      select: {
+        items: {
+          where: {
+            dateReturned: null,
+          },
+        },
       },
     },
+  },
+});
+
+export type LoanWithTags = Prisma.LoanGetPayload<typeof loanWithTags>;
+
+export const loanWithTagsAndItems = Prisma.validator<Prisma.LoanDefaultArgs>()({
+  include: {
+    ...loanWithTags.include,
+    items: {
+      select: {
+        item: {
+          select: {
+            id: true,
+            qrCode: true,
+            name: true,
+          },
+        },
+      },
+    },
+  },
+});
+
+export type LoanWithTagsAndItems = Prisma.LoanGetPayload<
+  typeof loanWithTagsAndItems
+>;
+
+export const personWithTags = Prisma.validator<Prisma.PersonDefaultArgs>()({
+  include: {
+    tags: true,
     _count: {
       select: {
         loans: {
@@ -149,70 +94,14 @@ export const personFindOne = Prisma.validator<Prisma.PersonDefaultArgs>()({
   },
 });
 
-export type PersonFindOne = Prisma.PersonGetPayload<typeof personFindOne>;
+export type PersonWithTags = Prisma.PersonGetPayload<typeof personWithTags>;
 
-export const loanedItemInclude =
-  Prisma.validator<Prisma.LoanedItemDefaultArgs>()({
-    include: {
-      item: {
-        include: {
-          tags: true,
-        },
-      },
-      returnedBy: {
-        include: {
-          tags: true,
-        },
-      },
-    },
-  });
-
-export type LoanedItemInclude = Prisma.LoanedItemGetPayload<
-  typeof loanedItemInclude
->;
-
-export const loanFindMany = Prisma.validator<Prisma.LoanDefaultArgs>()({
-  select: {
-    id: true,
-    person: {
-      select: {
-        id: true,
-        qrCode: true,
-        firstName: true,
-        lastName: true,
-        nickname: true,
-        tags: {
-          select: {
-            name: true,
-            color: true,
-          },
-        },
-      },
-    },
-    items: {
-      select: {
-        dateLoaned: true,
-        dateReturned: true,
-        item: {
-          select: {
-            id: true,
-            name: true,
-            qrCode: true,
-          },
-        },
-      },
-    },
-    tags: {
-      select: {
-        name: true,
-        color: true,
-      },
-    },
-    createdDate: true,
-    updatedDate: true,
+export const itemWithTags = Prisma.validator<Prisma.ItemDefaultArgs>()({
+  include: {
+    tags: true,
     _count: {
       select: {
-        items: {
+        loans: {
           where: {
             dateReturned: null,
           },
@@ -221,18 +110,7 @@ export const loanFindMany = Prisma.validator<Prisma.LoanDefaultArgs>()({
     },
   },
 });
-export type LoanFindMany = Prisma.LoanGetPayload<typeof loanFindMany>;
 
-export const loanFindOne = Prisma.validator<Prisma.LoanDefaultArgs>()({
-  include: {
-    person: {
-      include: {
-        tags: true
-      }
-    },
-    items: loanedItemInclude,
-    tags: true,
-  },
-});
+export type ItemWithTags = Prisma.ItemGetPayload<typeof itemWithTags>;
 
-export type LoanFindOne = Prisma.LoanGetPayload<typeof loanFindOne>;
+//#endregion

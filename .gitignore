@@ -141,3 +141,6 @@ prisma/*
 !prisma/seed.ts
 
 sslcert
+
+push-signout.sh
+start.sh

@@ -26,7 +26,7 @@ export const formatDate = (
   return date.toLocaleString("en", options);
 };
 
-export const dateDiff = (date: string | Date) => {
+export const dateDiff = (date: string | Date, withoutSuffix: boolean = false) => {
   const now = new Date();
 
   const d = dayjs(date);
@@ -36,7 +36,7 @@ export const dateDiff = (date: string | Date) => {
   } else if (d.isYesterday()) {
     return `Yesterday`;
   } else {
-    return `${d.fromNow()}`
+    return `${d.fromNow(withoutSuffix)}`
   }
 };
 

@@ -4,6 +4,8 @@ import { IconDownload } from "@tabler/icons-react";
 import QRCode from "qrcode";
 import { useEffect, useRef } from "react";
 
+export const QR_WIDTH = 30;
+
 export interface QRCodeViewProps {
   qrCode?: string | null;
   scale?: number;
@@ -24,14 +26,14 @@ export default function QRCodeView({
       QRCode.toCanvas(qrCodeRef.current, qrCode, {
         scale: scale,
         margin: 0,
-        width: scale * 25
+        width: scale * QR_WIDTH,
       });
     }
-  }, [qrCode, qrCodeRef]);
+  }, [qrCode, qrCodeRef, scale]);
 
   function download() {
     if (qrCodeRef.current) {
-      const url = qrCodeRef.current?.toDataURL('image/png');
+      const url = qrCodeRef.current?.toDataURL("image/png");
       const link = document.createElement("a");
       link.download = `${qrCode}.png`;
       link.href = url;
@@ -40,14 +42,20 @@ export default function QRCodeView({
       notifications.show({
         message: "Failed to download qrCode",
         color: "error",
-      })
+      });
     }
   }
 
   return (
     <>
       {showDownload && (
-        <ActionIcon variant="subtle" pos="absolute" top={10} right={10} onClick={() => download()}>
+        <ActionIcon
+          variant="subtle"
+          pos="absolute"
+          top={10}
+          right={10}
+          onClick={() => download()}
+        >
           <IconDownload />
         </ActionIcon>
       )}

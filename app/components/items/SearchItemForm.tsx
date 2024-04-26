@@ -1,11 +1,9 @@
 import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader as itemsLoader } from "~/routes/items";
-import { loader as itemLoader } from "~/routes/items.$itemId";
-import { ItemFindMany, ItemFindOne } from "~/utils/types.server";
+import { ItemWithTags } from "~/utils/types.server";
 import { itemNameValidator, qrCodeValidator } from "~/utils/validators.client";
 import SearchCombobox, { SearchFormValues } from "../SearchCombobox";
 import CreateItemForm from "./CreateItemForm";
@@ -17,11 +15,10 @@ export interface SearchItemFormProps {
   submitOnSelect?: boolean;
   showCombobox?: boolean;
   autoFocus?: boolean;
-  filterItems?: (items: ItemFindMany[]) => ItemFindMany[];
-  disableItem?: (item: ItemFindMany) => boolean;
+  filterItems?: (items: ItemWithTags[]) => ItemWithTags[];
+  disableItem?: (item: ItemWithTags) => boolean;
   onChange?: (search?: SearchFormValues) => void;
-  onSubmit?: (result: ItemFindMany) => boolean;
-  onResult?: (result?: ItemFindOne) => void;
+  onSubmit?: (item: ItemWithTags) => boolean;
 }
 
 export default function SearchItemForm({
@@ -32,7 +29,6 @@ export default function SearchItemForm({
   filterItems = (items) => items,
   disableItem,
   onChange,
-  onResult,
   onSubmit,
 }: SearchItemFormProps) {
   const form = useForm<SearchFormValues>({
@@ -53,7 +49,6 @@ export default function SearchItemForm({
   });
 
   const searchItemsFetcher = useTypedFetcher<typeof itemsLoader>();
-  const itemFetcher = useTypedFetcher<typeof itemLoader>();
 
   const [opened, { open, close }] = useDisclosure(false);
 
@@ -62,24 +57,14 @@ export default function SearchItemForm({
   const items =
     searchItemsFetcher &&
     searchItemsFetcher.data &&
-    filterItems(searchItemsFetcher.data.items).sort((a, b) => {
-      const diff = a._count.loans - b._count.loans;
+    searchItemsFetcher.data.items &&
+    filterItems
+      ? filterItems(searchItemsFetcher.data.items).sort((a, b) => {
+          const diff = a._count.loans - b._count.loans;
 
-      return diff * 1000 + a.name.localeCompare(b.name);
-    });
-
-  useEffect(() => {
-    if (itemFetcher.data) {
-      form.setValues({
-        name: itemFetcher.data.name,
-        qrCode: itemFetcher.data.qrCode || "",
-      });
-
-      search(form.values);
-
-      onResult?.(itemFetcher.data);
-    }
-  }, [itemFetcher.data]);
+          return diff * 1000 + a.name.localeCompare(b.name);
+        })
+      : [];
 
   function search(search: SearchFormValues) {
     if (search && (search.name || search.qrCode)) {
@@ -95,17 +80,12 @@ export default function SearchItemForm({
     }
   }
 
-  function submit(value: { id: number }) {
-    console.log("Submitting item %s", JSON.stringify(value));
-    itemFetcher.load(`/items/${value.id}`);
-  }
-
   return (
     <>
       <Modal opened={opened} onClose={close} title={"Create New Item"} centered>
         <CreateItemForm
           onSubmitted={(item) => {
-            submit(item);
+            onSubmit?.(item);
             close();
           }}
           name={form.values.name}
@@ -147,13 +127,19 @@ export default function SearchItemForm({
           }
         }}
         onSubmit={(value) => {
-          if (value) {
-            form.setValues({
-              name: value.name,
-              qrCode: value.qrCode || "",
-            });
+          console.log("Item Search Submit Handle: %s", JSON.stringify(value));
 
-            if (!onSubmit || onSubmit(value)) submit(value);
+          if (value) {
+            if (onSubmit?.(value)) {
+              form.setValues({
+                name: value.name,
+                qrCode: value.qrCode || "",
+              });
+
+              return true;
+            }
+
+            return false;
           } else {
             console.warn("Value is undefined");
           }
@@ -174,7 +160,12 @@ export default function SearchItemForm({
       >
         {(value) => (
           <>
-            <ItemComboView highlight={form.values.name || ""} item={value} />
+            <ItemComboView
+              highlight={form.values.name?.split(" ") || ""}
+              name={value.name}
+              outstanding={value._count.loans > 0}
+              tags={value.tags}
+            />
             <Divider mt="sm" />
           </>
         )}

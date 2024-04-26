@@ -1,11 +1,9 @@
 import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
-import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader as peopleLoader } from "~/routes/people";
-import { loader as personLoader } from "~/routes/people.$personId";
-import { PersonFindMany, PersonFindOne } from "~/utils/types.server";
+import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 import {
   personNameValidator,
@@ -21,11 +19,10 @@ export interface SearchPersonFormProps {
   submitOnSelect?: boolean;
   showCombobox?: boolean;
   autoFocus?: boolean;
-  filterItems?: (items: PersonFindMany[]) => PersonFindMany[];
-  disableItem?: (item: PersonFindMany) => boolean;
+  filterItems?: (items: PersonWithTags[]) => PersonWithTags[];
+  disableItem?: (item: PersonWithTags) => boolean;
   onChange?: (search?: SearchFormValues) => void;
-  onSubmit?: (result: PersonFindMany) => boolean;
-  onResult?: (result?: PersonFindOne) => void;
+  onSubmit?: (result: PersonWithTags) => boolean;
 }
 
 export default function SearchPersonForm({
@@ -36,7 +33,6 @@ export default function SearchPersonForm({
   filterItems = (items) => items,
   disableItem,
   onChange,
-  onResult,
   onSubmit,
 }: SearchPersonFormProps) {
   const form = useForm<SearchFormValues>({
@@ -57,7 +53,6 @@ export default function SearchPersonForm({
   });
 
   const searchPeopleFetcher = useTypedFetcher<typeof peopleLoader>();
-  const personFetcher = useTypedFetcher<typeof personLoader>();
 
   const [opened, { open, close }] = useDisclosure(false);
 
@@ -66,22 +61,11 @@ export default function SearchPersonForm({
   const people =
     searchPeopleFetcher &&
     searchPeopleFetcher.data &&
-    searchPeopleFetcher.data instanceof Array
-      ? filterItems(searchPeopleFetcher.data)
+    searchPeopleFetcher.data.people
+      ? filterItems
+        ? filterItems(searchPeopleFetcher.data.people)
+        : searchPeopleFetcher.data.people
       : [];
-
-  useEffect(() => {
-    if (personFetcher.data) {
-      form.setValues({
-        name: formatFullName(personFetcher.data),
-        qrCode: personFetcher.data.qrCode || "",
-      });
-
-      search(form.values);
-
-      onResult?.(personFetcher.data);
-    }
-  }, [personFetcher.data]);
 
   function search(search: SearchFormValues) {
     if (search && (search.name || search.qrCode)) {
@@ -93,13 +77,8 @@ export default function SearchPersonForm({
 
       searchPeopleFetcher.load(`/people?${searchParams}`);
     } else {
-      searchPeopleFetcher.data = [];
+      searchPeopleFetcher.data.people = [];
     }
-  }
-
-  function submit(value: { id: number }) {
-    console.log("Submitting person %s", JSON.stringify(value));
-    personFetcher.load(`/people/${value.id}`);
   }
 
   return (
@@ -107,7 +86,7 @@ export default function SearchPersonForm({
       <Modal opened={opened} onClose={close} title={"Create New Person"}>
         <CreatePersonForm
           onSubmitted={(person) => {
-            submit(person);
+            onSubmit?.(person);
             close();
           }}
           name={form.values.name}
@@ -150,12 +129,16 @@ export default function SearchPersonForm({
         }}
         onSubmit={(value) => {
           if (value) {
-            form.setValues({
-              name: formatFullName(value),
-              qrCode: value.qrCode || "",
-            });
+            if (onSubmit?.(value)) {
+              form.setValues({
+                name: formatFullName(value),
+                qrCode: value.qrCode || "",
+              });
 
-            if (!onSubmit || onSubmit(value)) submit(value);
+              return true;
+            }
+
+            return false;
           } else {
             console.warn("Value is undefined");
           }
@@ -178,7 +161,9 @@ export default function SearchPersonForm({
           <>
             <PersonComboView
               highlight={form.values.name || ""}
-              person={value}
+              fullName={{ ...value }}
+              outStandingLoans={value._count.loans}
+              tags={value.tags}
             />
             <Divider mt="sm" />
           </>

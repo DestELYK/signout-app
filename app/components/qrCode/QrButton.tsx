@@ -60,6 +60,7 @@ export default function QrButton({
       <Tooltip label={hasCamera ? "Scan QR Code" : "No Camera"}>
         <ActionIcon
           size="input-sm"
+          tabIndex={-1}
           disabled={disabled || !hasCamera}
           onClick={() => {
             open();
