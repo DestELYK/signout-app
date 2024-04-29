@@ -3,7 +3,6 @@ export default {
   ignoredRouteFiles: ["**/*.css"],
   serverModuleFormat: "esm",
   browserNodeBuiltinsPolyfill: { modules: { timers: true } },
-  serverMinify: true,
   serverDependenciesToBundle: [
     "/^remix-utils.*/",
   ]

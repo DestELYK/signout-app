@@ -5,6 +5,7 @@ import {
   Flex,
   Loader,
   Skeleton,
+  Text,
 } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
@@ -34,6 +35,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
         item: {
           select: {
             name: true,
+            description: true,
             tags: true,
           },
         },
@@ -86,7 +88,10 @@ export default function Page() {
                     </Badge>
                   }
                 >
-                  {item.item.name}
+                  <Text>{item.item.name}</Text>
+                  <Text size="xs" fs="italic">
+                    {item.item.description || "No description"}
+                  </Text>
                 </Accordion.Control>
                 <Accordion.Panel>
                   {itemId && itemId === item.itemId.toString() ? (

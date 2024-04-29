@@ -80,7 +80,6 @@ export default function Page() {
         <Flex w="100%" direction="row" align="center" gap="sm" wrap="nowrap">
           <QRCodePreview qrCode={data.item.item.qrCode} scale={2} />
           <Flex w="100%" direction="column" gap="xs">
-            <Text>{data.item.item.description || "No description"}</Text>
             <Text size="xs">
               Date Loaned: {formatDate(data.item.dateLoaned)}
               <br />
