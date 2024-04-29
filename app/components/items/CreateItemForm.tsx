@@ -1,11 +1,11 @@
 import {
-    Button,
-    Flex,
-    Group,
-    LoadingOverlay,
-    Stack,
-    Text,
-    TextInput,
+  Button,
+  Flex,
+  Group,
+  LoadingOverlay,
+  Stack,
+  Text,
+  TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
@@ -16,10 +16,10 @@ import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { action } from "~/routes/items";
 import { ItemWithTags, PostItemFormData } from "~/utils/types.server";
 import {
-    blankValueValidator,
-    itemDescriptionValidator,
-    itemNameValidator,
-    qrCodeValidator,
+  blankValueValidator,
+  itemDescriptionValidator,
+  itemNameValidator,
+  qrCodeValidator,
 } from "~/utils/validators.client";
 import QrButton from "../qrCode/QrButton";
 import TagCombobox from "../tags/TagCombobox";
@@ -46,6 +46,7 @@ export default function CreateItemForm({
       name: "",
       qrCode: "",
       description: "",
+      location: { id: -1 },
       tags: [],
     },
     validate: {
@@ -55,6 +56,9 @@ export default function CreateItemForm({
       },
       description: (value) => {
         if (value) return itemDescriptionValidator(value, DESCRIPTION_LIMIT);
+      },
+      location: (value) => {
+        if (!value || value.id == -1) return "A location needs to be selected";
       },
       tags: (value) => {
         if (value.length < TAG_MIN) {
@@ -138,8 +142,8 @@ export default function CreateItemForm({
         <TextInput
           disabled={loading}
           label="Name"
-          required
           data-autofocus
+          required
           {...form.getInputProps("name")}
         />
         <Flex direction="row">
@@ -167,15 +171,31 @@ export default function CreateItemForm({
         <TagCombobox
           required
           disabled={loading}
+          onTagsChange={(values, error) => {
+            if (error) form.setFieldError("location", error);
+            else form.setFieldValue("location", values[0] || { id: -1 });
+          }}
+          category="Location"
+          limit={1}
+          fieldInfo={{
+            label: "Location",
+            placeholder: "Search for location...",
+            description: "Select a location in which the item is located",
+          }}
+          error={form.getInputProps("location").error}
+        />
+        <TagCombobox
+          required
+          disabled={loading}
           onTagsChange={(values) => {
             form.setFieldValue("tags", values);
           }}
           category="Item Type"
           limit={3}
           fieldInfo={{
-            label: "Tags",
-            placeholder: "Search for tags...",
-            description: "Select at least 1 tag for item",
+            label: "Type",
+            placeholder: "Search for item types...",
+            description: "Select at least 1 type for the item",
           }}
           error={form.getInputProps("tags").error}
         />

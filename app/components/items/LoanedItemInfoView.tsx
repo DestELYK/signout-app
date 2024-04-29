@@ -1,7 +1,13 @@
 import { Badge, Flex, Group, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import {
+  dateDiff,
+  filterTags,
+  formatDate,
+  formatFullName,
+} from "~/utils/utils";
 
+import { Tag } from "@prisma/client";
 import QRCodePreview from "../qrCode/QRCodePreview";
 
 export interface LoanedItemInfoViewProps {
@@ -17,7 +23,7 @@ export interface LoanedItemInfoViewProps {
     lastName: string;
     nickname: string | null;
   } | null;
-  tags?: { name: string; color: string }[] | null;
+  tags?: Tag[] | null;
   rightSection?: React.ReactNode;
   showDetails?: boolean;
   showOutstanding?: boolean;
@@ -66,7 +72,7 @@ export default function LoanedItemInfoView({
             <Group gap="xs">
               {tags &&
                 tags.length > 0 &&
-                tags.map((tag) => (
+                filterTags(tags).map((tag) => (
                   <Badge
                     key={tag.name}
                     size="xs"

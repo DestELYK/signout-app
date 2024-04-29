@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader } from "~/routes/tags";
 import { PostTagFormData } from "~/utils/types.server";
+import { filterTags } from "~/utils/utils";
 import CreateTagForm from "./CreateTagForm";
 
 export type OnTagSubmit = (values: PostTagFormData) => void;
@@ -23,7 +24,7 @@ export type OnTagSearch = (value: string, category: string) => void;
 
 export type TagComboboxProps = {
   onTagSearch?: OnTagSearch;
-  onTagsChange?: (value: Tag[]) => void;
+  onTagsChange?: (value: Tag[], error?: string) => void;
   fieldInfo?: {
     label?: string;
     description?: string;
@@ -83,14 +84,20 @@ export default function TagCombobox({
   const handleValueSelect = (val: string) => {
     if (tags.find((t) => t.id.toString() === val)) {
       handleValueRemove(val);
+    } else if (tags.length < limit) {
+      const tag = data.find((t) => t.id.toString() === val);
+      if (tag) {
+        const newTags = [...tags, tag];
+        setTags(newTags);
+        onTagsChange?.(newTags);
+      }
     } else {
-      const newTags = [...tags, data.find((t) => t.id.toString() === val)!];
-      setTags(newTags);
-      onTagsChange?.(newTags);
+      error = `Went over limit of ${limit}`;
+      onTagsChange?.(tags, error);
     }
   };
 
-  const values = tags.map((t: Tag) => (
+  const values = filterTags(tags).map((t) => (
     <Pill
       key={t.id}
       withRemoveButton
@@ -117,17 +124,24 @@ export default function TagCombobox({
     ));
 
   useEffect(() => {
-    onTagSearch?.(search, category);
-    searchTagsFetcher.load(`/tags?category=${category}&q=${search}`);
-  }, [search]);
-
-  useEffect(() => {
     setTags(value || []);
   }, [value]);
 
+  useEffect(() => {
+    updateSearch("");
+  }, []);
+
   function updateTags(tags: Tag[]) {
+    console.log(tags);
     setTags(tags);
     onTagsChange?.(tags);
+  }
+
+  function updateSearch(value: string) {
+    setSearch(value);
+
+    onTagSearch?.(value, category);
+    searchTagsFetcher.load(`/tags?category=${category}&q=${value}`);
   }
 
   return (
@@ -135,7 +149,7 @@ export default function TagCombobox({
       <Modal opened={opened} onClose={close} centered title="Create New Tag">
         <CreateTagForm
           onSubmitted={(tag) => {
-            updateTags([...data, tag]);
+            handleValueSelect(tag.id.toString());
             close();
           }}
           category={category}
@@ -149,13 +163,14 @@ export default function TagCombobox({
           if (value === "$create") {
             open();
           } else {
-            setSearch("");
+            updateSearch("");
             handleValueSelect(value);
           }
         }}
       >
         <Combobox.DropdownTarget>
           <PillsInput
+            autoFocus={autoFocus}
             label={fieldInfo.label}
             description={fieldInfo.description}
             required={required}
@@ -191,7 +206,7 @@ export default function TagCombobox({
                   }}
                   onChange={(event) => {
                     combobox.updateSelectedOptionIndex();
-                    setSearch(event.currentTarget.value);
+                    updateSearch(event.currentTarget.value);
                   }}
                 />
               </Combobox.EventsTarget>

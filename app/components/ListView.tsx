@@ -5,7 +5,6 @@ import {
   CloseButton,
   Divider,
   Flex,
-  FocusTrap,
   Group,
   Loader,
   Modal,
@@ -34,6 +33,7 @@ export interface ListViewProps<T extends { id: number }> {
   createTitle?: string;
   createSection?: React.ReactNode;
   itemsPerPage: number;
+  emptyText?: string;
   data: {
     [value: string]: { label: string; items: T[] };
   };
@@ -45,6 +45,7 @@ export default function ListView<T extends { id: number }>({
   createTitle,
   createSection,
   itemsPerPage = ITEMS_PER_PAGE,
+  emptyText = "No entries for section",
   data,
   children,
 }: ListViewProps<T>) {
@@ -159,34 +160,31 @@ export default function ListView<T extends { id: number }>({
         collapseSection={
           <>
             <Flex w="100%" direction="row" align="center" gap={0}>
-              <FocusTrap active={collapseOpened}>
-                <TextInput
-                  w="100%"
-                  rightSection={
-                    navigation.location &&
-                    new URLSearchParams(navigation.location.search).has("q") ? (
-                      <Loader size="xs" />
-                    ) : (
-                      form.values.query.length !== 0 && (
-                        <CloseButton
-                          onClick={() =>
-                            updateSearch({ query: "", qrCode: "" })
-                          }
-                        />
-                      )
+              <TextInput
+                data-autofocus
+                w="100%"
+                rightSection={
+                  navigation.location &&
+                  new URLSearchParams(navigation.location.search).has("q") ? (
+                    <Loader size="xs" />
+                  ) : (
+                    form.values.query.length !== 0 && (
+                      <CloseButton
+                        onClick={() => updateSearch({ query: "", qrCode: "" })}
+                      />
                     )
-                  }
-                  placeholder="Search for loan by item or person's name"
-                  {...form.getInputProps("query")}
-                  onChange={(event) => {
-                    updateSearch({
-                      query: event.currentTarget.value,
-                      qrCode: "",
-                    });
-                  }}
-                  ref={queryRef}
-                />
-              </FocusTrap>
+                  )
+                }
+                placeholder="Search for loan by item or person's name"
+                {...form.getInputProps("query")}
+                onChange={(event) => {
+                  updateSearch({
+                    query: event.currentTarget.value,
+                    qrCode: "",
+                  });
+                }}
+                ref={queryRef}
+              />
               <QrButton
                 onResult={(result) =>
                   updateSearch({ query: "", qrCode: result.data })
@@ -317,7 +315,7 @@ export default function ListView<T extends { id: number }>({
                   </Card.Section>
                 ))
               ) : (
-                <div className="h-full w-full">No Outstanding Loans</div>
+                <div className="h-full w-full">{emptyText}</div>
               )}
             </Card>
           </ScrollArea.Autosize>

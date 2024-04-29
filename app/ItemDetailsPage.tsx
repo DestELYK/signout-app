@@ -1,9 +1,10 @@
 import {
   ActionIcon,
   Collapse,
+  ScrollArea,
   SegmentedControl,
   Stack,
-  Text
+  Text,
 } from "@mantine/core";
 import {
   Outlet,
@@ -47,13 +48,13 @@ export default function ItemDetailsPage({
       case "overview":
         navigate(`.`, {
           replace: true,
-          relative: "route"
+          relative: "route",
         });
         break;
       default:
         navigate(`./${value}`, {
           replace: true,
-          relative: "route"
+          relative: "route",
         });
         break;
     }
@@ -63,22 +64,20 @@ export default function ItemDetailsPage({
       title={title}
       loading={loading}
       leftSection={
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={() => navigate(-1)}
-        >
+        <ActionIcon variant="subtle" color="gray" onClick={() => navigate(-1)}>
           <IconArrowLeft />
         </ActionIcon>
       }
       rightSection={
-        <ActionIcon
-          variant="subtle"
-          color="gray"
-          onClick={() => navigate("./edit", { relative: "route" })}
-        >
-          <IconEdit />
-        </ActionIcon>
+        !editing && (
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={() => navigate("./edit", { relative: "route" })}
+          >
+            <IconEdit />
+          </ActionIcon>
+        )
       }
     >
       <Collapse mb="sm" w="100%" in={!editing}>
@@ -99,15 +98,9 @@ export default function ItemDetailsPage({
           onChange={onChange}
         />
       </Collapse>
-      {/* {loading ? (
-        <Center h="100%">
-          <Loader size="xl" />
-        </Center>
-      ) : (
-        <ScrollArea.Autosize mt="sm" type="auto" scrollbars="y"> */}
-          <Outlet />
-        {/* </ScrollArea.Autosize>
-      )} */}
+      <ScrollArea type="auto" scrollbars="y">
+        <Outlet />
+      </ScrollArea>
     </InfoView>
   );
 }

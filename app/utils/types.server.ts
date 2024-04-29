@@ -20,10 +20,17 @@ export type PostItemFormData = {
   name: string;
   qrCode?: string;
   description?: string;
+  location: { id: number };
   tags: { id: number }[];
 };
 
-export type PostTagFormData = { name: string; color: string; category: string };
+export type PostTagFormData = {
+  name: string;
+  color: string;
+  category: string;
+  priority?: number;
+  hidden?: boolean;
+};
 
 //#endregion
 

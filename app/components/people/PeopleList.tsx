@@ -9,7 +9,7 @@ import {
 import { NavLink, useSearchParams } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
 import { PersonWithTags } from "~/utils/types.server";
-import { formatFullName } from "~/utils/utils";
+import { filterTags, formatFullName } from "~/utils/utils";
 import ListView from "../ListView";
 import CreatePersonForm from "./CreatePersonForm";
 
@@ -92,7 +92,7 @@ export default function PeopleList({ people }: PeopleListProps) {
                     component={Title}
                     order={5}
                   >{`${formatFullName(item)}`}</Highlight>
-                  {item.tags.map((t) => (
+                  {filterTags(item.tags, "Person Role").map((t) => (
                     <Badge key={t.name} color={t.color}>
                       {t.name}
                     </Badge>

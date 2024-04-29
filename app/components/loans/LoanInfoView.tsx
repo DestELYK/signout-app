@@ -9,7 +9,12 @@ import {
   Title,
 } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import {
+  dateDiff,
+  filterTags,
+  formatDate,
+  formatFullName,
+} from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
 import QRCodePreview from "../qrCode/QRCodePreview";
@@ -46,7 +51,7 @@ export default function LoanInfoView({
           <Flex direction="row" align="center" justify="space-between">
             <Title order={4}>{`Loan #${id}`}</Title>
             <Group>
-              {tags.map((t) => (
+              {filterTags(tags).map((t) => (
                 <Badge key={t.id} color={t.color} autoContrast>
                   {t.name}
                 </Badge>
@@ -81,7 +86,7 @@ export default function LoanInfoView({
           <Group w="100%" align="center" justify="space-between">
             <Title order={5}>{formatFullName(person)}</Title>
             <Group>
-              {person.tags.map((tag) => (
+              {filterTags(person.tags).map((tag) => (
                 <Badge key={tag.id} color={tag.color} autoContrast>
                   {tag.name}
                 </Badge>

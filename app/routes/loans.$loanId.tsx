@@ -22,8 +22,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
   const loanId = parseInt(params.loanId);
 
-  console.log(loanId);
-
   if (loanId === undefined) {
     throw new Response(null, {
       status: 404,
@@ -113,8 +111,6 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
             ? formData.dateReturned || new Date()
             : undefined;
 
-        console.log(updatedDate);
-
         if (!personId) {
           personId = (
             await prisma.loan.findFirstOrThrow({
@@ -138,26 +134,24 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
                     returnedById?: number;
                     dateReturned?: Date;
                     itemId?: number;
-                  }
+                  };
 
                   if (i.newId !== undefined) {
                     data = {
                       itemId: i.newId,
                       dateReturned: formData.dateReturned || undefined,
-                    }
+                    };
                   } else if (i.returnedById !== undefined) {
                     data = {
                       returnedById: i.returnedById,
-                      dateReturned: formData.dateReturned || updatedDate
-                    }
+                      dateReturned: formData.dateReturned || updatedDate,
+                    };
                   } else {
                     data = {
                       returnedById: personId,
                       dateReturned: formData.dateReturned || updatedDate,
-                    }
+                    };
                   }
-
-                  console.log(formData, ' ', data);
 
                   return {
                     where: {
@@ -166,7 +160,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
                         ...(i.returnedById ? [{ dateReturned: null }] : []),
                       ],
                     },
-                    data: data
+                    data: data,
                   };
                 }),
               },

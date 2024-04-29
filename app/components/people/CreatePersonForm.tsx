@@ -171,11 +171,12 @@ export default function CreatePersonForm({
         <TagCombobox
           required
           disabled={loading}
-          onTagsChange={(values) => {
-            if (values.length == 1) {
-              form.setFieldValue("role", values[0]);
-            } else {
+          onTagsChange={(values, error) => {
+            if (error) {
               form.setFieldValue("role", undefined);
+              form.setFieldError("role", error);
+            } else {
+              form.setFieldValue("role", values[0]);
             }
           }}
           category="Person Role"

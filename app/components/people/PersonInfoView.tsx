@@ -1,6 +1,7 @@
 import { Badge, Flex, Stack, Text } from "@mantine/core";
+import { Tag } from "@prisma/client";
 import { Link } from "@remix-run/react";
-import { formatFullName } from "~/utils/utils";
+import { filterTags, formatFullName } from "~/utils/utils";
 import QRCodePreview from "../qrCode/QRCodePreview";
 
 export interface PersonInfoViewProps {
@@ -9,7 +10,7 @@ export interface PersonInfoViewProps {
   firstName: string;
   lastName: string;
   nickname?: string | null;
-  tags?: { name: string; color: string }[] | null;
+  tags?: Tag[] | null;
   rightSection?: React.ReactNode;
 }
 
@@ -47,7 +48,7 @@ export default function PersonInfoView({
             </Text>
             {qrCode &&
               tags &&
-              tags.map((tag) => (
+              filterTags(tags, "Person Role").map((tag) => (
                 <Badge key={tag.name} color={tag.color} autoContrast>
                   {tag.name}
                 </Badge>
@@ -57,7 +58,7 @@ export default function PersonInfoView({
         <Flex direction="row" wrap="nowrap" align="center" gap="xs">
           {!qrCode &&
             tags &&
-            tags.map((tag) => (
+            filterTags(tags).map((tag) => (
               <Badge key={tag.name} color={tag.color} autoContrast>
                 {tag.name}
               </Badge>

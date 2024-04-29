@@ -1,5 +1,6 @@
-import { Badge, Group, Highlight, Text } from "@mantine/core";
+import { Badge, Flex, Group, Highlight, Text } from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { filterTags } from "~/utils/utils";
 
 export interface ItemComboViewProps {
   highlight: string | string[];
@@ -14,21 +15,39 @@ export default function ItemComboView({
   name,
   tags,
 }: ItemComboViewProps) {
+  const locationTag = tags.find((t) => t.category === "Location");
+
   return (
     <>
-      <Highlight highlight={highlight}>{name}</Highlight>
-      <Group gap="sm" justify="space-between">
-        <Badge
-          style={{ justifySelf: "flex-start" }}
-          color={outstanding ? "red" : "green"}
-          autoContrast
-        >
+      <Flex
+        direction="row"
+        wrap="nowrap"
+        align="center"
+        justify="space-between"
+        gap="sm"
+      >
+        <Highlight highlight={highlight}>{name}</Highlight>
+        {locationTag && (
+          <Badge size="xs" color={locationTag.color} autoContrast>
+            {locationTag.name}
+          </Badge>
+        )}
+      </Flex>
+      <Flex
+        direction="row"
+        gap="sm"
+        align="center"
+        wrap="nowrap"
+        justify="space-between"
+      >
+        <Badge color={outstanding ? "red" : "green"} autoContrast>
           {outstanding ? "Out" : "In"}
         </Badge>
         {tags && tags.length > 0 ? (
           <Group>
-            {tags.map((t) => (
+            {filterTags(tags, "Item Type").map((t) => (
               <Badge
+                size="xs"
                 key={t.name}
                 miw="max-content"
                 ml="auto"
@@ -42,7 +61,7 @@ export default function ItemComboView({
         ) : (
           <Text size="xs">No tags</Text>
         )}
-      </Group>
+      </Flex>
     </>
   );
 }

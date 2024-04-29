@@ -3,7 +3,9 @@ import {
   ColorInput,
   Group,
   LoadingOverlay,
+  Slider,
   Stack,
+  Switch,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -42,11 +44,17 @@ export default function CreateTagForm({
       name: "",
       color: "#ffffff",
       category: "",
+      priority: 0,
+      hidden: false,
     },
     validate: {
       name: (value) => blankValueValidator(value) || tagNameValidator(value),
       color: (value) => blankValueValidator(value) || tagColorValidator(value),
       category: (value) => tagCategoryValidator(value),
+      priority: (value) => {
+        if (value !== undefined && (value > 1000 || value < -1000))
+          return "Priority is outside range (-1000 & 1000)";
+      },
     },
   });
 
@@ -56,17 +64,9 @@ export default function CreateTagForm({
         notifications.show({
           message: (
             <>
-              Created new person: <b>{data.tag.name}</b>.{" "}
-              <Text span inherit c="blue">
-                Click to view
-              </Text>
-              .
+              Created new tag: <b>{data.tag.name}</b>. .
             </>
           ),
-          onClick: () => {
-            notifications.clean();
-            navigate(`/tags/${data.tag.id}`);
-          },
         });
         onSubmitted?.(data.tag);
       }
@@ -92,7 +92,7 @@ export default function CreateTagForm({
   function handleSubmit() {
     if (!form.validate().hasErrors) {
       modals.openConfirmModal({
-        id: "person-create-confirm",
+        id: "tag-create-confirm",
         title: "Confirm Creation",
         centered: true,
         children: (
@@ -105,7 +105,7 @@ export default function CreateTagForm({
           cancel: "No",
         },
         onConfirm: () => {
-          modals.close("person-create-confirm");
+          modals.close("tag-create-confirm");
           submitNewTag.submit(form.values, {
             action: "/tags",
             method: "POST",
@@ -116,7 +116,7 @@ export default function CreateTagForm({
           onSubmit?.(form.values);
         },
         onCancel: () => {
-          modals.close("person-create-confirm");
+          modals.close("tag-create-confirm");
         },
       });
     }
@@ -133,12 +133,42 @@ export default function CreateTagForm({
           required
           {...form.getInputProps("name")}
         />
-        <ColorInput label="Color" required {...form.getInputProps("color")} />
+        <ColorInput
+          label="Color"
+          description="Tags will be displayed with this color"
+          required
+          {...form.getInputProps("color")}
+        />
+        <Stack gap={0}>
+          <Text size="sm">Priority</Text>
+          <Text size="xs" c="dimmed">
+            Greater priority tags will be displayed before lower priority tags
+          </Text>
+          <Slider
+            disabled={loading}
+            marks={[
+              { value: -100, label: "Low" },
+              { value: 0, label: "Normal" },
+              { value: 100, label: "High" },
+            ]}
+            step={5}
+            min={-100}
+            max={100}
+            p="sm"
+            mb="sm"
+            {...form.getInputProps("priority")}
+          />
+        </Stack>
         <TextInput
           label="Category"
           disabled={loading || category != undefined}
           required
           {...form.getInputProps("category")}
+        />
+        <Switch
+          label="Hidden"
+          description="Hides tag from being displayed, but will still be used for filtering"
+          {...form.getInputProps("hidden")}
         />
         <Group justify="end">
           <Button disabled={loading} onClick={() => handleSubmit()}>

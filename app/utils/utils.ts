@@ -1,8 +1,9 @@
+import { Tag } from "@prisma/client";
 import dayjs from "dayjs";
 
-import isToday from 'dayjs/plugin/isToday.js';
-import isYesterday from 'dayjs/plugin/isYesterday.js';
-import relativeTime from 'dayjs/plugin/relativeTime.js';
+import isToday from "dayjs/plugin/isToday.js";
+import isYesterday from "dayjs/plugin/isYesterday.js";
+import relativeTime from "dayjs/plugin/relativeTime.js";
 
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
@@ -26,9 +27,10 @@ export const formatDate = (
   return date.toLocaleString("en", options);
 };
 
-export const dateDiff = (date: string | Date, withoutSuffix: boolean = false) => {
-  const now = new Date();
-
+export const dateDiff = (
+  date: string | Date,
+  withoutSuffix: boolean = false
+) => {
   const d = dayjs(date);
 
   if (d.isToday()) {
@@ -36,7 +38,7 @@ export const dateDiff = (date: string | Date, withoutSuffix: boolean = false) =>
   } else if (d.isYesterday()) {
     return `Yesterday`;
   } else {
-    return `${d.fromNow(withoutSuffix)}`
+    return `${d.fromNow(withoutSuffix)}`;
   }
 };
 
@@ -54,4 +56,12 @@ export const formatFullName = ({
 
 export const capitalizeFirstLetter = (string: string) => {
   return string.charAt(0).toUpperCase() + string.slice(1);
+};
+
+export const filterTags = (tags: Tag[], category: string = "none") => {
+  return tags
+    .filter(
+      (tag) => (category === "none" || tag.category === category) && !tag.hidden
+    )
+    .sort((a, b) => b.priority - a.priority);
 };

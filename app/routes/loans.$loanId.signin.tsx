@@ -16,7 +16,7 @@ import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useNavigate, useNavigation, useParams } from "@remix-run/react";
+import { Form, useParams } from "@remix-run/react";
 import { useEffect, useState } from "react";
 import {
   typedjson,
@@ -26,7 +26,7 @@ import {
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import PersonPicker from "~/components/people/PersonPicker";
-import { formatDate } from "~/utils/utils";
+import { filterTags, formatDate } from "~/utils/utils";
 import {
   PatchLoanFormData,
   action,
@@ -63,8 +63,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 };
 
 export default function Page() {
-  const navigate = useNavigate();
-  const navigation = useNavigation();
   const loanData = useTypedRouteLoaderData<typeof loanLoader>(
     "routes/loans.$loanId"
   );
@@ -73,8 +71,6 @@ export default function Page() {
   const [returnedByPerson, setReturnedByPerson] = useState(
     loanData?.loan?.person
   );
-
-  console.log(loanData);
 
   const submit = useTypedFetcher<typeof action>();
 
@@ -131,20 +127,17 @@ export default function Page() {
           <Stack gap={0}>
             <Text {...(outstanding && { c: "dimmed" })}>{item.item.name}</Text>
             <Group>
-              {item.item.tags.map(
-                (t) =>
-                  t.category === "Item Type" && (
-                    <Badge
-                      key={t.id}
-                      color={outstanding ? "dimmed" : t.color}
-                      {...(outstanding && { c: "dimmed" })}
-                      size="xs"
-                      autoContrast
-                    >
-                      {t.name}
-                    </Badge>
-                  )
-              )}
+              {filterTags(item.item.tags, "Item Type").map((t) => (
+                <Badge
+                  key={t.id}
+                  color={outstanding ? "dimmed" : t.color}
+                  {...(outstanding && { c: "dimmed" })}
+                  size="xs"
+                  autoContrast
+                >
+                  {t.name}
+                </Badge>
+              ))}
             </Group>
           </Stack>
         </Table.Td>

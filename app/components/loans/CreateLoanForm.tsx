@@ -231,6 +231,8 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
                         name: "Added",
                         color: "red",
                         category: "_",
+                        priority: 5000,
+                        hidden: false,
                       },
                       ...i.tags,
                     ];
@@ -258,7 +260,10 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
         <TagCombobox
           category="Loan Info"
           value={tags}
-          onTagsChange={updateTags}
+          onTagsChange={(values, error) => {
+            if (error) form.setFieldError("tags", error);
+            else updateTags(values);
+          }}
           disabled={loading}
           error={form.getInputProps("tags").error}
           fieldInfo={{

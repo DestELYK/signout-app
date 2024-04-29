@@ -44,6 +44,8 @@ model Item {
 
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
+
+  locationId Int
 }
 
 model Loan {
@@ -79,11 +81,15 @@ model LoanedItem {
 
 model Tag {
   id       Int    @id @default(autoincrement())
-  name     String @unique
+  name     String
   color    String
+  priority Int @default(0)
   category String
+  hidden   Boolean @default(false)
 
   loans  Loan[]
   items  Item[]
   people Person[]
+
+  @@unique([name, category])
 }

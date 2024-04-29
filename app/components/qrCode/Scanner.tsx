@@ -53,8 +53,6 @@ export default function Scanner({
             time: new Date(),
           };
 
-          console.log(result);
-
           if (stopOnDetection) {
             pauseScanner();
           }
@@ -112,8 +110,6 @@ export default function Scanner({
   }
 
   function pauseScanner() {
-    console.log(State[state]);
-
     if (state != State.Scanning) return;
 
     scannerRef.current?.$video.pause();

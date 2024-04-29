@@ -150,10 +150,10 @@ export default function SearchCombobox<T extends { id: number }>({
       <Combobox.Target>
         <Flex align="start" w="100%">
           <TextInput
+            data-autofocus={autoFocus}
             ref={nameRef}
             w="100%"
             mt="sm"
-            autoFocus={autoFocus}
             description={formData.description?.name}
             placeholder={formData.placeholder?.name}
             {...(formData.label && { label: formData.label.name })}

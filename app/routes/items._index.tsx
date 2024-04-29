@@ -22,7 +22,10 @@ export default function Page() {
         }
         zIndex={1000}
       />
-      <ItemList items={data && data.items || []}/>
+      <ItemList
+        items={(data && data.items) || []}
+        missingItems={(data && data.missingItems) || []}
+      />
     </>
   );
 }

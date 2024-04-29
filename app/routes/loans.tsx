@@ -16,8 +16,6 @@ export const meta: MetaFunction = () => {
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
 
-  console.log("Loading");
-
   if (url.pathname.endsWith("/")) {
     return redirect("/loans");
   }

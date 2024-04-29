@@ -1,4 +1,4 @@
-import { Text, Timeline } from "@mantine/core";
+import { Center, Text, Timeline } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 import {
@@ -177,9 +177,13 @@ export default function Page() {
       [orderedLoans.length - 1]?.scrollIntoView({ block: "nearest" });
   }, [timelineItems]);
 
-  return (
+  return orderedLoans.length > 0 ? (
     <Timeline active={orderedLoans.length} bulletSize={32} lineWidth={4}>
       {timelineItems}
     </Timeline>
+  ) : (
+    <Center h="60dvh" w="100%">
+      <Text>No timeline</Text>
+    </Center>
   );
 }

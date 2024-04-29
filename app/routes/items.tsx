@@ -67,13 +67,43 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           },
         ],
       }),
+      missingItems: await prisma.item.findMany({
+        where: {
+          ...filter,
+          tags: {
+            some: {
+              OR: [
+                {
+                  name: "Lost",
+                },
+                {
+                  name: "Missing",
+                },
+                {
+                  name: "Broken",
+                },
+              ],
+            },
+          },
+        },
+        include: itemWithTags.include,
+        orderBy: [
+          {
+            id: "desc",
+          },
+        ],
+      }),
       error: undefined,
     });
   } catch (e) {
     const error = handleError(e, "no item was returned");
 
     if (error) {
-      return typedjson({ error: error, items: undefined });
+      return typedjson({
+        error: error,
+        items: undefined,
+        missingItems: undefined,
+      });
     } else {
       throw new Response(String(e), {
         status: 500,
@@ -88,26 +118,40 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     switch (request.method) {
       case "POST":
-        const name = formData.name;
-
-        if (!name) {
+        if (!formData.name) {
           throw new Error("Name must be provided");
         }
 
-        const qrCode = formData.qrCode;
+        if (formData.location === undefined) {
+          throw new Error("There must be a location set");
+        }
 
-        const tags: { id: number }[] = formData.tags;
-
-        if (tags.length < 1) {
+        if (formData.tags === undefined || formData.tags.length < 1) {
           throw new Error("There must be at least 1 tag");
+        }
+
+        try {
+          // verifies that the provided id is a valid location tag
+          await prisma.tag.findFirstOrThrow({
+            where: { id: formData.location.id, category: "Location" },
+          });
+        } catch (e) {
+          throw new Error("Location tag is invalid");
+        }
+
+        if (
+          formData.tags.find((t) => t.id === formData.location.id) === undefined
+        ) {
+          formData.tags.push(formData.location);
         }
 
         const item = await prisma.item.create({
           data: {
-            name: name,
-            ...(qrCode && { qrCode: qrCode }),
+            name: formData.name,
+            qrCode: formData.qrCode,
+            locationId: formData.location.id,
             tags: {
-              connect: tags,
+              connect: formData.tags,
             },
           },
           include: itemWithTags.include,

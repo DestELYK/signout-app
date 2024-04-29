@@ -1,3 +1,4 @@
+import { Tag } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson } from "remix-typedjson";
 import { handleError } from "~/lib/db.server";
@@ -36,36 +37,41 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.json();
+  const formData: Tag = await request.json();
 
   try {
     switch (request.method) {
       case "POST":
-        const name = formData.name;
-
-        if (!name) {
+        if (formData.name === undefined) {
           throw new Error("Name must be provided");
         }
 
-        const color = formData.color;
-
-        // TODO - color validation
-        if (!color) {
+        if (formData.color === undefined) {
           throw new Error("Color must be provided");
         }
 
-        const category = formData.category;
-
-        if (!category) {
+        if (formData.category === undefined) {
           throw new Error("Category must be provided");
         }
+
+        if (formData.priority === undefined) {
+          formData.priority = 0;
+        }
+
+        if (formData.hidden === undefined) {
+          formData.hidden = false;
+        }
+
+        // TODO - blacklist categories that can't be hidden
 
         return typedjson({
           tag: await prisma.tag.create({
             data: {
-              name: name,
-              color: color,
-              category: category,
+              name: formData.name,
+              color: formData.color,
+              priority: formData.priority,
+              category: formData.category,
+              hidden: formData.hidden,
             },
           }),
           error: undefined,
