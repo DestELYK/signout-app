@@ -1,6 +1,7 @@
-import { Center, Text } from "@mantine/core";
+import { Center, Flex, Image, Stack, Text } from "@mantine/core";
 import type { MetaFunction } from "@remix-run/node";
 import { useMatches } from "@remix-run/react";
+import InfoView from "~/components/InfoView";
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,10 +14,15 @@ export default function Index() {
   const matches = useMatches();
 
   return (
-    <>
-      <Center h="100%">
-        <Text>Welcome to the Helpdesk Signout App!</Text>
-      </Center>
-    </>
+    <InfoView title="Home">
+      <Flex direction="column" h="100%">
+        <Image src="/logo.png" />
+        <Center h="100%">
+          <Stack>
+            <Text>Welcome to the Helpdesk Signout App!</Text>
+          </Stack>
+        </Center>
+      </Flex>
+    </InfoView>
   );
 }
