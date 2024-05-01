@@ -29,6 +29,9 @@ const ITEMS_PER_PAGE = 15;
 
 // TODO - implement importing and exporting data
 // TODO - allow filtering the list
+// TODO - lazy load the list
+// TODO - allow sorting the list
+// TODO - virtual list
 
 export interface ListViewProps<T extends { id: number }> {
   title: string;
