@@ -1,30 +1,17 @@
-import {
-  Badge,
-  Card,
-  Center,
-  Flex,
-  Group,
-  ScrollArea,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Flex, Group, ScrollArea, Textarea } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
-import {
-  dateDiff,
-  filterTags,
-  formatDate,
-  formatFullName,
-} from "~/utils/utils";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
-import QRCodePreview from "../qrCode/QRCodePreview";
+import { createOutstandingTag } from "../OutstandingBadge";
+import StatCard from "../StatCard";
+import InfoView from "../base/InfoView";
+import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
+import TagGroup from "../tags/TagGroup";
 
 export interface LoanInfoViewProps {
   id: number;
-  person: Omit<
-    PersonWithTags,
-    "_count" | "notes" | "createdDate" | "updatedDate"
-  >;
+  person: Omit<PersonWithTags, "_count" | "createdDate" | "updatedDate">;
   tags: Tag[];
   createdDate: Date;
   updatedDate: Date;
@@ -46,136 +33,71 @@ export default function LoanInfoView({
   return (
     <Flex direction="column" w="100%" h="100%" gap="md">
       {/* Loan Card */}
-      <Card withBorder w="100%" h={160} p="sm">
-        <Card.Section withBorder inheritPadding py="xs">
-          <Flex direction="row" align="center" justify="space-between">
-            <Title order={4}>{`Loan #${id}`}</Title>
-            <Group>
-              {filterTags(tags).map((t) => (
-                <Badge key={t.id} color={t.color} autoContrast>
-                  {t.name}
-                </Badge>
-              ))}
-              <Badge
-                color={outstandingItems > 0 ? "red" : "green"}
-                autoContrast
-              >
-                {outstandingItems > 0 ? "Out" : "In"}
-              </Badge>
-            </Group>
-          </Flex>
-        </Card.Section>
-        {notes ? (
-          <ScrollArea.Autosize mih={80} type="auto" scrollbars="y">
-            <Text>{notes}</Text>
-          </ScrollArea.Autosize>
-        ) : (
-          <Center h="100%">No notes</Center>
-        )}
-      </Card>
+      <InfoView
+        title={`Loan #${id}`}
+        rightSection={
+          <TagGroup
+            tags={[
+              ...tags,
+              createOutstandingTag({ out: outstandingItems > 0 }),
+            ]}
+          />
+        }
+      >
+        <ScrollArea.Autosize type="auto" scrollbars="y">
+          <Textarea
+            w="100%"
+            minRows={5}
+            maxRows={5}
+            autosize
+            value={notes || "No notes"}
+            readOnly
+          />
+        </ScrollArea.Autosize>
+      </InfoView>
 
       {/* Person Card */}
-      <Card withBorder w="100%" h={130} p="sm">
-        <Card.Section withBorder inheritPadding py="xs">
-          <Title order={4} ta="center">
-            Loaned By
-          </Title>
-        </Card.Section>
-        <Flex h="100%" direction="row" mt="sm" align="center" gap="sm">
-          <QRCodePreview qrCode={person.qrCode} scale={2} />
-          <Group w="100%" align="center" justify="space-between">
-            <Title order={5}>{formatFullName(person)}</Title>
-            <Group>
-              {filterTags(person.tags).map((tag) => (
-                <Badge key={tag.id} color={tag.color} autoContrast>
-                  {tag.name}
-                </Badge>
-              ))}
-            </Group>
-          </Group>
-        </Flex>
-      </Card>
+      <InfoView
+        title={formatFullName(person)}
+        href={`/people/${person.id}`}
+        rightSection={
+          <TagGroup tags={person.tags} categories={["Person Role"]} />
+        }
+      >
+        <QRCodeWithComponent qrCode={person.qrCode} scale={3}>
+          <Textarea
+            w="100%"
+            minRows={4}
+            maxRows={4}
+            autosize
+            value={person.notes || "No notes"}
+            readOnly
+          />
+        </QRCodeWithComponent>
+      </InfoView>
 
       {/* Outstanding Items */}
       <Group grow>
-        <Card withBorder p="sm" h={80}>
-          <Flex
-            h="100%"
-            direction="column"
-            align="center"
-            gap={0}
-            justify="space-between"
-          >
-            <Text size="32px" ta="center">
-              {outstandingItems}
-            </Text>
-            <Text size="sm" ta="center">
-              Outstanding Items
-            </Text>
-          </Flex>
-        </Card>
+        <StatCard value={outstandingItems} label="Outstanding Items" />
 
         {/* Total Items */}
-        <Card withBorder p="sm" h={80}>
-          <Flex
-            h="100%"
-            direction="column"
-            align="center"
-            gap={0}
-            justify="space-between"
-          >
-            <Text size="32px" ta="center">
-              {items}
-            </Text>
-            <Text size="sm" ta="center">
-              Total Items
-            </Text>
-          </Flex>
-        </Card>
+        <StatCard value={items} label="Total Items" />
       </Group>
 
       {/* Created Date */}
       <Group grow>
-        <Card withBorder p="sm" h={120}>
-          <Flex
-            h="100%"
-            direction="column"
-            align="center"
-            gap={0}
-            justify="space-between"
-          >
-            <Text size="32px" ta="center">
-              {dateDiff(createdDate, true)}
-            </Text>
-            <Text size="sm" ta="center" fw="bold">
-              Since Creation
-            </Text>
-            <Text size="xs" ta="center">
-              {formatDate(createdDate)}
-            </Text>
-          </Flex>
-        </Card>
+        <StatCard
+          value={dateDiff(createdDate, true)}
+          label="Since Creation"
+          caption={formatDate(createdDate)}
+        />
 
         {/* Updated Date */}
-        <Card withBorder p="sm" h={120}>
-          <Flex
-            h="100%"
-            direction="column"
-            align="center"
-            gap={0}
-            justify="space-between"
-          >
-            <Text size="32px" ta="center">
-              {dateDiff(updatedDate, true)}
-            </Text>
-            <Text size="sm" ta="center" fw="bold">
-              Since Updated
-            </Text>
-            <Text size="xs" ta="center">
-              {formatDate(updatedDate)}
-            </Text>
-          </Flex>
-        </Card>
+        <StatCard
+          value={dateDiff(updatedDate, true)}
+          label="Since Updated"
+          caption={formatDate(updatedDate)}
+        />
       </Group>
     </Flex>
   );

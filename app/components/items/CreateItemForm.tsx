@@ -24,7 +24,7 @@ import {
 import QrButton from "../qrCode/QrButton";
 import TagCombobox from "../tags/TagCombobox";
 
-const DESCRIPTION_LIMIT = 40;
+const DESCRIPTION_LIMIT = 100;
 const TAG_MIN = 1;
 const TAG_MAX = 5;
 

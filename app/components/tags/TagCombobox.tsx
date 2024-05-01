@@ -73,7 +73,10 @@ export default function TagCombobox({
 
   const loading = searchTagsFetcher.state == "loading";
 
-  const data = (searchTagsFetcher.data && searchTagsFetcher.data.tags) || [];
+  const data =
+    searchTagsFetcher.data && searchTagsFetcher.data.tags
+      ? filterTags(searchTagsFetcher.data.tags)
+      : [];
 
   const handleValueRemove = (val: string) => {
     const newTags = tags.filter((t) => t.id.toString() !== val);

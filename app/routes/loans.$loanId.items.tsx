@@ -1,12 +1,4 @@
-import {
-  Accordion,
-  Badge,
-  Center,
-  Flex,
-  Loader,
-  Skeleton,
-  Text,
-} from "@mantine/core";
+import { Accordion, Center, Flex, Loader, Skeleton, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
   Outlet,
@@ -16,6 +8,7 @@ import {
 } from "@remix-run/react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
+import OutstandingBadge from "~/components/OutstandingBadge";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -82,11 +75,7 @@ export default function Page() {
             {data.items.map((item) => (
               <Accordion.Item key={item.itemId} value={item.itemId.toString()}>
                 <Accordion.Control
-                  icon={
-                    <Badge color={item.dateReturned ? "green" : "red"}>
-                      {item.dateReturned ? "Returned" : "Outstanding"}
-                    </Badge>
-                  }
+                  icon={<OutstandingBadge out={item.dateReturned === null} />}
                 >
                   <Text>{item.item.name}</Text>
                   <Text size="xs" fs="italic">

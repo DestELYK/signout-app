@@ -13,22 +13,22 @@ import {
   useNavigation,
 } from "@remix-run/react";
 import { IconArrowLeft, IconEdit } from "@tabler/icons-react";
-import InfoView from "./components/InfoView";
+import InfoView from "./components/base/InfoView";
 
 export interface ItemPageProps {
   title: string;
   data: {
-    [value: string]: { label: string; icon: React.ReactNode };
+    [value: string]: {
+      label: string;
+      icon: React.ReactNode;
+      disabled?: boolean;
+    };
   };
   default?: string;
   loading?: boolean;
 }
 
-export default function ItemDetailsPage({
-  title,
-  data,
-  loading,
-}: ItemPageProps) {
+export default function DetailsPage({ title, data, loading }: ItemPageProps) {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const location = useLocation();
@@ -79,8 +79,9 @@ export default function ItemDetailsPage({
           </ActionIcon>
         )
       }
+      headerProps={{ withBorder: true }}
     >
-      <Collapse mb="sm" w="100%" in={!editing}>
+      <Collapse my="sm" w="100%" in={!editing}>
         <SegmentedControl
           w="100%"
           data={Object.keys(data).map((key) => {
@@ -92,6 +93,7 @@ export default function ItemDetailsPage({
                   <Text size="sm">{data[key].label}</Text>
                 </Stack>
               ),
+              disabled: data[key].disabled,
             };
           })}
           value={value}

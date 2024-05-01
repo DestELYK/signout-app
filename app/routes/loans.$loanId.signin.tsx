@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Checkbox,
   Collapse,
@@ -26,7 +25,8 @@ import {
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import PersonPicker from "~/components/people/PersonPicker";
-import { filterTags, formatDate } from "~/utils/utils";
+import TagGroup from "~/components/tags/TagGroup";
+import { formatDate } from "~/utils/utils";
 import {
   PatchLoanFormData,
   action,
@@ -126,19 +126,11 @@ export default function Page() {
         <Table.Td>
           <Stack gap={0}>
             <Text {...(outstanding && { c: "dimmed" })}>{item.item.name}</Text>
-            <Group>
-              {filterTags(item.item.tags, "Item Type").map((t) => (
-                <Badge
-                  key={t.id}
-                  color={outstanding ? "dimmed" : t.color}
-                  {...(outstanding && { c: "dimmed" })}
-                  size="xs"
-                  autoContrast
-                >
-                  {t.name}
-                </Badge>
-              ))}
-            </Group>
+            <TagGroup
+              tags={item.item.tags}
+              categories={["Item Type"]}
+              badgeProps={{ size: "xs" }}
+            />
           </Stack>
         </Table.Td>
         <Table.Td color="">

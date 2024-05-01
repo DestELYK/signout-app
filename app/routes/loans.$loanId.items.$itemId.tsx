@@ -1,4 +1,4 @@
-import { Badge, Button, Flex, Group, Text } from "@mantine/core";
+import { Button, Flex, Group, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
@@ -9,13 +9,9 @@ import {
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import QRCodePreview from "~/components/qrCode/QRCodePreview";
+import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
-import {
-  dateDiff,
-  filterTags,
-  formatDate,
-  formatFullName,
-} from "~/utils/utils";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { loader as loanLoader } from "./loans.$loanId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -120,11 +116,7 @@ export default function Page() {
           </Flex>
         </Flex>
         <Group justify="end" mt="sm">
-          {filterTags(data.item.item.tags).map((tag) => (
-            <Badge key={tag.id} color={tag.color} autoContrast>
-              {tag.name}
-            </Badge>
-          ))}
+          <TagGroup tags={data.item.item.tags} />
           <Button
             variant="outline"
             rightSection={<IconArrowRight />}

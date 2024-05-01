@@ -1,6 +1,7 @@
-import { Badge, Flex, Group, Highlight, Text } from "@mantine/core";
+import { Flex, Highlight, Text } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { filterTags, formatFullName } from "~/utils/utils";
+import { formatFullName } from "~/utils/utils";
+import TagGroup from "../tags/TagGroup";
 
 export interface PersonComboViewProps {
   highlight: string;
@@ -21,13 +22,7 @@ export default function PersonComboView({
         <Highlight w="100%" lineClamp={2} highlight={highlight}>
           {formatFullName(fullName)}
         </Highlight>
-        <Group>
-          {filterTags(tags, "Person Role").map((tag) => (
-            <Badge key={tag.name} color={tag.color} variant="dot" autoContrast>
-              {tag.name}
-            </Badge>
-          ))}
-        </Group>
+        <TagGroup tags={tags} categories={["Person Role"]} />
       </Flex>
       {outStandingLoans > 0 ? (
         <Text c="red" size="xs" fw="bold">

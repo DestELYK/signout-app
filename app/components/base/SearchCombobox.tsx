@@ -12,8 +12,8 @@ import {
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import React, { useRef } from "react";
-import QrButton from "./qrCode/QrButton";
-import { ScanResults } from "./qrCode/Scanner";
+import QrButton from "../qrCode/QrButton";
+import { ScanResults } from "../qrCode/Scanner";
 
 export interface SearchFormValues {
   qrCode?: string;

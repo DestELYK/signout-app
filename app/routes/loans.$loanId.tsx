@@ -6,10 +6,10 @@ import {
 } from "@remix-run/node";
 import { useRouteError } from "@remix-run/react";
 import { IconClipboard, IconInfoCircle, IconListCheck } from "@tabler/icons-react";
-import { typeddefer, typedjson, useTypedLoaderData } from "remix-typedjson";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import ErrorPage from "~/components/ErrorPage";
-import ItemDetailsPage from "~/ItemDetailsPage";
+import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 
@@ -29,7 +29,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   }
 
   try {
-    return typeddefer({
+    return typedjson({
       loan: await prisma.loan.findFirstOrThrow({
         where: { id: loanId },
         select: {
@@ -46,6 +46,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
               lastName: true,
               nickname: true,
               tags: true,
+              notes: true,
             },
           },
           _count: {
@@ -217,7 +218,7 @@ export default function Page() {
     </Center>
   ) : (
     data.loan !== undefined && (
-      <ItemDetailsPage
+      <DetailsPage
         title={`Loan #${data.loan.id}`}
         data={{
           overview: {

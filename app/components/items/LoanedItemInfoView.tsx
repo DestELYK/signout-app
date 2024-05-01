@@ -1,14 +1,11 @@
-import { Badge, Flex, Group, Stack, Text } from "@mantine/core";
+import { Flex, Group, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
-import {
-  dateDiff,
-  filterTags,
-  formatDate,
-  formatFullName,
-} from "~/utils/utils";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
+import OutstandingBadge from "../OutstandingBadge";
 import QRCodePreview from "../qrCode/QRCodePreview";
+import TagGroup from "../tags/TagGroup";
 
 export interface LoanedItemInfoViewProps {
   id: number;
@@ -70,27 +67,20 @@ export default function LoanedItemInfoView({
             </Text>
             {/* Tags */}
             <Group gap="xs">
-              {tags &&
-                tags.length > 0 &&
-                filterTags(tags).map((tag) => (
-                  <Badge
-                    key={tag.name}
-                    size="xs"
-                    color={tag.color}
-                    autoContrast
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
+              {tags && tags.length > 0 && (
+                <TagGroup
+                  tags={tags}
+                  categories={["Item Type"]}
+                  badgeProps={{ size: "xs" }}
+                />
+              )}
             </Group>
           </Stack>
         </Flex>
         <Flex direction="row" align="center" wrap="nowrap" gap="xs">
           {/* Outstanding Indicator */}
           {showOutstanding && dateLoaned && (
-            <Badge color={dateReturned ? "green" : "red"} autoContrast>
-              {dateReturned ? "In" : "Out"}
-            </Badge>
+            <OutstandingBadge out={!dateReturned} />
           )}
           {rightSection}
         </Flex>

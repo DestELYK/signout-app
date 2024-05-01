@@ -9,7 +9,7 @@ import {
   personNameValidator,
   qrCodeValidator,
 } from "~/utils/validators.client";
-import SearchCombobox, { SearchFormValues } from "../SearchCombobox";
+import SearchCombobox, { SearchFormValues } from "../base/SearchCombobox";
 import CreatePersonForm from "./CreatePersonForm";
 import PersonComboView from "./PersonComboView";
 

@@ -20,8 +20,10 @@ import { useDisclosure } from "@mantine/hooks";
 import { useNavigation, useSearchParams } from "@remix-run/react";
 import { IconPlus, IconSearch, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { ClientOnly } from "remix-utils/client-only";
+import { ToggleSchemeButton } from "../ToggleSchemeButton.client";
+import QrButton from "../qrCode/QrButton";
 import InfoView from "./InfoView";
-import QrButton from "./qrCode/QrButton";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -214,24 +216,30 @@ export default function ListView<T extends { id: number }>({
         }
         collapseOpen={collapseOpened}
         rightSection={
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            autoContrast
-            onClick={() => {
-              if (!collapseOpened) {
-                openCollapse();
+          <>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              autoContrast
+              onClick={() => {
+                if (!collapseOpened) {
+                  openCollapse();
 
-                queryRef.current?.focus();
-              } else {
-                updateSearch({ query: "", qrCode: "" });
-                closeCollapse();
-              }
-            }}
-          >
-            {collapseOpened ? <IconX /> : <IconSearch />}
-          </ActionIcon>
+                  queryRef.current?.focus();
+                } else {
+                  updateSearch({ query: "", qrCode: "" });
+                  closeCollapse();
+                }
+              }}
+            >
+              {collapseOpened ? <IconX /> : <IconSearch />}
+            </ActionIcon>
+            <ClientOnly fallback={null}>
+              {() => <ToggleSchemeButton />}
+            </ClientOnly>
+          </>
         }
+        headerProps={{ withBorder: true, mb: "sm", py: 0 }}
       >
         <>
           <Flex direction="column" wrap="nowrap">

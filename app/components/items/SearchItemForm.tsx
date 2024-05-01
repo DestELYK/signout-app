@@ -5,7 +5,7 @@ import { useTypedFetcher } from "remix-typedjson";
 import { loader as itemsLoader } from "~/routes/items";
 import { ItemWithTags } from "~/utils/types.server";
 import { itemNameValidator, qrCodeValidator } from "~/utils/validators.client";
-import SearchCombobox, { SearchFormValues } from "../SearchCombobox";
+import SearchCombobox, { SearchFormValues } from "../base/SearchCombobox";
 import CreateItemForm from "./CreateItemForm";
 import ItemComboView from "./ItemComboView";
 

@@ -1,17 +1,9 @@
-import {
-  Badge,
-  Flex,
-  Highlight,
-  Text,
-  Title,
-  UnstyledButton,
-} from "@mantine/core";
+import { UnstyledButton } from "@mantine/core";
 import { NavLink, useSearchParams } from "@remix-run/react";
-import { IconArrowRight } from "@tabler/icons-react";
 import { LoanWithTagsAndItems } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
-import ListView from "../ListView";
+import ListView from "../base/ListView";
 import CreateLoanForm from "./CreateLoanForm";
+import LoanListView from "./LoanListView";
 
 export interface LoanListProps {
   loans: LoanWithTagsAndItems[];
@@ -58,49 +50,16 @@ export function LoanList({ loans }: LoanListProps) {
       >
         {(item, query, qrCode) => (
           <UnstyledButton w="100%" component={NavLink} to={`/loans/${item.id}`}>
-            <Flex direction="row" align="center" justify="space-between">
-              <Flex w="100%" direction="column">
-                <Flex
-                  direction="row"
-                  align="center"
-                  wrap="nowrap"
-                  justify="space-between"
-                >
-                  <Title order={4}>{`#${item.id}`}</Title>
-                  <Badge color={item._count.items > 0 ? "red" : "green"}>
-                    {item._count.items > 0 ? "Out" : "In"}
-                  </Badge>
-                </Flex>
-                <Highlight
-                  highlight={query ? query.split(" ") : ""}
-                >{`${formatFullName(item.person)}`}</Highlight>
-                {item.items.slice(0, 2).map((i) => (
-                  <Highlight
-                    key={i.item.id}
-                    size="xs"
-                    highlight={
-                      qrCode && i.item.qrCode === qrCode
-                        ? i.item.name
-                        : query
-                        ? query.split(" ")
-                        : ""
-                    }
-                  >
-                    {i.item.name}
-                  </Highlight>
-                ))}
-                {item.items.length > 2 && (
-                  <Text fs="italic" size="xs">
-                    ...and {item.items.length - 2} other items
-                  </Text>
-                )}
-                <Text size="xs" mt="sm">
-                  Created: {formatDate(item.createdDate)} (
-                  {dateDiff(item.createdDate)})
-                </Text>
-              </Flex>
-              <IconArrowRight />
-            </Flex>
+            <LoanListView
+              id={item.id}
+              person={item.person}
+              items={item.items.map((i) => i.item)}
+              tags={item.tags}
+              createdDate={item.createdDate}
+              outstandingLoans={item._count.items}
+              query={query}
+              qrCode={qrCode}
+            />
           </UnstyledButton>
         )}
       </ListView>

@@ -31,6 +31,8 @@ import SearchItemForm from "../items/SearchItemForm";
 import PersonPicker from "../people/PersonPicker";
 import TagCombobox from "../tags/TagCombobox";
 
+// TODO - Add support for classroom signout
+
 export interface CreateLoanFormProps {
   onSubmitted?: (data: LoanWithTags) => void;
 }

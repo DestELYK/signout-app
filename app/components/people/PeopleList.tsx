@@ -1,17 +1,10 @@
-import {
-  Badge,
-  Flex,
-  Highlight,
-  Text,
-  Title,
-  UnstyledButton,
-} from "@mantine/core";
+import { UnstyledButton } from "@mantine/core";
 import { NavLink, useSearchParams } from "@remix-run/react";
-import { IconArrowRight } from "@tabler/icons-react";
 import { PersonWithTags } from "~/utils/types.server";
-import { filterTags, formatFullName } from "~/utils/utils";
-import ListView from "../ListView";
+import { filterTags } from "~/utils/utils";
+import ListView from "../base/ListView";
 import CreatePersonForm from "./CreatePersonForm";
+import PersonListView from "./PersonListView";
 
 export interface PeopleListProps {
   people: PersonWithTags[];
@@ -46,12 +39,16 @@ export default function PeopleList({ people }: PeopleListProps) {
             items: people,
           },
           outstanding: {
-            label: "Outstanding",
-            items: people.filter((p) => p._count.loans > 0),
+            label: "Students",
+            items: people.filter(
+              (p) => filterTags(p.tags, "Person Role")[0].name !== "Staff"
+            ),
           },
           returned: {
-            label: "Returned",
-            items: people.filter((p) => p._count.loans === 0),
+            label: "Staff",
+            items: people.filter(
+              (p) => filterTags(p.tags, "Person Role")[0].name === "Staff"
+            ),
           },
         }}
         itemsPerPage={15}
@@ -62,46 +59,16 @@ export default function PeopleList({ people }: PeopleListProps) {
             component={NavLink}
             to={`/people/${item.id}`}
           >
-            <Flex direction="row" align="center" justify="space-between">
-              <Flex w="100%" direction="column">
-                <Flex
-                  direction="row"
-                  align="center"
-                  wrap="nowrap"
-                  justify="space-between"
-                >
-                  <Title order={4}>{`#${item.id}`}</Title>
-                  <Badge color={item._count.loans > 0 ? "red" : "green"}>
-                    {item._count.loans > 0 ? "Outstanding" : "Returned"}
-                  </Badge>
-                </Flex>
-                <Flex
-                  direction="row"
-                  align="center"
-                  wrap="nowrap"
-                  justify="space-between"
-                >
-                  <Highlight
-                    highlight={
-                      qrCode
-                        ? formatFullName(item)
-                        : query
-                        ? query.split(" ")
-                        : ""
-                    }
-                    component={Title}
-                    order={5}
-                  >{`${formatFullName(item)}`}</Highlight>
-                  {filterTags(item.tags, "Person Role").map((t) => (
-                    <Badge key={t.name} color={t.color}>
-                      {t.name}
-                    </Badge>
-                  ))}
-                </Flex>
-                <Text size="xs">{item._count.loans} loans currently out</Text>
-              </Flex>
-              <IconArrowRight />
-            </Flex>
+            <PersonListView
+              id={item.id}
+              firstName={item.firstName}
+              lastName={item.lastName}
+              nickname={item.nickname}
+              tags={item.tags}
+              outstandingLoans={item._count.loans}
+              query={query}
+              qrCode={qrCode}
+            />
           </UnstyledButton>
         )}
       </ListView>

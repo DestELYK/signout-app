@@ -1,29 +1,26 @@
-import { Fieldset, Flex, Paper, Space, Stack, Text } from "@mantine/core";
+import { Flex, Group, Stack, Text, Textarea, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { Link } from "@remix-run/react";
-import { formatFullName } from "~/utils/utils";
-import QRCodePreview from "../qrCode/QRCodePreview";
+import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
+import StatCard from "../StatCard";
+import InfoView from "../base/InfoView";
+import LastLoanView, { LastLoanViewProps } from "../loans/LastLoanView";
+import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
+import TagGroup from "../tags/TagGroup";
 
 export interface ItemInfoViewProps {
   id: number;
   name: string;
   qrCode?: string | null;
+  location?: Tag;
   description?: string | null;
-  lastLoan: {
-    id: number;
-    person: {
-      id: number;
-      firstName: string;
-      lastName: string;
-      nickname?: string | null;
-    };
-    dateLoaned: Date;
-    dateReturned?: Date | null;
-    tags: Tag[];
-  };
+  notes?: string | null;
+  tags: Tag[];
+  lastLoan?: LastLoanViewProps;
   createdDate: Date;
   updatedDate: Date;
   loading?: boolean;
+  loans: number;
+  averageLoanTime?: number;
 }
 
 export default function ItemInfoView({
@@ -31,48 +28,98 @@ export default function ItemInfoView({
   name,
   qrCode,
   description,
-  lastLoan,
+  notes,
+  tags,
   createdDate,
   updatedDate,
+  lastLoan,
+  loans,
   loading,
+  averageLoanTime,
 }: ItemInfoViewProps) {
-  function editQRCode() {}
+  const itemOutstanding =
+    lastLoan && lastLoan.dateReturned === null ? true : false;
 
   return (
-    <Stack gap="sm">
-      <Fieldset legend="Details" disabled={loading}>
-        <Flex direction="row" gap="sm">
-          {qrCode ? (
-            <QRCodePreview qrCode={qrCode} scale={4} />
-          ) : (
-            <Paper
-              withBorder
-              w={100}
-              h={100}
-              ta="center"
-              component={Stack}
-              justify="center"
-              gap="sm"
-              onClick={() => editQRCode()}
-              style={{ cursor: "pointer" }}
-            >
-              <Text>No QRCode</Text>
-              <Text size="xs">Click to add QRCode</Text>
-            </Paper>
-          )}
+    <Flex direction="column" w="100%" h="100%" gap="sm">
+      {/* Item Card */}
+      <Title order={4}>Details</Title>
+      <InfoView
+        title={name}
+        href={`/items/${id}`}
+        rightSection={
+          <TagGroup
+            tags={tags}
+            categories={["Item Type"]}
+            groupProps={{ justify: "end" }}
+          />
+        }
+        bottomSection={
+          <TagGroup
+            tags={tags}
+            categories={["Location", "Item Status"]}
+            groupProps={{ justify: "end" }}
+          />
+        }
+        cardProps={{ p: "sm" }}
+      >
+        <QRCodeWithComponent qrCode={qrCode} scale={2.5}>
           <Stack gap={0}>
-            <Text size="md">{description || "No description"}</Text>
+            <Text fw="bold" mb="md" size="sm">
+              Current Status:{" "}
+              <Text span c={itemOutstanding ? "red" : "green"}>
+                {itemOutstanding ? "Outstanding" : "Available"}
+              </Text>
+            </Text>
+            <Text fs="italic">{description || "No description"}</Text>
           </Stack>
-        </Flex>
-      </Fieldset>
-      <Fieldset legend="Last Loan" disabled={loading}>
-        <Flex direction="row" gap="sm">
-          <Text fw="bold" component={Link} to={`/people/${lastLoan.person.id}`}>
-            {formatFullName(lastLoan.person)}
-          </Text>
-        </Flex>
-      </Fieldset>
-      <Space mb="auto" />
-    </Stack>
+        </QRCodeWithComponent>
+      </InfoView>
+
+      {/* Last Loan Card */}
+      {lastLoan && lastLoan.person && (
+        <>
+          <Title order={4}>Last Loan</Title>
+          <LastLoanView {...lastLoan} />
+        </>
+      )}
+      {/* Notes */}
+      <Title order={4}>Notes</Title>
+      <Textarea
+        w="100%"
+        minRows={5}
+        maxRows={5}
+        autosize
+        value={notes || "No notes"}
+        readOnly
+      />
+
+      {/* Outstanding Items */}
+      <Group grow>
+        <StatCard value={loans} label="Total Signouts" />
+        {averageLoanTime && (
+          <StatCard
+            value={formatDuration(averageLoanTime)}
+            label="Average Return Duration"
+          />
+        )}
+      </Group>
+
+      {/* Created Date */}
+      <Group grow>
+        <StatCard
+          value={dateDiff(createdDate, true)}
+          label="Since Creation"
+          caption={formatDate(createdDate)}
+        />
+
+        {/* Updated Date */}
+        <StatCard
+          value={dateDiff(updatedDate, true)}
+          label="Since Updated"
+          caption={formatDate(updatedDate)}
+        />
+      </Group>
+    </Flex>
   );
 }

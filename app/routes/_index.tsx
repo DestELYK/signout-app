@@ -1,7 +1,7 @@
 import { Center, Flex, Image, Stack, Text } from "@mantine/core";
 import type { MetaFunction } from "@remix-run/node";
 import { useMatches } from "@remix-run/react";
-import InfoView from "~/components/InfoView";
+import InfoView from "~/components/base/InfoView";
 
 export const meta: MetaFunction = () => {
   return [

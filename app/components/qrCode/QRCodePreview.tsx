@@ -34,21 +34,21 @@ export default function QRCodePreview({
         onClick={() => qrCode && previewOpen()}
         style={{ cursor: "pointer" }}
       >
-        {qrCode ? (
-          <QRCodeView qrCode={qrCode} scale={scale} />
-        ) : (
-          <Paper
-            withBorder
-            w={`${QR_WIDTH * scale}px`}
-            h={`${QR_WIDTH * scale}px`}
-          >
+        <Paper
+          withBorder
+          w={`${QR_WIDTH * scale}px`}
+          h={`${QR_WIDTH * scale}px`}
+        >
+          {qrCode ? (
+            <QRCodeView qrCode={qrCode} scale={scale} />
+          ) : (
             <Center h="100%">
               <Text ta="center" size="xs">
                 No QRCode
               </Text>
             </Center>
-          </Paper>
-        )}
+          )}
+        </Paper>
       </Box>
     </>
   );
