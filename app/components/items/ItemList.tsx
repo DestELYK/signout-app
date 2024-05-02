@@ -40,7 +40,7 @@ export default function ItemList({ items, missingItems }: ItemListProps) {
             items: items,
           },
           outstanding: {
-            label: "Students",
+            label: "Outstanding",
             items: items.filter((l) => l._count.loans > 0),
           },
           missing: {

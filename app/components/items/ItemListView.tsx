@@ -50,7 +50,7 @@ export default function ItemListView({
           {description}
         </Text>
         <Text size="xs">
-          Added: {formatDate(createdDate)} ({dateDiff(createdDate)})
+          Added: {formatDate(createdDate)} ({dateDiff({ date: createdDate })})
         </Text>
       </Flex>
       <IconArrowRight />

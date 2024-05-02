@@ -77,7 +77,7 @@ export default function LoanListView({
           </Text>
         )}
         <Text size="xs" mt="sm">
-          Created: {formatDate(createdDate)} ({dateDiff(createdDate)})
+          Created: {formatDate(createdDate)} ({dateDiff({ date: createdDate })})
         </Text>
       </Flex>
       <IconArrowRight />

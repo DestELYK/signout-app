@@ -1,6 +1,15 @@
-import { Accordion, Center, Flex, Loader, Skeleton, Text } from "@mantine/core";
+import {
+  Accordion,
+  Button,
+  Center,
+  Loader,
+  Skeleton,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
+  Link,
   Outlet,
   useNavigate,
   useNavigation,
@@ -70,52 +79,69 @@ export default function Page() {
   const loanId = params.loanId;
 
   return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
+    <>
       {data &&
       (!navigation.location ||
         !navigation.location.pathname.endsWith("items")) ? (
-        <>
-          <Accordion
-            onChange={(value) => {
-              if (!value) {
-                navigate(`/items/${itemId}/loans`, { replace: true });
-              } else {
-                navigate(`/items/${itemId}/loans/${value}`, { replace: true });
-              }
-            }}
-            value={loanId || null}
-          >
-            {data.items.map((item) => (
-              <Accordion.Item key={item.loanId} value={item.loanId.toString()}>
-                <Accordion.Control
-                  icon={<OutstandingBadge out={item.dateReturned === null} />}
+        data.items.length > 0 ? (
+          <>
+            <Accordion
+              onChange={(value) => {
+                if (!value) {
+                  navigate(`/items/${itemId}/loans`, { replace: true });
+                } else {
+                  navigate(`/items/${itemId}/loans/${value}`, {
+                    replace: true,
+                  });
+                }
+              }}
+              value={loanId || null}
+            >
+              {data.items.map((item) => (
+                <Accordion.Item
+                  key={item.loanId}
+                  value={item.loanId.toString()}
                 >
-                  <Text>
-                    Loan #{item.loanId} - {formatFullName(item.loan.person)}
-                  </Text>
-                  <Text size="xs" fs="italic" c="dimmed">
-                    {formatDate(item.dateLoaned)} ({dateDiff(item.dateLoaned)})
-                  </Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  {loanId && loanId === item.loanId.toString() ? (
-                    <Outlet />
-                  ) : (
-                    navigation.location &&
-                    !navigation.location.pathname.endsWith("/loans") && (
-                      <Center w="100%">
-                        <Loader />
-                      </Center>
-                    )
-                  )}
-                </Accordion.Panel>
-              </Accordion.Item>
-            ))}
-          </Accordion>
-        </>
+                  <Accordion.Control
+                    icon={<OutstandingBadge out={item.dateReturned === null} />}
+                  >
+                    <Text>
+                      Loan #{item.loanId} - {formatFullName(item.loan.person)}
+                    </Text>
+                    <Text size="xs" fs="italic" c="dimmed">
+                      {formatDate(item.dateLoaned)} (
+                      {dateDiff({ date: item.dateLoaned })})
+                    </Text>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    {loanId && loanId === item.loanId.toString() ? (
+                      <Outlet />
+                    ) : (
+                      navigation.location &&
+                      !navigation.location.pathname.endsWith("/loans") && (
+                        <Center w="100%">
+                          <Loader />
+                        </Center>
+                      )
+                    )}
+                  </Accordion.Panel>
+                </Accordion.Item>
+              ))}
+            </Accordion>
+          </>
+        ) : (
+          <Center h="100%">
+            <Stack>
+              <Text ta="center">No loans have been created</Text>
+              <Button component={Link} to="/loans?create=">
+                Create a new loan here
+              </Button>
+            </Stack>
+          </Center>
+        )
       ) : (
         <Skeleton h={200} />
       )}
-    </Flex>
+    </>
   );
 }

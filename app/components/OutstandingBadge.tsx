@@ -2,7 +2,7 @@ import { Badge, BadgeProps } from "@mantine/core";
 import { Tag } from "@prisma/client";
 
 export const OUT_COLOR = "#F21616";
-export const IN_COLOR = "#00ff54";
+export const IN_COLOR = "#32a852";
 
 export function createOutstandingTag({
   out,

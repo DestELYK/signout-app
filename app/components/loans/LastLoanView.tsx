@@ -46,7 +46,8 @@ export default function LastLoanView({
       <QRCodeWithComponent qrCode={person.qrCode} scale={2.5}>
         <Stack gap={0}>
           <Text>
-            <b>{dateDiff(dateLoaned, true)}</b> since last loan
+            <b>{dateDiff({ date: dateLoaned, withoutSuffix: true })}</b> since
+            last loan
           </Text>
           <Text size="xs" c="dimmed" fs="italic">
             {formatDate(dateLoaned)}
@@ -54,7 +55,8 @@ export default function LastLoanView({
           {dateReturned && (
             <>
               <Text mt="sm">
-                <b>{dateDiff(dateReturned, true)}</b> since returned
+                <b>{dateDiff({ date: dateReturned, withoutSuffix: true })}</b>{" "}
+                since returned
               </Text>
               {returnedBy && (
                 <Text size="xs">

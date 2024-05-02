@@ -1,21 +1,24 @@
-import { Center, Text, Timeline } from "@mantine/core";
+import { rem } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
-import { Link } from "@remix-run/react";
 import {
+  IconCheck,
+  IconCircle,
   IconMinus,
   IconPlus,
   IconQuestionMark,
+  IconTrash,
   IconX,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
-import { useEffect, useRef } from "react";
 import {
   typedjson,
   useTypedLoaderData,
   useTypedRouteLoaderData,
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
-import { dateDiff, formatDate } from "~/utils/utils";
+import DateTimeline, { TimelineItemValues } from "~/components/DateTimeline";
+import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
+import { filterTags } from "~/utils/utils";
 import { loader as itemLoader } from "./items.$itemId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -80,110 +83,90 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
 export default function Page() {
   const parentData =
-    useTypedRouteLoaderData<typeof itemLoader>(`/items.$itemId`);
+    useTypedRouteLoaderData<typeof itemLoader>(`routes/items.$itemId`);
   const data = useTypedLoaderData<typeof loader>();
-  const viewportRef = useRef<HTMLDivElement>(null);
 
-  const returnedLoans = data.loans.filter((l) => l.dateReturned);
+  const returnedLoans = data.loans.filter((l) => l.dateReturned !== null);
 
-  const orderedLoans: {
-    id: number;
-    dateLoaned: Date;
-    dateReturned?: Date;
-    lost?: boolean;
-  }[] = data && [
-    ...data.loans.map((l) => {
-      return {
-        id: l.loan.id,
-        person: l.loan.person,
-        dateLoaned: l.dateLoaned,
-      };
-    }),
-    ...returnedLoans.map((l) => {
-      return {
-        id: l.loan.id,
-        person: l.loan.person,
-        dateLoaned: l.dateLoaned,
-        dateReturned: l.dateReturned,
-      };
-    }),
+  //@ts-ignore
+  const orderedLoans: TimelineItemValues[] = data && [
+    ...data.loans.map((l) => ({
+      id: l.loan.id,
+      person: l.loan.person,
+      date: l.dateLoaned,
+      label: "Sign-Out",
+      icon: <IconMinus size={rem(40)} />,
+      color: OUT_COLOR,
+      line: "dotted",
+    })),
+    ...returnedLoans.map((l) => ({
+      id: l.loan.id,
+      person: l.loan.person,
+      date: l.dateReturned,
+      label: "Sign-In",
+      icon: <IconPlus size={rem(40)} />,
+      color: IN_COLOR,
+      line: "solid",
+    })),
   ];
 
   orderedLoans.sort((a, b) => {
-    if (a.id && b.id && a.dateReturned) {
-      return dayjs(a.dateReturned).diff(b.dateLoaned);
-    } else {
-      return dayjs(a.dateLoaned).diff(b.dateLoaned);
-    }
+    return dayjs(a.date).diff(b.date);
   });
 
-  if (
-    parentData &&
-    parentData.item &&
-    parentData.item.tags.find((t) => t.name === "Lost")
-  ) {
+  if (parentData && parentData.item) {
+    orderedLoans.unshift({
+      id: -1,
+      date: parentData.item.createdDate,
+      label: "Item Added",
+      icon: <IconCircle size={rem(40)} />,
+      color: "blue",
+      line: "solid",
+    });
+
+    const status = filterTags(parentData.item.tags, "Item Status");
+
     const lastItem = orderedLoans[orderedLoans.length - 1];
 
-    orderedLoans.push({
-      ...lastItem,
-      lost: true,
-    });
+    if (lastItem.label === "Sign-Out") {
+      orderedLoans.push({
+        id: orderedLoans.length,
+        date: new Date(),
+        label: status.length > 0 ? status[0].name : "Outstanding",
+        icon:
+          status.length > 0 ? (
+            status[0].name === "Missing" || status[0].name === "Lost" ? (
+              <IconQuestionMark size={rem(40)} />
+            ) : (
+              <IconTrash size={rem(40)} />
+            )
+          ) : (
+            <IconX size={rem(40)} />
+          ),
+        color: status.length > 0 ? "red" : "blue",
+        line: "dotted",
+      });
+    } else {
+      orderedLoans.push({
+        id: orderedLoans.length,
+        date: new Date(),
+        label: "Available",
+        icon: <IconCheck size={rem(40)} />,
+        color: "blue",
+        line: "solid",
+      });
+    }
   }
 
-  const timelineItems = orderedLoans ? (
-    orderedLoans.map((l) => {
-      return (
-        <Timeline.Item
-          data-list-item
-          key={
-            l.dateReturned ? `${l.id}-returned` : l.lost ? `${l.id}-lost` : l.id
-          }
-          bullet={
-            l.dateReturned ? (
-              <IconPlus />
-            ) : l.lost ? (
-              <IconQuestionMark />
-            ) : (
-              <IconMinus />
-            )
-          }
-          title={
-            <Text component={Link} to={`/loans/${l.id}`}>
-              {`Loan #${l.id} - ${
-                l.lost ? "Lost" : `Sign ${l.dateReturned ? "In" : "Out"}`
-              }`}
-            </Text>
-          }
-          lineVariant={l.dateReturned ? "solid" : "dashed"}
-          color={l.dateReturned ? "green" : l.lost ? "orange" : "red"}
-          style={{ justifyItems: "center" }}
-        >
-          <Text size="sm" c="dimmed">
-            {formatDate(l.dateReturned || l.dateLoaned)}
-          </Text>
-          <Text size="xs" mt={4}>
-            {dateDiff(l.dateReturned || l.dateLoaned)}
-          </Text>
-        </Timeline.Item>
-      );
-    })
-  ) : (
-    <Timeline.Item bullet={<IconX />} title="No history" />
-  );
-
-  useEffect(() => {
-    viewportRef.current
-      ?.querySelectorAll("[data-list-item]")
-      [orderedLoans.length - 1]?.scrollIntoView({ block: "nearest" });
-  }, [timelineItems]);
-
-  return orderedLoans.length > 0 ? (
-    <Timeline active={orderedLoans.length} bulletSize={32} lineWidth={4}>
-      {timelineItems}
-    </Timeline>
-  ) : (
-    <Center h="60dvh" w="100%">
-      <Text>No timeline</Text>
-    </Center>
+  return (
+    <DateTimeline
+      prefix="Loan #"
+      href="/loans"
+      items={orderedLoans}
+      active={
+        orderedLoans.length -
+        (orderedLoans[orderedLoans.length - 1].label !== "Available" ? 2 : 1)
+      }
+    />
   );
 }

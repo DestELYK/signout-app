@@ -95,12 +95,14 @@ export default function LoanedItemInfoView({
       {showDetails &&
         (dateReturned ? (
           <Text size="xs" lineClamp={1}>
-            Returned: {formatDate(dateReturned)} ({dateDiff(dateReturned)})
+            Returned: {formatDate(dateReturned)} (
+            {dateDiff({ date: dateReturned })})
           </Text>
         ) : (
           dateLoaned && (
             <Text size="xs" lineClamp={1}>
-              Last Seen: {formatDate(dateLoaned)} ({dateDiff(dateLoaned)})
+              Last Seen: {formatDate(dateLoaned)} (
+              {dateDiff({ date: dateLoaned })})
             </Text>
           )
         ))}

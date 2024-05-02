@@ -85,7 +85,7 @@ export default function Page() {
               Date Loaned: {formatDate(data.item.dateLoaned)}
               <br />
               <span style={{ fontWeight: "bold" }}>
-                ({dateDiff(data.item.dateLoaned)})
+                ({dateDiff({ date: data.item.dateLoaned })})
               </span>
             </Text>
             {data.item.dateReturned && (
@@ -93,7 +93,7 @@ export default function Page() {
                 Date Returned: {formatDate(data.item.dateReturned)}
                 <br />
                 <span style={{ fontWeight: "bold" }}>
-                  ({dateDiff(data.item.dateReturned)})
+                  ({dateDiff({ date: data.item.dateReturned })})
                 </span>
               </Text>
             )}

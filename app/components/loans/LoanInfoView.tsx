@@ -87,14 +87,14 @@ export default function LoanInfoView({
       {/* Created Date */}
       <Group grow>
         <StatCard
-          value={dateDiff(createdDate, true)}
+          value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
           caption={formatDate(createdDate)}
         />
 
         {/* Updated Date */}
         <StatCard
-          value={dateDiff(updatedDate, true)}
+          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
           label="Since Updated"
           caption={formatDate(updatedDate)}
         />

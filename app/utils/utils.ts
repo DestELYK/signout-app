@@ -31,16 +31,24 @@ export const formatDate = (
   return date.toLocaleString("en", options);
 };
 
-export const dateDiff = (
-  date: string | Date,
-  withoutSuffix: boolean = false,
-  otherDate?: string | Date
-) => {
+export const dateDiff = ({
+  date,
+  otherDate,
+  withoutSuffix = false,
+  skipToday = false,
+  skipYesterday = false,
+}: {
+  date: string | Date;
+  withoutSuffix?: boolean;
+  otherDate?: string | Date;
+  skipToday?: boolean;
+  skipYesterday?: boolean;
+}) => {
   const d = dayjs(date);
 
-  if (d.isToday()) {
+  if (!skipToday && d.isToday()) {
     return `Today`;
-  } else if (d.isYesterday()) {
+  } else if (!skipYesterday && d.isYesterday()) {
     return `Yesterday`;
   } else {
     return otherDate
