@@ -18,6 +18,7 @@ import {
 import invariant from "tiny-invariant";
 import DateTimeline, { TimelineItemValues } from "~/components/DateTimeline";
 import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
+import { prisma } from "~/lib/prisma.server";
 import { filterTags } from "~/utils/utils";
 import { loader as itemLoader } from "./items.$itemId";
 
@@ -49,36 +50,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       },
     }),
   });
-
-  // return {await prisma.item.findFirstOrThrow({
-  //   where: { id: parseInt(params.itemId) },
-  //   select: {
-  //     id: true,
-  //     name: true,
-  //     loans: {
-  //       include: {
-  //         loan: {
-  //           include: {
-  //             person: true,
-  //             tags: true,
-  //           },
-  //         },
-  //         returnedBy: {
-  //           include: {
-  //             tags: true,
-  //           },
-  //         },
-  //       },
-  //       orderBy: {
-  //         dateLoaned: "asc",
-  //       },
-  //     },
-  //     tags: true,
-  //   },
-  //   orderBy: {
-  //     name: "asc",
-  //   },
-  // })};
 };
 
 export default function Page() {

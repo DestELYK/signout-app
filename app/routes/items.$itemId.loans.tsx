@@ -2,7 +2,6 @@ import {
   Accordion,
   Button,
   Center,
-  Loader,
   Skeleton,
   Stack,
   Text,
@@ -18,6 +17,7 @@ import {
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import OutstandingBadge from "~/components/OutstandingBadge";
+import { prisma } from "~/lib/prisma.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 // ? - Deciding whether to remove this page or /items/$itemId/timeline.tsx as they both display essentially the same information
@@ -114,16 +114,7 @@ export default function Page() {
                     </Text>
                   </Accordion.Control>
                   <Accordion.Panel>
-                    {loanId && loanId === item.loanId.toString() ? (
-                      <Outlet />
-                    ) : (
-                      navigation.location &&
-                      !navigation.location.pathname.endsWith("/loans") && (
-                        <Center w="100%">
-                          <Loader />
-                        </Center>
-                      )
-                    )}
+                    {loanId && loanId === item.loanId.toString() && <Outlet />}
                   </Accordion.Panel>
                 </Accordion.Item>
               ))}

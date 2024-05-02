@@ -26,6 +26,7 @@ import {
 import invariant from "tiny-invariant";
 import PersonPicker from "~/components/people/PersonPicker";
 import TagGroup from "~/components/tags/TagGroup";
+import { prisma } from "~/lib/prisma.server";
 import { formatDate } from "~/utils/utils";
 import {
   PatchLoanFormData,

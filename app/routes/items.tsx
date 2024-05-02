@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { Outlet, useParams } from "@remix-run/react";
-import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import { Outlet } from "@remix-run/react";
+import { typedjson } from "remix-typedjson";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { PostItemFormData, itemWithTags } from "~/utils/types.server";
@@ -14,102 +14,96 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const name = url.searchParams.get("name");
   const type = url.searchParams.get("type");
   const query = url.searchParams.get("q") || url.searchParams.get("query");
+  const display = url.searchParams.get("display");
 
-  try {
-    const filter: Prisma.ItemWhereInput = query
-      ? {
-          OR: [
-            {
-              AND: query.split(" ").map((s) => ({
+  const filter = query
+    ? {
+        OR: [
+          {
+            AND: query.split(" ").map((s) => ({
+              name: {
+                contains: s,
+              },
+            })),
+          },
+          {
+            tags: {
+              some: {
                 name: {
-                  contains: s,
+                  contains: query,
                 },
-              })),
+              },
             },
-            {
+          },
+        ],
+        ...(loanId && {
+          loans: {
+            some: {
+              loanId: parseInt(loanId),
+            },
+          },
+        }),
+      }
+    : ({
+        ...(loanId && {
+          loans: {
+            some: {
+              loanId: parseInt(loanId),
+            },
+          },
+        }),
+        ...(qrCode && { qrCode: qrCode }),
+        ...(name && { name: name }),
+        ...(type && { type: type }),
+        ...(display === "outstanding"
+          ? { loans: { some: { dateReturned: null } } }
+          : display === "missing" && {
               tags: {
                 some: {
-                  name: {
-                    contains: query,
-                  },
+                  OR: [
+                    { name: "Lost" },
+                    { name: "Missing" },
+                    {
+                      name: "Broken",
+                    },
+                  ],
                 },
               },
-            },
-          ],
-          ...(loanId && {
-            loans: {
-              some: {
-                loanId: parseInt(loanId),
-              },
-            },
-          }),
-        }
-      : {
-          ...(loanId && {
-            loans: {
-              some: {
-                loanId: parseInt(loanId),
-              },
-            },
-          }),
-          ...(qrCode && { qrCode: qrCode }),
-          ...(name && { name: name }),
-          ...(type && { type: type }),
-        };
+            }),
+      } satisfies Prisma.ItemWhereInput);
 
-    return typedjson({
-      items: await prisma.item.findMany({
-        include: itemWithTags.include,
-        where: filter,
-        orderBy: [
-          {
-            id: "desc",
-          },
-        ],
-      }),
-      missingItems: await prisma.item.findMany({
-        where: {
-          ...filter,
-          tags: {
-            some: {
-              OR: [
-                {
-                  name: "Lost",
-                },
-                {
-                  name: "Missing",
-                },
-                {
-                  name: "Broken",
-                },
-              ],
-            },
+  return typedjson({
+    totalCount: await prisma.item.count({
+      where: { ...filter, loans: undefined, tags: undefined },
+    }),
+    outstandingCount: await prisma.item.count({
+      where: {
+        ...filter,
+        loans: { some: { dateReturned: null } },
+        tags: undefined,
+      },
+    }),
+    missingCount: await prisma.item.count({
+      where: {
+        ...filter,
+        loans: undefined,
+        tags: {
+          some: {
+            OR: [{ name: "Lost" }, { name: "Missing" }, { name: "Broken" }],
           },
         },
-        include: itemWithTags.include,
-        orderBy: [
-          {
-            id: "desc",
-          },
-        ],
-      }),
-      error: undefined,
-    });
-  } catch (e) {
-    const error = handleError(e, "no item was returned");
-
-    if (error) {
-      return typedjson({
-        error: error,
-        items: undefined,
-        missingItems: undefined,
-      });
-    } else {
-      throw new Response(String(e), {
-        status: 500,
-      });
-    }
-  }
+      },
+    }),
+    items: await prisma.item.findMany({
+      include: itemWithTags.include,
+      where: filter,
+      orderBy: [
+        {
+          id: "desc",
+        },
+      ],
+    }),
+  });
 };
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -177,20 +171,5 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Page() {
-  const data = useTypedLoaderData<typeof loader>();
-
-  const params = useParams();
-
-  const itemId = params.itemId;
-
-  let name;
-
-  if (itemId) {
-    name =
-      data &&
-      data.items &&
-      data.items.find((i) => i.id.toString() === itemId)?.name;
-  }
-
   return <Outlet />;
 }

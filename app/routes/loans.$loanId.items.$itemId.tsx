@@ -11,6 +11,7 @@ import invariant from "tiny-invariant";
 import QRCodePreview from "~/components/qrCode/QRCodePreview";
 import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
+import { prisma } from "~/lib/prisma.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { loader as loanLoader } from "./loans.$loanId";
 

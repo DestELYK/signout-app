@@ -1,15 +1,23 @@
-import { Skeleton, Stack } from "@mantine/core";
+import { MantineSpacing, Skeleton, Stack } from "@mantine/core";
 
-export default function ListSkeleton({itemCount, height}: {itemCount: number, height: string | number}) {
-    let children = []
-    
-    for (let i = 0; i < itemCount; i++) {
-        children.push(<Skeleton h={height}/>)
-    }
+export default function ListSkeleton({
+  itemCount,
+  height,
+  gap = "md",
+}: {
+  itemCount: number;
+  height: string | number;
+  gap?: MantineSpacing;
+}) {
+  const children = [];
 
-    return (
-        <Stack h="100%" justify="stretch">
-            {children}
-        </Stack>
-    )
-} 
+  for (let i = 0; i < itemCount; i++) {
+    children.push(<Skeleton key={i} h={height} />);
+  }
+
+  return (
+    <Stack h="100%" justify="stretch" gap={gap}>
+      {children}
+    </Stack>
+  );
+}

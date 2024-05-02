@@ -22,9 +22,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const itemIds = url.searchParams.getAll("itemId");
   const personId = url.searchParams.get("personId");
-  const outstanding = url.searchParams.has("outstanding");
   const qrCode = url.searchParams.get("qrCode");
   const query = url.searchParams.get("q");
+  const limit = url.searchParams.get("limit");
+  const offset = url.searchParams.get("offset");
+  const display = url.searchParams.get("display");
 
   let filter: Prisma.LoanWhereInput = query
     ? {
@@ -105,12 +107,36 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             },
           }),
         ...(personId && { personId: parseInt(personId) }),
-        ...(outstanding && { items: { some: { dateReturned: null } } }),
+        ...(display === "outstanding"
+          ? { items: { some: { dateReturned: null } } }
+          : display === "returned" && {
+              items: { none: { dateReturned: null } },
+            }),
       };
 
   return typedjson({
-    count: await prisma.loan.count({
-      where: filter,
+    totalCount: await prisma.loan.count({
+      where: { ...filter, items: undefined },
+    }),
+    outCount: await prisma.loan.count({
+      where: {
+        ...filter,
+        items: {
+          some: {
+            dateReturned: null,
+          },
+        },
+      },
+    }),
+    inCount: await prisma.loan.count({
+      where: {
+        ...filter,
+        items: {
+          none: {
+            dateReturned: null,
+          },
+        },
+      },
     }),
     loans: await prisma.loan.findMany({
       include: {
@@ -122,6 +148,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           id: "desc",
         },
       ],
+      take: limit ? parseInt(limit) : undefined,
+      skip: offset ? parseInt(offset) : undefined,
     }),
   });
 };

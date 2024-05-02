@@ -11,6 +11,7 @@ import invariant from "tiny-invariant";
 import { QRCodeWithComponent } from "~/components/qrCode/QRCodeWithComponent";
 import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
+import { prisma } from "~/lib/prisma.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { loader as itemLoader } from "./items.$itemId";
 

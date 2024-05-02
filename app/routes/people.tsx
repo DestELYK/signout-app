@@ -14,67 +14,105 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const nickname = url.searchParams.get("nickname");
   const qrCode = url.searchParams.get("qrCode");
   const query = url.searchParams.get("q") || url.searchParams.get("query");
+  const display = url.searchParams.get("display");
 
-  try {
-    const filter: Prisma.PersonWhereInput = query
-      ? ({
-          OR: [
-            {
-              firstName: {
-                contains: query,
-              },
-            },
-            {
-              lastName: {
-                contains: query,
-              },
-            },
-            {
-              nickname: {
-                contains: query,
-              },
-            },
-            {
-              AND: {
-                OR: [
-                  { firstName: { contains: query.split(" ", 2)[0] } },
-                  { nickname: { contains: query.split(" ", 2)[0] } },
-                ],
-                lastName: { contains: query.split(" ", 2)[1] },
-              },
-            },
-          ],
-        } satisfies Prisma.PersonWhereInput)
-      : {
-          ...(firstName && { firstName: firstName }),
-          ...(lastName && { lastName: lastName }),
-          ...(nickname && { nickname: nickname }),
-          ...(qrCode && { qrCode: qrCode }),
-        };
-
-    return typedjson({
-      people: await prisma.person.findMany({
-        where: filter,
-        include: personWithTags.include,
-        orderBy: [
+  const filter: Prisma.PersonWhereInput = query
+    ? ({
+        OR: [
           {
-            id: "desc",
+            firstName: {
+              contains: query,
+            },
+          },
+          {
+            lastName: {
+              contains: query,
+            },
+          },
+          {
+            nickname: {
+              contains: query,
+            },
+          },
+          {
+            AND: {
+              OR: [
+                { firstName: { contains: query.split(" ", 2)[0] } },
+                { nickname: { contains: query.split(" ", 2)[0] } },
+              ],
+              lastName: { contains: query.split(" ", 2)[1] },
+            },
           },
         ],
-      }),
-      error: undefined,
-    });
-  } catch (e) {
-    const error = handleError(e, "no people returned");
+      } satisfies Prisma.PersonWhereInput)
+    : {
+        ...(firstName && { firstName: firstName }),
+        ...(lastName && { lastName: lastName }),
+        ...(nickname && { nickname: nickname }),
+        ...(qrCode && { qrCode: qrCode }),
+        ...(display === "students"
+          ? {
+              tags: {
+                some: {
+                  AND: [
+                    {
+                      category: "Person Role",
+                    },
+                    {
+                      NOT: {
+                        name: "Staff",
+                      },
+                    },
+                  ],
+                },
+              },
+            }
+          : display === "staff" && { tags: { some: { name: "Staff" } } }),
+      };
 
-    if (error) {
-      return typedjson({ error: error, people: undefined });
-    } else {
-      throw new Response(String(e), {
-        status: 500,
-      });
-    }
-  }
+  return typedjson({
+    totalCount: await prisma.person.count({
+      where: { ...filter, tags: undefined },
+    }),
+    studentCount: await prisma.person.count({
+      where: {
+        ...filter,
+        tags: {
+          some: {
+            AND: [
+              {
+                category: "Person Role",
+              },
+              {
+                NOT: {
+                  name: "Staff",
+                },
+              },
+            ],
+          },
+        },
+      },
+    }),
+    staffCount: await prisma.person.count({
+      where: {
+        ...filter,
+        tags: {
+          some: {
+            name: "Staff",
+          },
+        },
+      },
+    }),
+    people: await prisma.person.findMany({
+      where: filter,
+      include: personWithTags.include,
+      orderBy: [
+        {
+          id: "desc",
+        },
+      ],
+    }),
+  });
 };
 
 export async function action({ request }: ActionFunctionArgs) {

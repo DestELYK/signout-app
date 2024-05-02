@@ -1,4 +1,4 @@
-import { Accordion, Center, Flex, Loader, Skeleton, Text } from "@mantine/core";
+import { Accordion, Flex, Skeleton, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
   Outlet,
@@ -9,6 +9,7 @@ import {
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import OutstandingBadge from "~/components/OutstandingBadge";
+import { prisma } from "~/lib/prisma.server";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -83,16 +84,7 @@ export default function Page() {
                   </Text>
                 </Accordion.Control>
                 <Accordion.Panel>
-                  {itemId && itemId === item.itemId.toString() ? (
-                    <Outlet />
-                  ) : (
-                    navigation.location &&
-                    !navigation.location.pathname.endsWith("/items") && (
-                      <Center w="100%">
-                        <Loader />
-                      </Center>
-                    )
-                  )}
+                  {itemId && itemId === item.itemId.toString() && <Outlet />}
                 </Accordion.Panel>
               </Accordion.Item>
             ))}

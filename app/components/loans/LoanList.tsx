@@ -6,10 +6,18 @@ import CreateLoanForm from "./CreateLoanForm";
 import LoanListView from "./LoanListView";
 
 export interface LoanListProps {
+  count: number;
+  outstandingCount: number;
+  returnedCount: number;
   loans: LoanWithTagsAndItems[];
 }
 
-export function LoanList({ loans }: LoanListProps) {
+export function LoanList({
+  count,
+  outstandingCount,
+  returnedCount,
+  loans,
+}: LoanListProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   return (
@@ -36,14 +44,17 @@ export function LoanList({ loans }: LoanListProps) {
           all: {
             label: "All",
             items: loans,
+            size: count,
           },
           outstanding: {
             label: "Outstanding",
-            items: loans.filter((l) => l._count.items > 0),
+            items: loans,
+            size: outstandingCount,
           },
           returned: {
             label: "Returned",
-            items: loans.filter((l) => l._count.items === 0),
+            items: loans,
+            size: returnedCount,
           },
         }}
         itemsPerPage={15}

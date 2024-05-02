@@ -11,7 +11,6 @@ import {
   Pagination,
   ScrollArea,
   SegmentedControl,
-  Space,
   Text,
   TextInput,
 } from "@mantine/core";
@@ -23,6 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClientOnly } from "remix-utils/client-only";
 import { ToggleSchemeButton } from "../ToggleSchemeButton.client";
 import QrButton from "../qrCode/QrButton";
+import ListSkeleton from "../skeletons/ListSkeleton";
 import InfoView from "./InfoView";
 
 const ITEMS_PER_PAGE = 15;
@@ -40,7 +40,7 @@ export interface ListViewProps<T extends { id: number }> {
   itemsPerPage: number;
   emptyText?: string;
   data: {
-    [value: string]: { label: string; items: T[] };
+    [value: string]: { label: string; items?: T[]; size: number };
   };
   children: (item: T, query?: string, qrCode?: string) => React.ReactNode;
 }
@@ -56,7 +56,6 @@ export default function ListView<T extends { id: number }>({
 }: ListViewProps<T>) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
-  const [filterOpened, { toggle: toggleFilter }] = useDisclosure(false);
   const queryRef = useRef<HTMLInputElement>(null);
   const [collapseOpened, { open: openCollapse, close: closeCollapse }] =
     useDisclosure(searchParams.has("q", "qrCode"));
@@ -74,15 +73,15 @@ export default function ListView<T extends { id: number }>({
 
   const items = data[value].items;
 
-  const filteredItems = items.slice(
-    (activePage - 1) * itemsPerPage,
-    (activePage - 1) * itemsPerPage + itemsPerPage
-  );
+  const totalCount = data[value].size;
+
+  const filteredItems =
+    items && items.length > itemsPerPage ? items.slice(0, itemsPerPage) : items;
 
   const controlData = Object.keys(data).map((key) => {
     return {
       value: key,
-      label: `${data[key].label} (${data[key].items.length})`,
+      label: `${data[key].label} (${data[key].size})`,
     };
   });
 
@@ -118,6 +117,16 @@ export default function ListView<T extends { id: number }>({
   useEffect(() => {
     setPage(1);
   }, [value]);
+
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        prev.set("limit", itemsPerPage.toString());
+        return prev;
+      },
+      { replace: true }
+    );
+  }, [itemsPerPage]);
 
   function updateSearch({
     query,
@@ -259,6 +268,7 @@ export default function ListView<T extends { id: number }>({
                       } else {
                         prev.set("display", value);
                       }
+                      prev.delete("offset");
                       return prev;
                     },
                     {
@@ -318,46 +328,65 @@ export default function ListView<T extends { id: number }>({
             pb="xs"
             offsetScrollbars={"y"}
           >
-            <Card withBorder p="sm">
-              {items.length > 0 ? (
-                filteredItems.map((item) => (
-                  <Card.Section key={item.id} inheritPadding withBorder py="sm">
-                    {children(item, form.values.query, form.values.qrCode)}
-                  </Card.Section>
-                ))
-              ) : (
-                <div className="h-full w-full">{emptyText}</div>
-              )}
-            </Card>
+            {filteredItems === undefined ||
+            (navigation.location !== undefined &&
+              navigation.location.pathname === location.pathname &&
+              !/^\/.*\/\d+$/.test(navigation.location.pathname)) ? (
+              <ListSkeleton height={80} itemCount={itemsPerPage} gap={2} />
+            ) : (
+              <Card withBorder p="sm">
+                {filteredItems.length > 0 ? (
+                  filteredItems.map((item) => (
+                    <Card.Section
+                      key={item.id}
+                      inheritPadding
+                      withBorder
+                      py="sm"
+                    >
+                      {children(item, form.values.query, form.values.qrCode)}
+                    </Card.Section>
+                  ))
+                ) : (
+                  <div className="h-full w-full">{emptyText}</div>
+                )}
+              </Card>
+            )}
           </ScrollArea.Autosize>
-          {filteredItems.length < itemsPerPage && <Space mb="auto" />}
-          {items.length > itemsPerPage && (
-            <>
-              <Divider />
-              <Pagination.Root
-                mt="md"
-                siblings={1}
-                px="sm"
-                total={
-                  items.length > itemsPerPage
-                    ? Math.ceil(items.length / itemsPerPage)
-                    : items.length
-                }
-                value={activePage}
-                onChange={(value) => {
-                  setPage(value);
+          <Divider />
+          <Pagination.Root
+            mt="md"
+            siblings={1}
+            px="sm"
+            total={
+              totalCount > itemsPerPage
+                ? Math.ceil(totalCount / itemsPerPage)
+                : totalCount
+            }
+            value={activePage}
+            onChange={(value) => {
+              setPage(value);
 
-                  scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-              >
-                <Group gap={5} justify="center">
-                  <Pagination.Previous />
-                  <Pagination.Items />
-                  <Pagination.Next />
-                </Group>
-              </Pagination.Root>
-            </>
-          )}
+              scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+
+              setSearchParams(
+                (prev) => {
+                  if (value === 1) {
+                    prev.delete("offset");
+                  } else {
+                    prev.set("offset", ((value - 1) * itemsPerPage).toString());
+                  }
+                  return prev;
+                },
+                { replace: true }
+              );
+            }}
+          >
+            <Group gap={5} justify="center">
+              <Pagination.Previous />
+              <Pagination.Items />
+              <Pagination.Next />
+            </Group>
+          </Pagination.Root>
         </>
       </InfoView>
     </>

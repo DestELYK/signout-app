@@ -23,9 +23,10 @@ import {
   Box,
   ColorSchemeScript,
   Flex,
+  LoadingOverlay,
   MantineProvider,
   SegmentedControl,
-  createTheme
+  createTheme,
 } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
@@ -109,7 +110,6 @@ export default function App() {
     value = "people";
   }
 
-
   function onChange(value: string) {
     switch (value) {
       case "home":
@@ -141,6 +141,13 @@ export default function App() {
               style={{ overflow: "hidden" }}
             >
               <Box h="calc(100% - 58px)">
+                <LoadingOverlay
+                  visible={
+                    navigation.location !== undefined &&
+                    navigation.location.pathname !== location.pathname
+                  }
+                  zIndex={1000}
+                />
                 <Outlet />
               </Box>
               <SegmentedControl
@@ -165,6 +172,7 @@ export default function App() {
                 ]}
                 value={value}
                 onChange={onChange}
+                onClick={() => onChange(value)}
               />
             </Flex>
             <ScrollRestoration />

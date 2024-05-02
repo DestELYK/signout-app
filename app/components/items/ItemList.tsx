@@ -7,11 +7,18 @@ import CreateItemForm from "./CreateItemForm";
 import ItemListView from "./ItemListView";
 
 export interface ItemListProps {
-  items: ItemWithTags[];
-  missingItems: ItemWithTags[];
+  items?: ItemWithTags[];
+  totalCount: number;
+  outstandingCount: number;
+  missingCount: number;
 }
 
-export default function ItemList({ items, missingItems }: ItemListProps) {
+export default function ItemList({
+  items,
+  totalCount,
+  outstandingCount,
+  missingCount,
+}: ItemListProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   return (
@@ -38,14 +45,17 @@ export default function ItemList({ items, missingItems }: ItemListProps) {
           all: {
             label: "All",
             items: items,
+            size: totalCount,
           },
           outstanding: {
             label: "Outstanding",
-            items: items.filter((l) => l._count.loans > 0),
+            items: items,
+            size: outstandingCount,
           },
           missing: {
             label: "Missing",
-            items: missingItems,
+            items: items,
+            size: missingCount,
           },
         }}
         itemsPerPage={15}

@@ -1,16 +1,23 @@
 import { UnstyledButton } from "@mantine/core";
 import { NavLink, useSearchParams } from "@remix-run/react";
 import { PersonWithTags } from "~/utils/types.server";
-import { filterTags } from "~/utils/utils";
 import ListView from "../base/ListView";
 import CreatePersonForm from "./CreatePersonForm";
 import PersonListView from "./PersonListView";
 
 export interface PeopleListProps {
   people: PersonWithTags[];
+  totalCount: number;
+  studentCount: number;
+  staffCount: number;
 }
 
-export default function PeopleList({ people }: PeopleListProps) {
+export default function PeopleList({
+  people,
+  totalCount,
+  studentCount,
+  staffCount,
+}: PeopleListProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   return (
@@ -37,18 +44,17 @@ export default function PeopleList({ people }: PeopleListProps) {
           all: {
             label: "All",
             items: people,
+            size: totalCount,
           },
-          outstanding: {
+          students: {
             label: "Students",
-            items: people.filter(
-              (p) => filterTags(p.tags, "Person Role")[0].name !== "Staff"
-            ),
+            items: people,
+            size: studentCount,
           },
-          returned: {
+          staff: {
             label: "Staff",
-            items: people.filter(
-              (p) => filterTags(p.tags, "Person Role")[0].name === "Staff"
-            ),
+            items: people,
+            size: staffCount,
           },
         }}
         itemsPerPage={15}
