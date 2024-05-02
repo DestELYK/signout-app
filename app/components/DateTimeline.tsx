@@ -7,29 +7,19 @@ export type TimelineItemValues = {
   date: Date;
   label: string;
   icon: React.ReactNode;
+  children?: React.ReactNode;
   color: string;
   line: "dotted" | "dashed" | "solid";
 };
 
 export interface DateTimelineProps {
   active: number;
-  prefix?: string;
   href?: string;
   items: TimelineItemValues[];
 }
 
-export default function DateTimeline({
-  active,
-  prefix,
-  href,
-  items,
-}: DateTimelineProps) {
+export default function DateTimeline({ active, href, items }: DateTimelineProps) {
   const timelineItems = items.map((l, index) => {
-    const title =
-      index === 0 || index == items.length - 1
-        ? l.label
-        : `${prefix}${l.id} - ${l.label}`;
-
     return (
       <Timeline.Item
         data-list-item
@@ -52,16 +42,17 @@ export default function DateTimeline({
         }
         title={
           index === 0 || index === items.length - 1 ? (
-            <Text fw="bold">{title}</Text>
+            <Text fw="bold">{l.label}</Text>
           ) : (
             <Text fw="bold" component={Link} to={`${href}/${l.id}`}>
-              {title}
+              {l.label}
             </Text>
           )
         }
         lineVariant={l.line}
         color={l.color}
       >
+        {l.children}
         <Text size="sm" c="dimmed">
           {formatDate(l.date)}
         </Text>

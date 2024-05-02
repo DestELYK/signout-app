@@ -64,7 +64,7 @@ export default function Page() {
       id: l.loan.id,
       person: l.loan.person,
       date: l.dateLoaned,
-      label: "Sign-Out",
+      label: `Loan #${l.loan.id} - Sign-Out`,
       icon: <IconMinus size={40} />,
       color: OUT_COLOR,
       line: "dotted",
@@ -73,7 +73,7 @@ export default function Page() {
       id: l.loan.id,
       person: l.loan.person,
       date: l.dateReturned,
-      label: "Sign-In",
+      label: `Loan #${l.loan.id} - Sign-In`,
       icon: <IconPlus size={40} />,
       color: IN_COLOR,
       line: "solid",
@@ -98,7 +98,7 @@ export default function Page() {
 
     const lastItem = orderedLoans[orderedLoans.length - 1];
 
-    if (lastItem.label === "Sign-Out") {
+    if (lastItem.label.includes("Sign-Out")) {
       orderedLoans.push({
         id: orderedLoans.length,
         date: new Date(),
@@ -130,7 +130,6 @@ export default function Page() {
 
   return (
     <DateTimeline
-      prefix="Loan #"
       href="/loans"
       items={orderedLoans}
       active={
