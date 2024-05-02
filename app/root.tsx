@@ -137,10 +137,10 @@ export default function App() {
             <Flex
               direction="column"
               h="100dvh"
-              w="100vw"
+              w="100dvw"
               style={{ overflow: "hidden" }}
             >
-              <Box h="calc(100% - 58px)">
+              <Box w="100%" h="calc(100% - 58px)">
                 <LoadingOverlay
                   visible={
                     navigation.location !== undefined &&
