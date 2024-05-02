@@ -1,4 +1,3 @@
-import { rem } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
   IconCheck,
@@ -66,7 +65,7 @@ export default function Page() {
       person: l.loan.person,
       date: l.dateLoaned,
       label: "Sign-Out",
-      icon: <IconMinus size={rem(40)} />,
+      icon: <IconMinus size={40} />,
       color: OUT_COLOR,
       line: "dotted",
     })),
@@ -75,7 +74,7 @@ export default function Page() {
       person: l.loan.person,
       date: l.dateReturned,
       label: "Sign-In",
-      icon: <IconPlus size={rem(40)} />,
+      icon: <IconPlus size={40} />,
       color: IN_COLOR,
       line: "solid",
     })),
@@ -90,7 +89,7 @@ export default function Page() {
       id: -1,
       date: parentData.item.createdDate,
       label: "Item Added",
-      icon: <IconCircle size={rem(40)} />,
+      icon: <IconCircle size={40} />,
       color: "blue",
       line: "solid",
     });
@@ -107,12 +106,12 @@ export default function Page() {
         icon:
           status.length > 0 ? (
             status[0].name === "Missing" || status[0].name === "Lost" ? (
-              <IconQuestionMark size={rem(40)} />
+              <IconQuestionMark size={40} />
             ) : (
-              <IconTrash size={rem(40)} />
+              <IconTrash size={40} />
             )
           ) : (
-            <IconX size={rem(40)} />
+            <IconX size={40} />
           ),
         color: status.length > 0 ? "red" : "blue",
         line: "dotted",
@@ -122,7 +121,7 @@ export default function Page() {
         id: orderedLoans.length,
         date: new Date(),
         label: "Available",
-        icon: <IconCheck size={rem(40)} />,
+        icon: <IconCheck size={40} />,
         color: "blue",
         line: "solid",
       });

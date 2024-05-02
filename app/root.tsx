@@ -26,6 +26,8 @@ import {
   LoadingOverlay,
   MantineProvider,
   SegmentedControl,
+  Stack,
+  Text,
   createTheme,
 } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
@@ -34,6 +36,7 @@ import {
   IconClipboard,
   IconDeviceImac,
   IconHome,
+  IconSettings,
   IconUser,
 } from "@tabler/icons-react";
 import { useRef } from "react";
@@ -113,10 +116,12 @@ export default function App() {
   function onChange(value: string) {
     switch (value) {
       case "home":
+        if (location.pathname === "/") return;
         navigate("/");
         break;
       default:
-        navigate(`/${value}`);
+        if (location.pathname === `/${value}`) return;
+        navigate(`/${value}?limit=15`);
         break;
     }
   }
@@ -140,7 +145,7 @@ export default function App() {
               w="100dvw"
               style={{ overflow: "hidden" }}
             >
-              <Box w="100%" h="calc(100% - 58px)">
+              <Box w="100%" h="calc(100% - 62px)">
                 <LoadingOverlay
                   visible={
                     navigation.location !== undefined &&
@@ -155,19 +160,49 @@ export default function App() {
                 data={[
                   {
                     value: "home",
-                    label: <IconHome size={32} />,
+                    label: (
+                      <Stack align="center" gap={0}>
+                        <IconHome size={24} />
+                        <Text size="sm">Home</Text>
+                      </Stack>
+                    ),
                   },
                   {
                     value: "loans",
-                    label: <IconClipboard size={32} />,
+                    label: (
+                      <Stack align="center" gap={0}>
+                        <IconClipboard size={24} />
+                        <Text size="sm">Loans</Text>
+                      </Stack>
+                    ),
                   },
                   {
                     value: "items",
-                    label: <IconDeviceImac size={32} />,
+                    label: (
+                      <Stack align="center" gap={0}>
+                        <IconDeviceImac size={24} />
+                        <Text size="sm">Items</Text>
+                      </Stack>
+                    ),
                   },
                   {
                     value: "people",
-                    label: <IconUser size={32} />,
+                    label: (
+                      <Stack align="center" gap={0}>
+                        <IconUser size={24} />
+                        <Text size="sm">People</Text>
+                      </Stack>
+                    ),
+                  },
+                  {
+                    value: "settings",
+                    label: (
+                      <Stack align="center" gap={0}>
+                        <IconSettings size={24} />
+                        <Text size="sm">Settings</Text>
+                      </Stack>
+                    ),
+                    disabled: true,
                   },
                 ]}
                 value={value}

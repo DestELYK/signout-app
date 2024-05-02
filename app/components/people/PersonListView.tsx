@@ -2,6 +2,7 @@ import { Flex, Highlight, Text, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { IconArrowRight } from "@tabler/icons-react";
 import { formatFullName } from "~/utils/utils";
+import { OUT_COLOR } from "../OutstandingBadge";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonListViewProps {
@@ -10,6 +11,7 @@ export interface PersonListViewProps {
   lastName: string;
   nickname?: string | null;
   tags: Tag[];
+  totalLoans: number;
   outstandingLoans: number;
   query?: string;
   qrCode?: string;
@@ -21,6 +23,7 @@ export default function PersonListView({
   lastName,
   nickname,
   tags,
+  totalLoans,
   outstandingLoans,
   query,
   qrCode,
@@ -48,7 +51,17 @@ export default function PersonListView({
           >{`${fullName}`}</Highlight>
           <TagGroup tags={tags} categories={["Person Role"]} />
         </Flex>
-        <Text size="xs">{outstandingLoans} loans currently out</Text>
+        {totalLoans > 0 && (
+          <Text size="xs">
+            {totalLoans} total loan{totalLoans > 1 ? "s" : ""}
+          </Text>
+        )}
+        {outstandingLoans > 0 && (
+          <Text size="xs" c={OUT_COLOR}>
+            {outstandingLoans} loan{outstandingLoans > 1 ? "s" : ""} currently
+            out
+          </Text>
+        )}
       </Flex>
       <IconArrowRight />
     </Flex>

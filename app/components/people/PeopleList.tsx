@@ -71,6 +71,7 @@ export default function PeopleList({
               lastName={item.lastName}
               nickname={item.nickname}
               tags={item.tags}
+              totalLoans={item.loans.length}
               outstandingLoans={item._count.loans}
               query={query}
               qrCode={qrCode}

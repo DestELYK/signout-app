@@ -11,7 +11,10 @@ import TagGroup from "../tags/TagGroup";
 
 export interface LoanInfoViewProps {
   id: number;
-  person: Omit<PersonWithTags, "_count" | "createdDate" | "updatedDate">;
+  person: Omit<
+    PersonWithTags,
+    "_count" | "createdDate" | "updatedDate" | "loans"
+  >;
   tags: Tag[];
   createdDate: Date;
   updatedDate: Date;

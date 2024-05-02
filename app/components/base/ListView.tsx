@@ -120,13 +120,15 @@ export default function ListView<T extends { id: number }>({
   }, [value]);
 
   useEffect(() => {
-    setSearchParams(
-      (prev) => {
-        prev.set("limit", itemsPerPage.toString());
-        return prev;
-      },
-      { replace: true }
-    );
+    if (!searchParams.has("limit")) {
+      setSearchParams(
+        (prev) => {
+          prev.set("limit", itemsPerPage.toString());
+          return prev;
+        },
+        { replace: true }
+      );
+    }
   }, [itemsPerPage]);
 
   function updateSearch({

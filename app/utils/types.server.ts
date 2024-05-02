@@ -85,6 +85,11 @@ export type LoanWithTagsAndItems = Prisma.LoanGetPayload<
 export const personWithTags = Prisma.validator<Prisma.PersonDefaultArgs>()({
   include: {
     tags: true,
+    loans: {
+      select: {
+        id: true,
+      },
+    },
     _count: {
       select: {
         loans: {
@@ -106,6 +111,11 @@ export type PersonWithTags = Prisma.PersonGetPayload<typeof personWithTags>;
 export const itemWithTags = Prisma.validator<Prisma.ItemDefaultArgs>()({
   include: {
     tags: true,
+    loans: {
+      select: {
+        loanId: true,
+      },
+    },
     _count: {
       select: {
         loans: {

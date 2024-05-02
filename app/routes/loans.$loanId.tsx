@@ -5,7 +5,11 @@ import {
   MetaFunction,
 } from "@remix-run/node";
 import { useRouteError } from "@remix-run/react";
-import { IconClipboard, IconInfoCircle, IconListCheck } from "@tabler/icons-react";
+import {
+  IconDeviceImac,
+  IconInfoCircle,
+  IconListCheck,
+} from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import ErrorPage from "~/components/ErrorPage";
@@ -226,7 +230,7 @@ export default function Page() {
             label: "Overview",
           },
           items: {
-            icon: <IconClipboard size={24} />,
+            icon: <IconDeviceImac size={24} />,
             label: "Items",
           },
           signin: {
