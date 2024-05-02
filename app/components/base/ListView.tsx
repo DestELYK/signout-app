@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   CloseButton,
+  Collapse,
   Divider,
   Flex,
   Group,
@@ -330,6 +331,7 @@ export default function ListView<T extends { id: number }>({
           >
             {filteredItems === undefined ||
             (navigation.location !== undefined &&
+              !navigation.location?.search.includes("create") &&
               navigation.location.pathname === location.pathname &&
               !/^\/.*\/\d+$/.test(navigation.location.pathname)) ? (
               <ListSkeleton height={80} itemCount={itemsPerPage} gap={2} />
@@ -353,40 +355,45 @@ export default function ListView<T extends { id: number }>({
             )}
           </ScrollArea.Autosize>
           <Divider />
-          <Pagination.Root
-            mt="md"
-            siblings={1}
-            px="sm"
-            total={
-              totalCount > itemsPerPage
-                ? Math.ceil(totalCount / itemsPerPage)
-                : totalCount
-            }
-            value={activePage}
-            onChange={(value) => {
-              setPage(value);
+          <Collapse in={totalCount > itemsPerPage}>
+            <Pagination.Root
+              mt="md"
+              siblings={1}
+              px="sm"
+              total={
+                totalCount > itemsPerPage
+                  ? Math.ceil(totalCount / itemsPerPage)
+                  : 1
+              }
+              value={activePage}
+              onChange={(value) => {
+                setPage(value);
 
-              scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
 
-              setSearchParams(
-                (prev) => {
-                  if (value === 1) {
-                    prev.delete("offset");
-                  } else {
-                    prev.set("offset", ((value - 1) * itemsPerPage).toString());
-                  }
-                  return prev;
-                },
-                { replace: true }
-              );
-            }}
-          >
-            <Group gap={5} justify="center">
-              <Pagination.Previous />
-              <Pagination.Items />
-              <Pagination.Next />
-            </Group>
-          </Pagination.Root>
+                setSearchParams(
+                  (prev) => {
+                    if (value === 1) {
+                      prev.delete("offset");
+                    } else {
+                      prev.set(
+                        "offset",
+                        ((value - 1) * itemsPerPage).toString()
+                      );
+                    }
+                    return prev;
+                  },
+                  { replace: true }
+                );
+              }}
+            >
+              <Group gap={5} justify="center">
+                <Pagination.Previous />
+                <Pagination.Items />
+                <Pagination.Next />
+              </Group>
+            </Pagination.Root>
+          </Collapse>
         </>
       </InfoView>
     </>
