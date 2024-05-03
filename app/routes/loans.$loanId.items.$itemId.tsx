@@ -83,7 +83,12 @@ export default function Page() {
           <QRCodePreview qrCode={data.item.item.qrCode} scale={2} />
           <Flex w="100%" direction="column" gap="xs">
             <Text size="xs">
-              Date Loaned: {formatDate(data.item.dateLoaned)}
+              Date Loaned:{" "}
+              {formatDate(data.item.dateLoaned, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
               <br />
               <span style={{ fontWeight: "bold" }}>
                 ({dateDiff({ date: data.item.dateLoaned })})
@@ -117,7 +122,12 @@ export default function Page() {
           </Flex>
         </Flex>
         <Group justify="end" mt="sm">
-          <TagGroup tags={data.item.item.tags} />
+          <TagGroup
+            tags={data.item.item.tags}
+            categories={["Item Type"]}
+            blacklist
+            groupProps={{ justify: "end" }}
+          />
           <Button
             variant="outline"
             rightSection={<IconArrowRight />}
