@@ -1,5 +1,6 @@
 import {
   Accordion,
+  Badge,
   Button,
   Center,
   Skeleton,
@@ -44,6 +45,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
               select: {
                 id: true,
                 name: true,
+                tags: true,
               },
             },
             dateLoaned: true,
@@ -104,7 +106,15 @@ export default function Page() {
               {data.loans.map((loan) => (
                 <Accordion.Item key={loan.id} value={loan.id.toString()}>
                   <Accordion.Control
-                    icon={<OutstandingBadge out={loan._count.items > 0} />}
+                    icon={
+                      loan.items.find((i) =>
+                        i.item.tags.find((t) => t.name === "Lost")
+                      ) ? (
+                        <Badge color="red">Lost Items</Badge>
+                      ) : (
+                        <OutstandingBadge out={loan._count.items > 0} />
+                      )
+                    }
                   >
                     <Text>
                       Loan #{loan.id} - {loan.items.length} item

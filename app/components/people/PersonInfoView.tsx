@@ -1,62 +1,137 @@
-import { Flex, Stack, Text } from "@mantine/core";
+import { Flex, Group, Stack, Text, Textarea, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { Link } from "@remix-run/react";
-import { formatFullName } from "~/utils/utils";
-import QRCodePreview from "../qrCode/QRCodePreview";
+import {
+  dateDiff,
+  formatDate,
+  formatDuration,
+  formatFullName,
+} from "~/utils/utils";
+import { OUT_COLOR } from "../OutstandingBadge";
+import StatCard from "../StatCard";
+import InfoView from "../base/InfoView";
+import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonInfoViewProps {
-  personId: number;
+  id: number;
   qrCode?: string | null;
   firstName: string;
   lastName: string;
   nickname?: string | null;
-  tags?: Tag[] | null;
-  rightSection?: React.ReactNode;
+  notes?: string | null;
+  tags: Tag[];
+  createdDate: Date;
+  updatedDate: Date;
+  loading?: boolean;
+  lostItems: number;
+  outstandingItems: number;
+  loans: number;
+  averageReturnTime?: number;
 }
 
 export default function PersonInfoView({
-  personId,
-  qrCode,
+  id,
   firstName,
   lastName,
   nickname,
+  qrCode,
+  notes,
   tags,
-  rightSection,
+  createdDate,
+  updatedDate,
+  loans,
+  outstandingItems,
+  lostItems,
+  averageReturnTime,
 }: PersonInfoViewProps) {
-  const fullName = formatFullName({ firstName, lastName, nickname });
-
   return (
-    <Stack gap={0} w="100%">
-      <Flex
-        w="100%"
-        direction="row"
-        wrap="nowrap"
-        align="center"
-        justify="space-between"
+    <Flex direction="column" w="100%" h="100%" gap="sm">
+      {/* Person Card */}
+      <Title order={4}>Details</Title>
+      <InfoView
+        title={formatFullName({ firstName, lastName, nickname })}
+        rightSection={
+          <TagGroup
+            tags={tags}
+            categories={["Person Role"]}
+            groupProps={{ justify: "end" }}
+          />
+        }
+        bottomSection={
+          <TagGroup
+            tags={tags}
+            categories={["Location", "Person Role"]}
+            groupProps={{ justify: "end" }}
+            blacklist
+          />
+        }
+        cardProps={{ p: "sm" }}
       >
-        <Flex direction="row" wrap="nowrap" align="center" gap="xs">
-          {/* QR Code Image */}
-          <QRCodePreview qrCode={qrCode} />
+        <QRCodeWithComponent qrCode={qrCode} scale={2.5}>
           <Stack gap={0}>
-            <Text
-              ta="center"
-              fw="bold"
-              component={Link}
-              to={`/people/${personId}`}
-            >
-              {fullName}
+            <Text fw="bold" mb="md" size="sm">
+              Current Status:{" "}
+              <Text span c={outstandingItems > 0 ? "red" : "green"}>
+                {outstandingItems > 0
+                  ? "Outstanding Items"
+                  : "All Items Returned"}
+              </Text>
             </Text>
-            {qrCode && tags && (
-              <TagGroup tags={tags} categories={["Person Role"]} />
-            )}
           </Stack>
-        </Flex>
-        <Flex direction="row" wrap="nowrap" align="center" gap="xs">
-          {!qrCode && tags && <TagGroup tags={tags} />}
-          {rightSection}
-        </Flex>
-      </Flex>
-    </Stack>
+        </QRCodeWithComponent>
+      </InfoView>
+
+      {/* Notes */}
+      <Title order={4}>Notes</Title>
+      <Textarea
+        w="100%"
+        minRows={5}
+        maxRows={5}
+        autosize
+        value={notes || "No notes"}
+        readOnly
+      />
+
+      {/* Outstanding Items */}
+      <Group align="stretch" grow>
+        {outstandingItems && (
+          <StatCard
+            color={OUT_COLOR}
+            value={outstandingItems}
+            label="Outstanding Items"
+          />
+        )}
+        <StatCard value={loans} label="Total Item Sign-Outs" />
+      </Group>
+
+      {/* Average Return Time */}
+      <Group align="stretch" grow>
+        {lostItems && lostItems > 0 && (
+          <StatCard color="red" value={lostItems} label="Lost Items" />
+        )}
+        {averageReturnTime && Math.round(averageReturnTime) > 0 && (
+          <StatCard
+            value={formatDuration(averageReturnTime)}
+            label="Average Return Time"
+          />
+        )}
+      </Group>
+
+      {/* Created Date */}
+      <Group align="stretch" grow>
+        <StatCard
+          value={dateDiff({ date: createdDate, withoutSuffix: true })}
+          label="Since Creation"
+          caption={formatDate(createdDate)}
+        />
+
+        {/* Updated Date */}
+        <StatCard
+          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+          label="Since Updated"
+          caption={formatDate(updatedDate)}
+        />
+      </Group>
+    </Flex>
   );
 }

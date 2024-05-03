@@ -1,7 +1,7 @@
 import {
   Button,
+  Card,
   Center,
-  Flex,
   Group,
   Loader,
   Stack,
@@ -16,6 +16,7 @@ import {
   useTypedRouteLoaderData,
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
+import { OUT_COLOR } from "~/components/OutstandingBadge";
 import { QRCodeWithComponent } from "~/components/qrCode/QRCodeWithComponent";
 import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
@@ -40,6 +41,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
                   id: true,
                   qrCode: true,
                   name: true,
+                  tags: true,
                 },
               },
               returnedBy: {
@@ -86,49 +88,59 @@ export default function Page() {
     <Text c="error">{data.error}</Text>
   ) : data.loan && personData?.person ? (
     <>
-      <Flex w="100%" direction="row" align="center" gap="sm" wrap="nowrap">
-        <>
-          <Flex w="100%" direction="column" gap="xs">
-            {data.loan.items.map((item) => (
-              <QRCodeWithComponent key={item.item.id} qrCode={item.item.qrCode}>
-                <Stack gap={0}>
-                  <Text>{item.item.name}</Text>
-                  <Text size="xs">
-                    Date Loaned: {formatDate(item.dateLoaned)}
-                    <br />
-                    <span style={{ fontWeight: "bold" }}>
-                      ({dateDiff({ date: item.dateLoaned })})
-                    </span>
+      <Card w="100%" withBorder>
+        {data.loan.items.map((item) => (
+          <Card.Section key={item.item.id} inheritPadding withBorder py="sm">
+            <QRCodeWithComponent key={item.item.id} qrCode={item.item.qrCode}>
+              <Stack w="100%" gap={0}>
+                <Text>{item.item.name}</Text>
+                {!item.dateReturned ? (
+                  <Text size="xs" c={OUT_COLOR}>
+                    {item.dateReturned ? "Returned" : "Outstanding"}
                   </Text>
-                  {item.dateReturned && (
-                    <Text size="xs">
-                      Date Returned: {formatDate(item.dateReturned)}
-                      <br />
-                      <span style={{ fontWeight: "bold" }}>
-                        ({dateDiff({ date: item.dateReturned })})
-                      </span>
-                    </Text>
-                  )}
-                  {item.returnedBy &&
-                    item.returnedBy.id.toString() !== personId && (
+                ) : (
+                  item.dateReturned && (
+                    <>
+                      {item.returnedBy &&
+                        item.returnedBy.id.toString() !== personId && (
+                          <Text size="xs">
+                            Returned By:{" "}
+                            <span
+                              style={{
+                                fontWeight: "bold",
+                                color: "red",
+                              }}
+                            >
+                              {formatFullName(item.returnedBy)}
+                            </span>
+                          </Text>
+                        )}
                       <Text size="xs">
-                        Returned By:{" "}
-                        <span
-                          style={{
-                            fontWeight: "bold",
-                            color: "red",
-                          }}
-                        >
-                          {formatFullName(item.returnedBy)}
+                        Date Returned:{" "}
+                        {formatDate(item.dateReturned, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                        <br />
+                        <span style={{ fontWeight: "bold" }}>
+                          ({dateDiff({ date: item.dateReturned })})
                         </span>
                       </Text>
-                    )}
-                </Stack>
-              </QRCodeWithComponent>
-            ))}
-          </Flex>
-        </>
-      </Flex>
+                    </>
+                  )
+                )}
+                <TagGroup
+                  tags={item.item.tags}
+                  categories={["Item Type"]}
+                  blacklist
+                  groupProps={{ mt: "sm", justify: "end" }}
+                />
+              </Stack>
+            </QRCodeWithComponent>
+          </Card.Section>
+        ))}
+      </Card>
       <Group justify="end" mt="sm">
         <TagGroup tags={data.loan.tags} />
         <Button

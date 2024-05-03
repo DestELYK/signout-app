@@ -58,7 +58,7 @@ export const dateDiff = ({
 };
 
 export const formatDuration = (duration: number) => {
-  return dayjs.duration({milliseconds: duration}).asDays().toFixed() + " days"
+  return dayjs.duration({ milliseconds: duration }).humanize();
 }
 
 //#endregion

@@ -1,7 +1,15 @@
-import { Card, CardProps, Flex, Text } from "@mantine/core";
+import {
+  Card,
+  CardProps,
+  DefaultMantineColor,
+  Flex,
+  StyleProp,
+  Text,
+} from "@mantine/core";
 
 export interface DateCardProps {
   value: string | number;
+  color?: StyleProp<DefaultMantineColor>;
   label: string;
   caption?: string;
   cardProps?: CardProps;
@@ -9,27 +17,22 @@ export interface DateCardProps {
 
 export default function StatCard({
   value,
+  color,
   label,
   caption,
   cardProps,
 }: DateCardProps) {
   return (
     <Card withBorder p="sm" {...cardProps}>
-      <Flex
-        h="100%"
-        direction="column"
-        align="center"
-        gap={0}
-        justify="space-between"
-      >
-        <Text size="32px" ta="center">
+      <Flex h="100%" direction="column" align="center" gap={0} justify="center">
+        <Text {...(color && { c: color })} size="32px" ta="center">
           {value}
         </Text>
         <Text size="sm" ta="center" fw="bold">
           {label}
         </Text>
         {caption && (
-          <Text size="xs" ta="center">
+          <Text size="xs" ta="center" mt="xs">
             {caption}
           </Text>
         )}
