@@ -16,6 +16,7 @@ import {
   useLocation,
   useNavigate,
   useNavigation,
+  useRevalidator,
   useRouteError,
 } from "@remix-run/react";
 
@@ -31,7 +32,7 @@ import {
   createTheme,
 } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
-import { Notifications } from "@mantine/notifications";
+import { Notifications, notifications } from "@mantine/notifications";
 import {
   IconClipboard,
   IconDeviceImac,
@@ -39,7 +40,8 @@ import {
   IconSettings,
   IconUser,
 } from "@tabler/icons-react";
-import { useRef } from "react";
+import { clearInterval, setInterval } from "node:timers";
+import { useEffect, useRef } from "react";
 import ErrorPage from "./components/ErrorPage";
 
 export const links: LinksFunction = () => [
@@ -101,6 +103,7 @@ export default function App() {
   const navigate = useNavigate();
   const bodyRef = useRef<HTMLBodyElement>(null);
   const location = useLocation();
+  const revalidator = useRevalidator();
   let value = "home";
 
   if (location.pathname === "/") {
@@ -125,6 +128,19 @@ export default function App() {
         break;
     }
   }
+
+  // Refresh data every 5 minutes
+  useEffect(() => {
+    const timer = setInterval(() => {
+      notifications.show({
+        message: "Refreshing data...",
+      });
+
+      revalidator.revalidate();
+    }, 1000 * 60 * 5);
+
+    return () => clearInterval(timer);
+  });
 
   return (
     <html lang="en">
