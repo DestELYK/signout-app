@@ -79,6 +79,7 @@ export default function DetailsPage({ title, data, loading }: ItemPageProps) {
           </ActionIcon>
         )
       }
+      cardProps={{ withBorder: false }}
       headerProps={{ withBorder: true }}
     >
       <Collapse my="sm" w="100%" in={!editing}>
