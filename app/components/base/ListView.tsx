@@ -254,6 +254,7 @@ export default function ListView<T extends { id: number }>({
             </ClientOnly>
           </>
         }
+        cardProps={{ withBorder: false }}
         headerProps={{ withBorder: true, mb: "sm", py: 0 }}
       >
         <>
