@@ -126,7 +126,7 @@ export default function Page() {
                     </Text>
                   </Accordion.Control>
                   <Accordion.Panel>
-                    {loanId && loanId === loan.id.toString() && <Outlet />}
+                    <Outlet />
                   </Accordion.Panel>
                 </Accordion.Item>
               ))}

@@ -84,7 +84,7 @@ export default function Page() {
                   </Text>
                 </Accordion.Control>
                 <Accordion.Panel>
-                  {itemId && itemId === item.itemId.toString() && <Outlet />}
+                  <Outlet />
                 </Accordion.Panel>
               </Accordion.Item>
             ))}
