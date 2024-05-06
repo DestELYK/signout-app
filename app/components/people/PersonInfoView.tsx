@@ -1,16 +1,9 @@
-import { Flex, Group, Stack, Text, Textarea, Title } from "@mantine/core";
+import { Flex, Group } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import {
-  dateDiff,
-  formatDate,
-  formatDuration,
-  formatFullName,
-} from "~/utils/utils";
+import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import { OUT_COLOR } from "../OutstandingBadge";
 import StatCard from "../StatCard";
-import InfoView from "../base/InfoView";
-import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
-import TagGroup from "../tags/TagGroup";
+import PersonCard from "./PersonCard";
 
 export interface PersonInfoViewProps {
   id: number;
@@ -47,49 +40,9 @@ export default function PersonInfoView({
   return (
     <Flex direction="column" w="100%" h="100%" gap="sm">
       {/* Person Card */}
-      <Title order={4}>Details</Title>
-      <InfoView
-        title={formatFullName({ firstName, lastName, nickname })}
-        rightSection={
-          <TagGroup
-            tags={tags}
-            categories={["Person Role"]}
-            groupProps={{ justify: "end" }}
-          />
-        }
-        bottomSection={
-          <TagGroup
-            tags={tags}
-            categories={["Location", "Person Role"]}
-            groupProps={{ justify: "end" }}
-            blacklist
-          />
-        }
-        cardProps={{ p: "sm" }}
-      >
-        <QRCodeWithComponent qrCode={qrCode} scale={2.5}>
-          <Stack gap={0}>
-            <Text fw="bold" mb="md" size="sm">
-              Current Status:{" "}
-              <Text span c={outstandingItems > 0 ? "red" : "green"}>
-                {outstandingItems > 0
-                  ? "Outstanding Items"
-                  : "All Items Returned"}
-              </Text>
-            </Text>
-          </Stack>
-        </QRCodeWithComponent>
-      </InfoView>
-
-      {/* Notes */}
-      <Title order={4}>Notes</Title>
-      <Textarea
-        w="100%"
-        minRows={5}
-        maxRows={5}
-        autosize
-        value={notes || "No notes"}
-        readOnly
+      <PersonCard
+        {...{ firstName, lastName, nickname, tags, notes, qrCode }}
+        outstandingItems={outstandingItems}
       />
 
       {/* Outstanding Items */}

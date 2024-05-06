@@ -1,12 +1,12 @@
 import { Flex, Group, ScrollArea, Textarea, Title } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { dateDiff, formatDate } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
 import { createOutstandingTag } from "../OutstandingBadge";
 import StatCard from "../StatCard";
 import InfoView from "../base/InfoView";
-import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
+import PersonCard from "../people/PersonCard";
 import TagGroup from "../tags/TagGroup";
 
 export interface LoanInfoViewProps {
@@ -62,24 +62,7 @@ export default function LoanInfoView({
 
       {/* Person Card */}
       <Title order={4}>Person</Title>
-      <InfoView
-        title={formatFullName(person)}
-        href={`/people/${person.id}`}
-        rightSection={
-          <TagGroup tags={person.tags} categories={["Person Role"]} />
-        }
-      >
-        <QRCodeWithComponent qrCode={person.qrCode} scale={3}>
-          <Textarea
-            w="100%"
-            minRows={4}
-            maxRows={4}
-            autosize
-            value={person.notes || "No notes"}
-            readOnly
-          />
-        </QRCodeWithComponent>
-      </InfoView>
+      <PersonCard {...person} />
 
       <Group grow>
         {/* Outstanding Items */}

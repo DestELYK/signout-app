@@ -11,7 +11,7 @@ export function QRCodeWithComponent({
   children,
 }: QRCodeWithComponentProps) {
   return (
-    <Flex direction="row" align="center" wrap="nowrap" gap="sm">
+    <Flex w="100%" direction="row" align="center" wrap="nowrap" gap="sm">
       <QRCodePreview qrCode={qrCode} scale={scale} />
       {children}
     </Flex>

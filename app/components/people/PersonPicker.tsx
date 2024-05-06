@@ -5,12 +5,12 @@ import { IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
-import PersonInfoView from "./PersonInfoView";
+import PersonCard from "./PersonCard";
 import SearchPersonForm from "./SearchPersonForm";
 
 type PersonPickerType = Omit<
   PersonWithTags,
-  "notes" | "_count" | "createdDate" | "updatedDate"
+  "_count" | "createdDate" | "updatedDate" | "loans"
 >;
 
 export interface PersonPickerProps {
@@ -20,7 +20,9 @@ export interface PersonPickerProps {
 }
 
 export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
-  const [person, setPerson] = useState(value || undefined);
+  const [person, setPerson] = useState<PersonPickerType | undefined>(
+    value || undefined
+  );
 
   useEffect(() => {
     setPerson(value);
@@ -72,12 +74,12 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
   }
 
   return person ? (
-    <PersonInfoView
-      personId={person.id}
+    <PersonCard
       qrCode={person.qrCode}
       firstName={person.firstName}
       lastName={person.lastName}
       nickname={person.nickname}
+      notes={person.notes}
       tags={person.tags}
       rightSection={
         <ActionIcon
@@ -91,6 +93,7 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
           <IconEdit />
         </ActionIcon>
       }
+      withBorder={false}
     />
   ) : (
     <SearchPersonForm

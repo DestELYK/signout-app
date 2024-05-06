@@ -6,6 +6,7 @@ import {
   Flex,
   Group,
   Loader,
+  Stack,
   Text,
   TextInput,
   useCombobox,
@@ -95,19 +96,72 @@ export default function SearchCombobox<T extends { id: number }>({
       }}
       store={combobox}
     >
-      {!qrDisabled ? (
+      <Stack gap={0}>
+        {!qrDisabled ? (
+          <Combobox.Target>
+            <Flex align="start" w="100%">
+              <TextInput
+                ref={qrCodeRef}
+                w="100%"
+                placeholder={formData.placeholder?.qrCode}
+                {...(formData.label && { label: formData.label.qrCode })}
+                size="sm"
+                description={formData.description?.qrCode}
+                value={value.qrCode}
+                error={errors?.qrCode}
+                onFocus={() => {
+                  combobox.openDropdown();
+                }}
+                onClick={() => {
+                  combobox.openDropdown();
+                }}
+                onBlur={() => {
+                  combobox.closeDropdown();
+                }}
+                rightSection={
+                  <CloseButton
+                    aria-label="Clear input"
+                    onClick={() => {
+                      onQRCodeChanged?.("");
+                    }}
+                    style={{
+                      display: value.qrCode ? undefined : "none",
+                    }}
+                  />
+                }
+                onChange={(event) => {
+                  if (onQRCodeChanged?.(event.currentTarget.value)) {
+                    combobox.openDropdown();
+                  } else {
+                    combobox.closeDropdown();
+                  }
+                }}
+              />
+              <Box style={{ verticalAlign: "top" }}>
+                <QrButton
+                  onResult={(result: ScanResults) => {
+                    combobox.openDropdown();
+
+                    onQRCodeChanged?.(result.data);
+                  }}
+                />
+              </Box>
+            </Flex>
+          </Combobox.Target>
+        ) : null}
         <Combobox.Target>
           <Flex align="start" w="100%">
             <TextInput
-              ref={qrCodeRef}
+              data-autofocus={autoFocus}
+              ref={nameRef}
               w="100%"
-              placeholder={formData.placeholder?.qrCode}
-              {...(formData.label && { label: formData.label.qrCode })}
-              size="sm"
-              description={formData.description?.qrCode}
-              value={value.qrCode}
-              error={errors?.qrCode}
-              onFocus={() => {
+              mt="sm"
+              description={formData.description?.name}
+              placeholder={formData.placeholder?.name}
+              {...(formData.label && { label: formData.label.name })}
+              error={errors?.name}
+              value={value.name}
+              onFocus={(s) => {
                 combobox.openDropdown();
               }}
               onClick={() => {
@@ -120,75 +174,25 @@ export default function SearchCombobox<T extends { id: number }>({
                 <CloseButton
                   aria-label="Clear input"
                   onClick={() => {
-                    onQRCodeChanged?.("");
+                    onNameChanged?.("");
                   }}
                   style={{
-                    display: value.qrCode ? undefined : "none",
+                    display: value.name ? undefined : "none",
                   }}
                 />
               }
               onChange={(event) => {
-                if (onQRCodeChanged?.(event.currentTarget.value)) {
+                if (onNameChanged?.(event.currentTarget.value)) {
                   combobox.openDropdown();
                 } else {
                   combobox.closeDropdown();
                 }
               }}
             />
-            <Box style={{ verticalAlign: "top" }}>
-              <QrButton
-                onResult={(result: ScanResults) => {
-                  combobox.openDropdown();
-
-                  onQRCodeChanged?.(result.data);
-                }}
-              />
-            </Box>
           </Flex>
         </Combobox.Target>
-      ) : null}
-      <Combobox.Target>
-        <Flex align="start" w="100%">
-          <TextInput
-            data-autofocus={autoFocus}
-            ref={nameRef}
-            w="100%"
-            mt="sm"
-            description={formData.description?.name}
-            placeholder={formData.placeholder?.name}
-            {...(formData.label && { label: formData.label.name })}
-            error={errors?.name}
-            value={value.name}
-            onFocus={(s) => {
-              combobox.openDropdown();
-            }}
-            onClick={() => {
-              combobox.openDropdown();
-            }}
-            onBlur={() => {
-              combobox.closeDropdown();
-            }}
-            rightSection={
-              <CloseButton
-                aria-label="Clear input"
-                onClick={() => {
-                  onNameChanged?.("");
-                }}
-                style={{
-                  display: value.name ? undefined : "none",
-                }}
-              />
-            }
-            onChange={(event) => {
-              if (onNameChanged?.(event.currentTarget.value)) {
-                combobox.openDropdown();
-              } else {
-                combobox.closeDropdown();
-              }
-            }}
-          />
-        </Flex>
-      </Combobox.Target>
+      </Stack>
+
       {showCombobox ? (
         <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
           {loading ? (
