@@ -16,6 +16,7 @@ import ErrorPage from "~/components/ErrorPage";
 import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
+import { PatchLoanFormData } from "~/utils/types.server";
 
 export const meta: MetaFunction = ({ params }) => {
   return [{ title: `Viewing Loan #${params.loanId}` }];
@@ -81,14 +82,6 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   }
 };
 
-export interface PatchLoanFormData {
-  personId?: number;
-  itemIds?: { id: number; newId?: number; returnedById?: number }[];
-  tagIds?: { id: number; name?: string }[];
-  notes?: string;
-  dateReturned?: Date;
-}
-
 export const action = async ({ params, request }: ActionFunctionArgs) => {
   const formData: PatchLoanFormData = await request.json();
 
@@ -113,7 +106,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
 
         const updatedDate =
           personId || itemIds || notes
-            ? formData.dateReturned || new Date()
+            ? (formData.dateReturned && new Date(formData.dateReturned)) ||
+              new Date()
             : undefined;
 
         if (!personId) {
@@ -144,17 +138,23 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
                   if (i.newId !== undefined) {
                     data = {
                       itemId: i.newId,
-                      dateReturned: formData.dateReturned || undefined,
+                      dateReturned: formData.dateReturned
+                        ? new Date(formData.dateReturned)
+                        : undefined,
                     };
                   } else if (i.returnedById !== undefined) {
                     data = {
                       returnedById: i.returnedById,
-                      dateReturned: formData.dateReturned || updatedDate,
+                      dateReturned: formData.dateReturned
+                        ? new Date(formData.dateReturned)
+                        : updatedDate,
                     };
                   } else {
                     data = {
                       returnedById: personId,
-                      dateReturned: formData.dateReturned || updatedDate,
+                      dateReturned: formData.dateReturned
+                        ? new Date(formData.dateReturned)
+                        : updatedDate,
                     };
                   }
 

@@ -14,10 +14,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const name = url.searchParams.get("name");
   const type = url.searchParams.get("type");
   const query = url.searchParams.get("q") || url.searchParams.get("query");
+  const limit = url.searchParams.get("limit");
+  const offset = url.searchParams.get("offset");
   const display = url.searchParams.get("display");
 
   const filter = query
     ? {
+        ...(display === "outstanding"
+          ? { loans: { some: { dateReturned: null } } }
+          : display === "missing" && {
+              tags: {
+                some: {
+                  OR: [
+                    { name: "Lost" },
+                    { name: "Missing" },
+                    {
+                      name: "Broken",
+                    },
+                  ],
+                },
+              },
+            }),
         OR: [
           {
             AND: query.split(" ").map((s) => ({
@@ -99,9 +116,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       where: filter,
       orderBy: [
         {
-          id: "desc",
+          name: "asc",
         },
       ],
+      take: limit ? parseInt(limit) : undefined,
+      skip: offset ? parseInt(offset) : undefined,
     }),
   });
 };

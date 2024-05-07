@@ -160,7 +160,7 @@ export default function SearchPersonForm({
         {(value) => (
           <>
             <PersonComboView
-              highlight={form.values.name || ""}
+              highlight={form.values.name?.split(" ") || ""}
               fullName={{ ...value }}
               outStandingLoans={value._count.loans}
               tags={value.tags}

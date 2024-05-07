@@ -27,12 +27,8 @@ import invariant from "tiny-invariant";
 import PersonPicker from "~/components/people/PersonPicker";
 import TagGroup from "~/components/tags/TagGroup";
 import { prisma } from "~/lib/prisma.server";
-import { formatDate } from "~/utils/utils";
-import {
-  PatchLoanFormData,
-  action,
-  loader as loanLoader,
-} from "./loans.$loanId";
+import { PatchLoanFormData } from "~/utils/types.server";
+import { action, loader as loanLoader } from "./loans.$loanId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -175,7 +171,7 @@ export default function Page() {
           <Collapse in={form.isValid()}>
             <Form
               onSubmit={form.onSubmit((values) => {
-                submit.submit(JSON.stringify(values), {
+                submit.submit(values, {
                   action: `/loans/${loanId}`,
                   method: "PATCH",
                   encType: "application/json",
@@ -188,9 +184,12 @@ export default function Page() {
                   valueFormat="DD MMM, YYYY @ hh:mm A"
                   label="Date Returned"
                   description="Optional date, will default to current time if left blank"
-                  placeholder={formatDate(new Date())}
-                  onClick={() => form.setFieldValue("dateReturned", new Date())}
                   {...form.getInputProps("dateReturned")}
+                  value={
+                    form.values.dateReturned
+                      ? new Date(form.values.dateReturned)
+                      : new Date()
+                  }
                 />
                 <Fieldset legend="Returned By">
                   <PersonPicker

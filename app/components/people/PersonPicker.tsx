@@ -94,6 +94,7 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
         </ActionIcon>
       }
       withBorder={false}
+      withDetails={false}
     />
   ) : (
     <SearchPersonForm

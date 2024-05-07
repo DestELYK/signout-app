@@ -194,7 +194,7 @@ export default function SearchCombobox<T extends { id: number }>({
       </Stack>
 
       {showCombobox ? (
-        <Combobox.Dropdown mah={300} style={{ overflowY: "auto" }}>
+        <Combobox.Dropdown mah={150} style={{ overflowY: "auto" }}>
           {loading ? (
             <Combobox.Empty>
               <Center w="100%" h={60}>

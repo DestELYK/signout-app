@@ -14,10 +14,30 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const nickname = url.searchParams.get("nickname");
   const qrCode = url.searchParams.get("qrCode");
   const query = url.searchParams.get("q") || url.searchParams.get("query");
+  const limit = url.searchParams.get("limit");
+  const offset = url.searchParams.get("offset");
   const display = url.searchParams.get("display");
 
   const filter: Prisma.PersonWhereInput = query
     ? ({
+        ...(display === "students"
+          ? {
+              tags: {
+                some: {
+                  AND: [
+                    {
+                      category: "Person Role",
+                    },
+                    {
+                      NOT: {
+                        name: "Staff",
+                      },
+                    },
+                  ],
+                },
+              },
+            }
+          : display === "staff" && { tags: { some: { name: "Staff" } } }),
         OR: [
           {
             firstName: {
@@ -108,9 +128,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       include: personWithTags.include,
       orderBy: [
         {
-          id: "desc",
+          firstName: "asc",
+        },
+        {
+          lastName: "asc",
+        },
+        {
+          nickname: "asc",
         },
       ],
+      take: limit ? parseInt(limit) : undefined,
+      skip: offset ? parseInt(offset) : undefined,
     }),
   });
 };

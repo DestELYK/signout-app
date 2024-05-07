@@ -116,8 +116,10 @@ export default function ListView<T extends { id: number }>({
   }, [searchParams.has("create")]);
 
   useEffect(() => {
-    setPage(1);
-  }, [value]);
+    const offset = Number(searchParams.get("offset")) ?? 0;
+
+    setPage(offset === 0 ? 1 : Math.round(offset / itemsPerPage) + 1);
+  }, [value, searchParams.get("offset")]);
 
   useEffect(() => {
     if (!searchParams.has("limit")) {

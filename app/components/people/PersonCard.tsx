@@ -1,11 +1,12 @@
 import { Text, Textarea } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { formatFullName } from "~/utils/utils";
+import { filterTags, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonCardProps {
+  id?: number;
   qrCode?: string | null;
   qrScale?: number;
   firstName: string;
@@ -16,9 +17,11 @@ export interface PersonCardProps {
   outstandingItems?: number;
   rightSection?: React.ReactNode;
   withBorder?: boolean;
+  withDetails?: boolean;
 }
 
 export default function PersonCard({
+  id,
   qrCode,
   qrScale,
   firstName,
@@ -29,10 +32,12 @@ export default function PersonCard({
   outstandingItems,
   rightSection,
   withBorder = true,
+  withDetails = true,
 }: PersonCardProps) {
   return (
     <InfoView
       title={formatFullName({ firstName, lastName, nickname })}
+      {...(id && { href: `/people/${id}` })}
       rightSection={
         <>
           <TagGroup
@@ -45,15 +50,16 @@ export default function PersonCard({
         </>
       }
       bottomSection={
-        <TagGroup
-          tags={tags}
-          categories={["Location", "Person Role"]}
-          groupProps={{ justify: "end" }}
-          blacklist
-        />
+        filterTags(tags, ["Location", "Person Role"], true).length > 0 && (
+          <TagGroup
+            tags={tags}
+            categories={["Location", "Person Role"]}
+            groupProps={{ justify: "end" }}
+            blacklist
+          />
+        )
       }
       cardProps={{
-        p: 0,
         withBorder: withBorder,
         style: { overflow: "visible" },
       }}
@@ -66,16 +72,18 @@ export default function PersonCard({
           </Text>
         </Text>
       )}
-      <QRCodeWithComponent qrCode={qrCode} scale={qrScale || 2.5}>
-        <Textarea
-          w="100%"
-          value={notes || "No notes"}
-          minRows={3}
-          maxRows={3}
-          autosize
-          readOnly
-        />
-      </QRCodeWithComponent>
+      {withDetails && (
+        <QRCodeWithComponent qrCode={qrCode} scale={qrScale || 2.5}>
+          <Textarea
+            w="100%"
+            value={notes || "No notes"}
+            minRows={3}
+            maxRows={3}
+            autosize
+            readOnly
+          />
+        </QRCodeWithComponent>
+      )}
     </InfoView>
   );
 }

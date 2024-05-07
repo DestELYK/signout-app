@@ -4,7 +4,7 @@ import { formatFullName } from "~/utils/utils";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonComboViewProps {
-  highlight: string;
+  highlight: string | string[];
   fullName: { firstName: string; lastName: string; nickname?: string | null };
   outStandingLoans: number;
   tags: Tag[];

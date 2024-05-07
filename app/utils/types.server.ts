@@ -35,6 +35,15 @@ export type PostTagFormData = {
 //#endregion
 
 //#region PATCH Types
+
+export interface PatchLoanFormData {
+  personId?: number;
+  itemIds?: { id: number; newId?: number; returnedById?: number }[];
+  tagIds?: { id: number; name?: string }[];
+  notes?: string;
+  dateReturned?: string;
+}
+
 //#endregion
 
 //#region Database Types

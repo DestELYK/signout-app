@@ -86,7 +86,7 @@ export default function InfoView({
       )}
       <LoadingOverlay visible={loading} zIndex={1000} />
       {children}
-      {bottomSection !== null && bottomSection !== undefined && (
+      {bottomSection && (
         <Card.Section inheritPadding py="sm">
           {bottomSection}
         </Card.Section>

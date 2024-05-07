@@ -30,6 +30,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   let filter: Prisma.LoanWhereInput = query
     ? {
+        ...(display === "outstanding"
+          ? { items: { some: { dateReturned: null } } }
+          : display === "returned" && {
+              items: { none: { dateReturned: null } },
+            }),
         OR: [
           {
             person: {
@@ -76,6 +81,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       }
     : qrCode
     ? {
+        ...(display === "outstanding"
+          ? { items: { some: { dateReturned: null } } }
+          : display === "returned" && {
+              items: { none: { dateReturned: null } },
+            }),
         OR: [
           {
             person: {
