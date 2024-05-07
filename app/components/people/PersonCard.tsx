@@ -1,4 +1,4 @@
-import { Text, Textarea } from "@mantine/core";
+import { MantineSpacing, StyleProp, Text, Textarea } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { filterTags, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
@@ -18,6 +18,7 @@ export interface PersonCardProps {
   rightSection?: React.ReactNode;
   withBorder?: boolean;
   withDetails?: boolean;
+  p?: StyleProp<MantineSpacing>;
 }
 
 export default function PersonCard({
@@ -33,6 +34,7 @@ export default function PersonCard({
   rightSection,
   withBorder = true,
   withDetails = true,
+  p,
 }: PersonCardProps) {
   return (
     <InfoView
@@ -60,6 +62,7 @@ export default function PersonCard({
         )
       }
       cardProps={{
+        ...(p !== undefined && { p: p }),
         withBorder: withBorder,
         style: { overflow: "visible" },
       }}

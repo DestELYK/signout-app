@@ -84,7 +84,8 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
       rightSection={
         <ActionIcon
           style={{ justifySelf: "end" }}
-          size="sm"
+          size="input-sm"
+          variant="outline"
           color="red"
           onClick={() => {
             updatePerson(undefined);
@@ -95,6 +96,7 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
       }
       withBorder={false}
       withDetails={false}
+      p={0}
     />
   ) : (
     <SearchPersonForm

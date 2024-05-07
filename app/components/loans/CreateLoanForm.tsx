@@ -2,7 +2,6 @@ import {
   ActionIcon,
   Box,
   Button,
-  Center,
   Divider,
   Fieldset,
   Flex,
@@ -11,11 +10,13 @@ import {
   ScrollArea,
   Text,
 } from "@mantine/core";
+import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { Tag } from "@prisma/client";
 import { useNavigate } from "@remix-run/react";
 import { IconArrowBackUp, IconPlus, IconTrash } from "@tabler/icons-react";
+import dayjs from "dayjs";
 import { useState } from "react";
 import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { action } from "~/routes/loans";
@@ -25,7 +26,7 @@ import {
   PersonWithTags,
   PostLoanFormData,
 } from "~/utils/types.server";
-import { formatFullName } from "~/utils/utils";
+import { formatDate, formatFullName } from "~/utils/utils";
 import LoanedItemInfoView from "../items/LoanedItemInfoView";
 import SearchItemForm from "../items/SearchItemForm";
 import PersonPicker from "../people/PersonPicker";
@@ -49,6 +50,7 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
       person: { id: -1 },
       items: [],
       tags: [],
+      dateLoaned: undefined,
     },
     validate: {
       person: (value) => {
@@ -58,6 +60,10 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
       items: (value) => {
         if (value === undefined || value.length === 0)
           return "Need at least one item";
+      },
+      dateLoaned: (value) => {
+        if (value && dayjs(value).isAfter(dayjs()))
+          return "Date cannot be in the future";
       },
     },
   });
@@ -177,7 +183,7 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
           disabled={loading}
           legend="Person"
           p="sm"
-          {...(form.errors.items && { style: { borderColor: "red" } })}
+          {...(form.errors.person && { style: { borderColor: "red" } })}
         >
           <Box pos="relative" h="100%">
             <LoadingOverlay
@@ -195,9 +201,9 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
           legend="Items"
           {...(form.errors.items && { style: { borderColor: "red" } })}
         >
-          {items.length > 0 ? (
-            <ScrollArea.Autosize mih={150} mah={250} type="auto" scrollbars="y">
-              {items.map((item) => (
+          <ScrollArea.Autosize mah={150} type="auto" scrollbars="y">
+            {items.length > 0 ? (
+              items.map((item) => (
                 <LoanedItemInfoView
                   key={item.id}
                   id={item.id}
@@ -216,11 +222,13 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
                     </ActionIcon>
                   }
                 />
-              ))}
-            </ScrollArea.Autosize>
-          ) : (
-            <Center h={150}>No items added</Center>
-          )}
+              ))
+            ) : (
+              <Text ta="center" p="sm">
+                No items added
+              </Text>
+            )}
+          </ScrollArea.Autosize>
           <Divider mb="md" />
           <SearchItemForm
             filterItems={(searchItems) =>
@@ -252,11 +260,13 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
             onSubmit={(item) => {
               insertItem(item);
 
+              form.clearFieldError("items");
+
               return false;
             }}
           />
         </Fieldset>
-        <Text my="sm" size="xs" c="red" hidden={form.errors.items == undefined}>
+        <Text size="xs" c="red" hidden={form.errors.items == undefined}>
           {form.errors.items}
         </Text>
         <TagCombobox
@@ -272,6 +282,23 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
             label: "Tags",
             description: "Optional tags for identifying specific loans",
           }}
+        />
+        <DateTimePicker
+          valueFormat="DD MMM, YYYY @ hh:mm A"
+          label="Date Returned"
+          description="Optional date, will default to current time if left blank"
+          placeholder={formatDate(new Date())}
+          onClick={() =>
+            form.setFieldValue("dateLoaned", new Date().toISOString())
+          }
+          timeInputProps={{ value: new Date().toLocaleTimeString() }}
+          {...form.getInputProps("dateLoaned")}
+          value={
+            form.values.dateLoaned
+              ? new Date(form.values.dateLoaned)
+              : undefined
+          }
+          maxDate={new Date()}
         />
         <Group mt="sm" justify="end">
           <ActionIcon

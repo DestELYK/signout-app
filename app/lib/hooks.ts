@@ -2,6 +2,8 @@ import { notifications } from "@mantine/notifications";
 import { useEffect } from "react";
 import { UseDataFunctionReturn, useTypedFetcher } from "remix-typedjson";
 
+// TODO - Have errors return with fields
+
 export function useFetcherWithErrorHandler<T>(
   onData: (data: UseDataFunctionReturn<T>) => void,
   onError?: (error: string) => void

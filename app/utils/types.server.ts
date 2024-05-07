@@ -6,6 +6,7 @@ export type PostLoanFormData = {
   person: { id: number };
   items: { id: number }[];
   tags: { id: number }[];
+  dateLoaned?: string;
 };
 
 export type PostPersonFormData = {

@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { MetaFunction, Outlet } from "@remix-run/react";
+import dayjs from "dayjs";
 import { redirect, typedjson } from "remix-typedjson";
 import { prisma } from "~/lib/prisma.server";
 import {
@@ -178,6 +179,13 @@ export async function action({ request }: ActionFunctionArgs) {
           throw Error("Loan requires at least one item");
         }
 
+        if (
+          formData.dateLoaned &&
+          dayjs(formData.dateLoaned).isAfter(dayjs())
+        ) {
+          throw Error("Loan date cannot be in the future!");
+        }
+
         const outstandingItems = await prisma.loanedItem.findMany({
           where: {
             AND: [
@@ -213,6 +221,11 @@ export async function action({ request }: ActionFunctionArgs) {
                     id: item.id,
                   },
                 },
+                ...(formData.dateLoaned && {
+                  dateLoaned: new Date(formData.dateLoaned),
+                  createdDate: new Date(formData.dateLoaned),
+                  updatedDate: new Date(formData.dateLoaned),
+                }),
               })),
             },
             tags: {
@@ -220,6 +233,10 @@ export async function action({ request }: ActionFunctionArgs) {
                 id: tag.id,
               })),
             },
+            ...(formData.dateLoaned && {
+              createdDate: new Date(formData.dateLoaned),
+              updatedDate: new Date(formData.dateLoaned),
+            }),
           },
           include: loanWithTags.include,
         });
