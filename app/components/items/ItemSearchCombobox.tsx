@@ -9,7 +9,7 @@ import SearchCombobox, { SearchFormValues } from "../base/SearchCombobox";
 import CreateItemForm from "./CreateItemForm";
 import ItemComboView from "./ItemComboView";
 
-export interface SearchItemFormProps {
+export interface ItemSearchComboboxProps {
   canCreate?: boolean;
   disabled?: boolean;
   submitOnSelect?: boolean;
@@ -21,7 +21,7 @@ export interface SearchItemFormProps {
   onSubmit?: (item: ItemWithTags) => boolean;
 }
 
-export default function SearchItemForm({
+export default function ItemSearchCombobox({
   canCreate = true,
   disabled = false,
   showCombobox = true,
@@ -30,7 +30,7 @@ export default function SearchItemForm({
   disableItem,
   onChange,
   onSubmit,
-}: SearchItemFormProps) {
+}: ItemSearchComboboxProps) {
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     validateInputOnBlur: true,

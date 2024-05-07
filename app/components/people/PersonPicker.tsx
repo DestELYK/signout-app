@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 import PersonCard from "./PersonCard";
-import SearchPersonForm from "./SearchPersonForm";
+import PersonSearchCombobox from "./PersonSearchCombobox";
 
 type PersonPickerType = Omit<
   PersonWithTags,
@@ -99,7 +99,7 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
       p={0}
     />
   ) : (
-    <SearchPersonForm
+    <PersonSearchCombobox
       onSubmit={(value) => {
         value && confirmOutstanding(value);
         return false;

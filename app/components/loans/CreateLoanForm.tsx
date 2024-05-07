@@ -27,8 +27,8 @@ import {
   PostLoanFormData,
 } from "~/utils/types.server";
 import { formatDate, formatFullName } from "~/utils/utils";
+import ItemSearchCombobox from "../items/ItemSearchCombobox";
 import LoanedItemInfoView from "../items/LoanedItemInfoView";
-import SearchItemForm from "../items/SearchItemForm";
 import PersonPicker from "../people/PersonPicker";
 import TagCombobox from "../tags/TagCombobox";
 
@@ -230,7 +230,7 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
             )}
           </ScrollArea.Autosize>
           <Divider mb="md" />
-          <SearchItemForm
+          <ItemSearchCombobox
             filterItems={(searchItems) =>
               searchItems.map((i) => {
                 if (items.find((i2) => i2.id == i.id)) {

@@ -13,7 +13,7 @@ import SearchCombobox, { SearchFormValues } from "../base/SearchCombobox";
 import CreatePersonForm from "./CreatePersonForm";
 import PersonComboView from "./PersonComboView";
 
-export interface SearchPersonFormProps {
+export interface PersonSearchComboboxProps {
   canCreate?: boolean;
   disabled?: boolean;
   submitOnSelect?: boolean;
@@ -25,7 +25,7 @@ export interface SearchPersonFormProps {
   onSubmit?: (result: PersonWithTags) => boolean;
 }
 
-export default function SearchPersonForm({
+export default function PersonSearchCombobox({
   canCreate = true,
   disabled = false,
   showCombobox = true,
@@ -34,7 +34,7 @@ export default function SearchPersonForm({
   disableItem,
   onChange,
   onSubmit,
-}: SearchPersonFormProps) {
+}: PersonSearchComboboxProps) {
   const form = useForm<SearchFormValues>({
     clearInputErrorOnChange: true,
     validateInputOnChange: true,
