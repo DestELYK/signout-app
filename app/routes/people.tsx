@@ -157,37 +157,27 @@ export async function action({ request }: ActionFunctionArgs) {
   try {
     switch (request.method) {
       case "POST":
-        const firstName = formData.firstName;
-
-        if (!firstName) {
+        if (!formData.firstName) {
           throw new Error("FirstName must be provided");
         }
 
-        const lastName = formData.lastName;
-
-        if (!lastName) {
+        if (!formData.lastName) {
           throw new Error("LastName must be provided");
         }
 
-        const nickname = formData.nickname;
-
-        const qrCode = formData.qrCode;
-
-        const role = formData.role;
-
-        if (!role) {
+        if (!formData.role) {
           throw new Error("There must be a role");
         }
 
         return typedjson({
           person: await prisma.person.create({
             data: {
-              firstName: firstName,
-              lastName: lastName,
-              ...(nickname && { nickname: nickname }),
-              ...(qrCode && { qrCode: qrCode }),
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              nickname: formData.nickname,
+              qrCode: formData.qrCode,
               tags: {
-                connect: role,
+                connect: formData.role,
               },
             },
             include: personWithTags.include,
