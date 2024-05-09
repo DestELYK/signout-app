@@ -17,8 +17,8 @@ import {
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import OutstandingBadge from "~/components/OutstandingBadge";
+import LoanSimpleView from "~/components/loans/LoanSimpleView";
 import { prisma } from "~/lib/prisma.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 // ? - Deciding whether to remove this page or /items/$itemId/timeline.tsx as they both display essentially the same information
 
@@ -105,13 +105,11 @@ export default function Page() {
                   <Accordion.Control
                     icon={<OutstandingBadge out={item.dateReturned === null} />}
                   >
-                    <Text>
-                      Loan #{item.loanId} - {formatFullName(item.loan.person)}
-                    </Text>
-                    <Text size="xs" fs="italic" c="dimmed">
-                      {formatDate(item.dateLoaned)} (
-                      {dateDiff({ date: item.dateLoaned })})
-                    </Text>
+                    <LoanSimpleView
+                      id={item.loanId}
+                      person={item.loan.person}
+                      dateLoaned={item.dateLoaned}
+                    />
                   </Accordion.Control>
                   <Accordion.Panel>
                     <Outlet />

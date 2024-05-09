@@ -1,17 +1,23 @@
 import {
   ActionIcon,
   Button,
+  Card,
+  Group,
+  LoadingOverlay,
   MantineSpacing,
+  Modal,
   Stack,
   StyleProp,
   Text,
 } from "@mantine/core";
-import { modals } from "@mantine/modals";
-import { Link } from "@remix-run/react";
+import { useDisclosure } from "@mantine/hooks";
 import { IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useTypedFetcher } from "remix-typedjson";
+import { loader } from "~/routes/loans";
 import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
+import LoanSimpleView, { LoanSimpleViewProps } from "../loans/LoanSimpleView";
 import PersonCard from "./PersonCard";
 import PersonSearchCombobox from "./PersonSearchCombobox";
 
@@ -35,9 +41,40 @@ export default function PersonPicker({
   p = 0,
   onChanged,
 }: PersonPickerProps) {
+  const fetcher = useTypedFetcher<typeof loader>();
   const [person, setPerson] = useState<PersonPickerType | undefined>(
     value || undefined
   );
+  const [outstandingPerson, setOutstandingPerson] = useState<
+    PersonWithTags | undefined
+  >();
+  const [outstandingLoans, setOutstandingLoans] =
+    useState<LoanSimpleViewProps[]>();
+
+  const [opened, { open, close }] = useDisclosure();
+
+  useEffect(() => {
+    if (
+      promptOutstanding &&
+      fetcher.state === "idle" &&
+      fetcher.data &&
+      outstandingPerson
+    ) {
+      setOutstandingLoans(
+        fetcher.data.loans.map((li) => ({
+          id: li.id,
+          dateLoaned: li.createdDate,
+          itemCount: li.items.length,
+        }))
+      );
+
+      console.log(fetcher.data.loans.length);
+    }
+
+    return () => {
+      setOutstandingLoans(undefined);
+    };
+  }, [promptOutstanding, fetcher.data, fetcher.state]);
 
   useEffect(() => {
     setPerson(value);
@@ -52,73 +89,99 @@ export default function PersonPicker({
     const outstandingLoans = person._count.loans;
 
     if (outstandingLoans > 0 && promptOutstanding) {
-      modals.openConfirmModal({
-        title: "Person has Outstanding Loans!",
-        children: (
-          <Stack>
-            <Text c="red">
-              {formatFullName(person)} already has {outstandingLoans} loans out!
-            </Text>
-            <Button
-              variant="subtle"
-              component={Link}
-              to={`/people/${person.id}/loans`}
-              onClick={() => modals.closeAll()}
-            >
-              View Loans
-            </Button>
-            <Text>
-              Are you sure you want to create a new loan for {person.firstName}?
-            </Text>
-          </Stack>
-        ),
-        labels: {
-          confirm: "Yes",
-          cancel: "No",
-        },
-        onConfirm: () => {
-          updatePerson(person);
-        },
-        onCancel: () => {
-          updatePerson(undefined);
-        },
-      });
+      setOutstandingPerson(person);
+      open();
     } else {
-      updatePerson(person);
+      setOutstandingPerson(undefined);
+      close();
     }
   }
 
-  return person ? (
-    <PersonCard
-      qrCode={person.qrCode}
-      firstName={person.firstName}
-      lastName={person.lastName}
-      nickname={person.nickname}
-      notes={person.notes}
-      tags={person.tags}
-      rightSection={
-        <ActionIcon
-          style={{ justifySelf: "end" }}
-          size="input-sm"
-          variant="outline"
-          color="red"
-          onClick={() => {
-            updatePerson(undefined);
+  return (
+    <>
+      {outstandingPerson && (
+        <Modal title="Outstanding Loans" opened={opened} onClose={close}>
+          <LoadingOverlay visible={fetcher.state === "loading"} zIndex={1000} />
+
+          <Stack>
+            <Text c="red">
+              {formatFullName(outstandingPerson)} already has{" "}
+              {outstandingPerson._count.loans} loans out!
+            </Text>
+            {outstandingLoans && outstandingLoans.length > 0 ? (
+              <Card>
+                {outstandingLoans.map((loan) => (
+                  <Card.Section key={loan.id} withBorder py="xs">
+                    <LoanSimpleView {...loan} />
+                  </Card.Section>
+                ))}
+              </Card>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={(event) => {
+                  fetcher.load(
+                    `/loans?display=outstanding&personId=${outstandingPerson.id}`
+                  );
+                }}
+              >
+                View Outstanding Loans
+              </Button>
+            )}
+            <Text>
+              Are you sure you want to create a new loan for{" "}
+              {outstandingPerson.firstName}?
+            </Text>
+            <Group justify="end">
+              <Button color="red" onClick={close}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  updatePerson(outstandingPerson);
+                  close();
+                }}
+              >
+                Confirm
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+      )}
+
+      {person ? (
+        <PersonCard
+          qrCode={person.qrCode}
+          firstName={person.firstName}
+          lastName={person.lastName}
+          nickname={person.nickname}
+          notes={person.notes}
+          tags={person.tags}
+          rightSection={
+            <ActionIcon
+              style={{ justifySelf: "end" }}
+              size="input-sm"
+              variant="outline"
+              color="red"
+              onClick={() => {
+                updatePerson(undefined);
+              }}
+            >
+              <IconEdit />
+            </ActionIcon>
+          }
+          withBorder={withBorder}
+          withDetails={false}
+          p={p}
+        />
+      ) : (
+        <PersonSearchCombobox
+          onSubmit={(value) => {
+            value && confirmOutstanding(value);
+            return false;
           }}
-        >
-          <IconEdit />
-        </ActionIcon>
-      }
-      withBorder={withBorder}
-      withDetails={false}
-      p={p}
-    />
-  ) : (
-    <PersonSearchCombobox
-      onSubmit={(value) => {
-        value && confirmOutstanding(value);
-        return false;
-      }}
-    />
+        />
+      )}
+    </>
   );
 }
