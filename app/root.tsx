@@ -34,7 +34,12 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications, notifications } from "@mantine/notifications";
-import { IconClipboard, IconDeviceImac, IconUser } from "@tabler/icons-react";
+import {
+  IconClipboard,
+  IconDeviceImac,
+  IconHome,
+  IconUser,
+} from "@tabler/icons-react";
 import { clearInterval, setInterval } from "node:timers";
 import { useEffect } from "react";
 import { ClientOnly } from "remix-utils/client-only";
@@ -176,9 +181,14 @@ export default function App() {
               </AppShell.Header>
               <AppShell.Navbar py="md">
                 <NavLink
+                  href="/"
+                  label="Home"
+                  leftSection={<IconHome size={24} />}
+                  active={value === "home"}
+                />
+                <NavLink
                   href="/loans?limit=15"
                   label="Loans"
-                  opened={value === "loans"}
                   leftSection={<IconClipboard size={24} />}
                   active={value === "loans"}
                 />
