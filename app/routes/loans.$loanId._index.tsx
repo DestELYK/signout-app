@@ -1,4 +1,4 @@
-import { Center, Flex, Skeleton, Text } from "@mantine/core";
+import { Center, Skeleton, Text } from "@mantine/core";
 import { useTypedRouteLoaderData } from "remix-typedjson";
 import LoanInfoView from "~/components/loans/LoanInfoView";
 import { loader } from "./loans.$loanId";
@@ -7,7 +7,7 @@ export default function Page() {
   const data = useTypedRouteLoaderData<typeof loader>("routes/loans.$loanId");
 
   return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
+    <>
       {data !== undefined ? (
         data.error !== undefined ? (
           <Center w="100%" h="100%">
@@ -33,6 +33,6 @@ export default function Page() {
           <Skeleton h={130} />
         </>
       )}
-    </Flex>
+    </>
   );
 }

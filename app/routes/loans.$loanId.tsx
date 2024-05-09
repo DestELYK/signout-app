@@ -19,7 +19,7 @@ import { prisma } from "~/lib/prisma.server";
 import { PatchLoanFormData } from "~/utils/types.server";
 
 export const meta: MetaFunction = ({ params }) => {
-  return [{ title: `Viewing Loan #${params.loanId}` }];
+  return [{ title: `Loan #${params.loanId}` }];
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {

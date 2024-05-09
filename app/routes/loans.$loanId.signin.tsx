@@ -2,7 +2,6 @@ import {
   Button,
   Checkbox,
   Collapse,
-  Fieldset,
   Flex,
   Group,
   Paper,
@@ -183,7 +182,7 @@ export default function Page() {
                 <DateTimePicker
                   valueFormat="DD MMM, YYYY @ hh:mm A"
                   label="Date Returned"
-                  description="Optional date, will default to current time if left blank"
+                  description="Select the date that the item(s) were returned, will default to current time if left blank"
                   {...form.getInputProps("dateReturned")}
                   value={
                     form.values.dateReturned
@@ -191,7 +190,14 @@ export default function Page() {
                       : new Date()
                   }
                 />
-                <Fieldset legend="Returned By">
+                <Stack gap={0}>
+                  <Text inline size="sm" fw={500} mb={8}>
+                    Returned By
+                  </Text>
+                  <Text inline size="xs" c="dimmed" mb={5}>
+                    Select who returned the item, defaults to the person who
+                    signed-out the item(s) originally
+                  </Text>
                   <PersonPicker
                     value={returnedByPerson}
                     onChanged={(person) => {
@@ -204,8 +210,10 @@ export default function Page() {
                         }))
                       );
                     }}
+                    withBorder={true}
+                    p="xs"
                   />
-                </Fieldset>
+                </Stack>
                 <Group justify="end">
                   <Button
                     type="submit"

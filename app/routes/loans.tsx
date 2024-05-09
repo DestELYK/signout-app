@@ -11,7 +11,7 @@ import {
 } from "~/utils/types.server";
 
 export const meta: MetaFunction = () => {
-  return [{ title: "Loans" }];
+  return [{ title: "Loans | SJK Sign-Out" }];
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {

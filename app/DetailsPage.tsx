@@ -1,6 +1,7 @@
 import {
-  ActionIcon,
+  Box,
   Collapse,
+  Flex,
   ScrollArea,
   SegmentedControl,
   Stack,
@@ -12,8 +13,6 @@ import {
   useNavigate,
   useNavigation,
 } from "@remix-run/react";
-import { IconArrowLeft, IconEdit } from "@tabler/icons-react";
-import InfoView from "./components/base/InfoView";
 
 export interface ItemPageProps {
   title: string;
@@ -60,50 +59,43 @@ export default function DetailsPage({ title, data, loading }: ItemPageProps) {
     }
   }
   return (
-    <InfoView
-      title={title}
-      loading={loading}
-      leftSection={
-        <ActionIcon variant="subtle" color="gray" onClick={() => navigate(-1)}>
-          <IconArrowLeft />
-        </ActionIcon>
-      }
-      rightSection={
-        !editing && (
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={() => navigate("./edit", { relative: "route" })}
-          >
-            <IconEdit />
-          </ActionIcon>
-        )
-      }
-      cardProps={{ withBorder: false }}
-      headerProps={{ withBorder: true }}
-    >
-      <Collapse my="sm" w="100%" in={!editing}>
-        <SegmentedControl
+    <>
+      <Flex w="100%" h="100%" direction="column" align="center" wrap="nowrap">
+        <Flex
           w="100%"
-          data={Object.keys(data).map((key) => {
-            return {
-              value: key,
-              label: (
-                <Stack align="center" gap={0}>
-                  {data[key].icon}
-                  <Text size="sm">{data[key].label}</Text>
-                </Stack>
-              ),
-              disabled: data[key].disabled,
-            };
-          })}
-          value={value}
-          onChange={onChange}
-        />
-      </Collapse>
-      <ScrollArea type="auto" scrollbars="y">
-        <Outlet />
-      </ScrollArea>
-    </InfoView>
+          direction="column"
+          align="center"
+          wrap="nowrap"
+          gap="sm"
+          p="sm"
+          style={{ boxShadow: "0px 2px 6px 2px #8686862d", zIndex: 10 }}
+        >
+          <Collapse w="100%" in={!editing}>
+            <SegmentedControl
+              w="100%"
+              data={Object.keys(data).map((key) => {
+                return {
+                  value: key,
+                  label: (
+                    <Stack align="center" gap={0}>
+                      {data[key].icon}
+                      <Text size="sm">{data[key].label}</Text>
+                    </Stack>
+                  ),
+                  disabled: data[key].disabled,
+                };
+              })}
+              value={value}
+              onChange={onChange}
+            />
+          </Collapse>
+        </Flex>
+        <ScrollArea.Autosize h="100%" w="100%" type="always" scrollbars="y">
+          <Box p="md" w="100%">
+            <Outlet />
+          </Box>
+        </ScrollArea.Autosize>
+      </Flex>
+    </>
   );
 }

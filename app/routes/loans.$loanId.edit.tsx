@@ -1,11 +1,7 @@
 import { Flex, Skeleton } from "@mantine/core";
-import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { LoaderFunctionArgs } from "@remix-run/node";
 import { useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
-
-export const meta: MetaFunction = ({ params }) => {
-  return [{ title: `Edit Loan #${params.loanId}` }];
-};
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");

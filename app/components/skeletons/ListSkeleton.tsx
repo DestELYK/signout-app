@@ -16,7 +16,7 @@ export default function ListSkeleton({
   }
 
   return (
-    <Stack h="100%" justify="stretch" gap={gap}>
+    <Stack h="100%" justify="stretch" m="sm" gap={gap}>
       {children}
     </Stack>
   );

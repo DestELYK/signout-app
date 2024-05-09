@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Button,
   Card,
+  Center,
   CloseButton,
   Collapse,
   Divider,
@@ -12,19 +13,17 @@ import {
   Pagination,
   ScrollArea,
   SegmentedControl,
+  Stack,
   Text,
   TextInput,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useNavigation, useSearchParams } from "@remix-run/react";
-import { IconPlus, IconSearch, IconX } from "@tabler/icons-react";
+import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { ClientOnly } from "remix-utils/client-only";
-import { ToggleSchemeButton } from "../ToggleSchemeButton.client";
 import QrButton from "../qrCode/QrButton";
 import ListSkeleton from "../skeletons/ListSkeleton";
-import InfoView from "./InfoView";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -159,7 +158,6 @@ export default function ListView<T extends { id: number }>({
     <>
       <Modal
         title={createTitle || ""}
-        size="95%"
         opened={createOpened}
         onClose={() => {
           setSearchParams(
@@ -174,143 +172,96 @@ export default function ListView<T extends { id: number }>({
       >
         {createSection}
       </Modal>
-      <InfoView
-        title={title}
-        collapseSection={
-          <>
-            <Flex w="100%" direction="row" align="center" gap={0}>
-              <TextInput
-                data-autofocus
-                w="100%"
-                rightSection={
-                  navigation.location &&
-                  new URLSearchParams(navigation.location.search).has("q") ? (
-                    <Loader size="xs" />
-                  ) : (
-                    form.values.query.length !== 0 && (
-                      <CloseButton
-                        onClick={() => updateSearch({ query: "", qrCode: "" })}
-                      />
-                    )
+      <Flex w="100%" h="100%" direction="column" align="center" wrap="nowrap">
+        <Flex
+          w="100%"
+          direction="column"
+          align="center"
+          wrap="nowrap"
+          gap="sm"
+          p="sm"
+          {...(filteredItems &&
+            filteredItems.length > 0 && {
+              style: { boxShadow: "0px 10px 10px 5px #8686862d", zIndex: 10 },
+            })}
+        >
+          <Flex w="100%" direction="row" align="center" gap="xs">
+            <TextInput
+              data-autofocus
+              radius="lg"
+              w="100%"
+              leftSection={<IconSearch />}
+              rightSection={
+                navigation.location &&
+                new URLSearchParams(navigation.location.search).has("q") ? (
+                  <Loader size="xs" />
+                ) : (
+                  form.values.query.length !== 0 && (
+                    <CloseButton
+                      onClick={() => updateSearch({ query: "", qrCode: "" })}
+                    />
                   )
-                }
-                placeholder="Search for loan by item or person's name"
-                {...form.getInputProps("query")}
-                onChange={(event) => {
-                  updateSearch({
-                    query: event.currentTarget.value,
-                    qrCode: "",
-                  });
-                }}
-                ref={queryRef}
-              />
-              <QrButton
-                onResult={(result) =>
-                  updateSearch({ query: "", qrCode: result.data })
-                }
-              />
-            </Flex>
-            {form.values.qrCode.length !== 0 && (
-              <Flex
-                w="100%"
-                mt="sm"
-                direction="row"
-                align="center"
-                justify="center"
-              >
-                <Text size="xs" ta="center">
-                  QRCode: {form.values.qrCode}
-                </Text>
-                <Button
-                  variant="subtle"
-                  onClick={() => updateSearch({ query: "", qrCode: "" })}
-                >
-                  Clear
-                </Button>
-              </Flex>
-            )}
-          </>
-        }
-        collapseOpen={collapseOpened}
-        rightSection={
-          <>
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              autoContrast
-              onClick={() => {
-                if (!collapseOpened) {
-                  openCollapse();
-
-                  queryRef.current?.focus();
-                } else {
-                  updateSearch({ query: "", qrCode: "" });
-                  closeCollapse();
-                }
+                )
+              }
+              placeholder={`Search ${title.toLowerCase()}...`}
+              {...form.getInputProps("query")}
+              onChange={(event) => {
+                updateSearch({
+                  query: event.currentTarget.value,
+                  qrCode: "",
+                });
               }}
-            >
-              {collapseOpened ? <IconX /> : <IconSearch />}
-            </ActionIcon>
-            <ClientOnly fallback={null}>
-              {() => <ToggleSchemeButton />}
-            </ClientOnly>
-          </>
-        }
-        cardProps={{ withBorder: false }}
-        headerProps={{ withBorder: true, mb: "sm", py: 0 }}
-      >
-        <>
-          <Flex direction="column" wrap="nowrap">
-            <Flex direction="row" align="center" gap="xs" mb="sm" wrap="nowrap">
-              <SegmentedControl
-                w="100vw"
-                data={controlData}
-                value={value}
-                onChange={(value) => {
-                  setSearchParams(
-                    (prev) => {
-                      if (value == Object.keys(data)[0]) {
-                        prev.delete("display");
-                      } else {
-                        prev.set("display", value);
-                      }
-                      prev.delete("offset");
-                      return prev;
-                    },
-                    {
-                      replace: true,
-                    }
-                  );
-
-                  setValue(value);
-                }}
-              ></SegmentedControl>
-              <ActionIcon
-                size={40}
-                variant="outline"
-                autoContrast
-                visibleFrom="xs"
-                onClick={() =>
-                  setSearchParams(
-                    (prev) => {
-                      prev.set("create", "");
-                      return prev;
-                    },
-                    {
-                      replace: true,
-                    }
-                  )
-                }
+              ref={queryRef}
+            />
+            <QrButton
+              onResult={(result) =>
+                updateSearch({ query: "", qrCode: result.data })
+              }
+            />
+          </Flex>
+          {form.values.qrCode.length !== 0 && (
+            <Flex w="100%" direction="row" align="center" justify="center">
+              <Text size="xs" ta="center">
+                QRCode: {form.values.qrCode}
+              </Text>
+              <Button
+                variant="subtle"
+                onClick={() => updateSearch({ query: "", qrCode: "" })}
               >
-                <IconPlus />
-              </ActionIcon>
+                Clear
+              </Button>
             </Flex>
-            <Button
-              mb="sm"
+          )}
+          <Flex w="100%" direction="row" align="center" gap="xs" wrap="nowrap">
+            <SegmentedControl
+              w="100%"
+              data={controlData}
+              value={value}
+              onChange={(value) => {
+                scrollRef.current?.scrollTo({ top: 0, behavior: "instant" });
+                setSearchParams(
+                  (prev) => {
+                    if (value == Object.keys(data)[0]) {
+                      prev.delete("display");
+                    } else {
+                      prev.set("display", value);
+                    }
+                    prev.delete("offset");
+                    return prev;
+                  },
+                  {
+                    replace: true,
+                  }
+                );
+
+                setValue(value);
+              }}
+            ></SegmentedControl>
+            <ActionIcon
+              size={40}
               variant="outline"
               autoContrast
-              leftSection={<IconPlus />}
-              hiddenFrom="xs"
+              visibleFrom="xs"
               onClick={() =>
                 setSearchParams(
                   (prev) => {
@@ -323,48 +274,69 @@ export default function ListView<T extends { id: number }>({
                 )
               }
             >
-              {createTitle}
-            </Button>
+              <IconPlus />
+            </ActionIcon>
           </Flex>
-          <ScrollArea.Autosize
-            type="always"
-            scrollbars="y"
-            viewportRef={scrollRef}
-            px="xs"
-            pb="xs"
-            offsetScrollbars={"y"}
-          >
-            {filteredItems === undefined ||
-            (navigation.location !== undefined &&
-              !navigation.location?.search.includes("create") &&
-              navigation.location.pathname === location.pathname &&
-              !/^\/.*\/\d+$/.test(navigation.location.pathname)) ? (
-              <ListSkeleton height={80} itemCount={itemsPerPage} gap={2} />
-            ) : (
-              <Card withBorder p="sm">
-                {filteredItems.length > 0 ? (
-                  filteredItems.map((item) => (
-                    <Card.Section
-                      key={item.id}
-                      inheritPadding
-                      withBorder
-                      py="sm"
-                    >
-                      {children(item, form.values.query, form.values.qrCode)}
-                    </Card.Section>
-                  ))
-                ) : (
-                  <div className="h-full w-full">{emptyText}</div>
-                )}
-              </Card>
-            )}
-          </ScrollArea.Autosize>
+        </Flex>
+        <ScrollArea.Autosize
+          h="100%"
+          w="100%"
+          type="always"
+          scrollbars="y"
+          viewportRef={scrollRef}
+          offsetScrollbars={"y"}
+        >
+          {filteredItems === undefined ||
+          (navigation.location !== undefined &&
+            !navigation.location?.search.includes("create") &&
+            navigation.location.pathname === location.pathname &&
+            !/^\/.*\/\d+$/.test(navigation.location.pathname)) ? (
+            <ListSkeleton height={80} itemCount={itemsPerPage} gap={2} />
+          ) : filteredItems.length > 0 ? (
+            <Card m="sm" withBorder>
+              {filteredItems.map((item) => (
+                <Card.Section key={item.id} inheritPadding withBorder py="sm">
+                  {children(item, form.values.query, form.values.qrCode)}
+                </Card.Section>
+              ))}
+            </Card>
+          ) : (
+            <Center w="100%" h="100%">
+              <Text m="auto">{emptyText}</Text>
+            </Center>
+          )}
+        </ScrollArea.Autosize>
+        <Stack
+          w="100%"
+          px="sm"
+          pb="sm"
+          {...(filteredItems &&
+            filteredItems.length > 0 && {
+              style: { boxShadow: "0px -10px 10px 5px #8686862d", zIndex: 10 },
+            })}
+        >
           <Divider />
+          <Button
+            autoContrast
+            leftSection={<IconPlus />}
+            hiddenFrom="xs"
+            onClick={() =>
+              setSearchParams(
+                (prev) => {
+                  prev.set("create", "");
+                  return prev;
+                },
+                {
+                  replace: true,
+                }
+              )
+            }
+          >
+            {createTitle}
+          </Button>
           <Collapse in={totalCount > itemsPerPage}>
             <Pagination.Root
-              mt="md"
               siblings={1}
-              px="sm"
               total={
                 totalCount > itemsPerPage
                   ? Math.ceil(totalCount / itemsPerPage)
@@ -399,8 +371,9 @@ export default function ListView<T extends { id: number }>({
               </Group>
             </Pagination.Root>
           </Collapse>
-        </>
-      </InfoView>
+        </Stack>
+      </Flex>
+      {/* </InfoView> */}
     </>
   );
 }

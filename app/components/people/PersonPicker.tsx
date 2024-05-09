@@ -1,4 +1,11 @@
-import { ActionIcon, Button, Stack, Text } from "@mantine/core";
+import {
+  ActionIcon,
+  Button,
+  MantineSpacing,
+  Stack,
+  StyleProp,
+  Text,
+} from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { Link } from "@remix-run/react";
 import { IconEdit } from "@tabler/icons-react";
@@ -16,10 +23,18 @@ type PersonPickerType = Omit<
 export interface PersonPickerProps {
   value?: PersonPickerType;
   promptOutstanding?: boolean;
+  withBorder?: boolean;
+  p?: StyleProp<MantineSpacing>;
   onChanged?: (person?: PersonWithTags) => void;
 }
 
-export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
+export default function PersonPicker({
+  value,
+  promptOutstanding = true,
+  withBorder = false,
+  p = 0,
+  onChanged,
+}: PersonPickerProps) {
   const [person, setPerson] = useState<PersonPickerType | undefined>(
     value || undefined
   );
@@ -36,7 +51,7 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
   function confirmOutstanding(person: PersonWithTags) {
     const outstandingLoans = person._count.loans;
 
-    if (outstandingLoans > 0) {
+    if (outstandingLoans > 0 && promptOutstanding) {
       modals.openConfirmModal({
         title: "Person has Outstanding Loans!",
         children: (
@@ -94,9 +109,9 @@ export default function PersonPicker({ value, onChanged }: PersonPickerProps) {
           <IconEdit />
         </ActionIcon>
       }
-      withBorder={false}
+      withBorder={withBorder}
       withDetails={false}
-      p={0}
+      p={p}
     />
   ) : (
     <PersonSearchCombobox

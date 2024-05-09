@@ -1,10 +1,18 @@
 import { Prisma } from "@prisma/client";
-import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from "@remix-run/node";
 import { Outlet } from "@remix-run/react";
 import { typedjson } from "remix-typedjson";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { PostPersonFormData, personWithTags } from "~/utils/types.server";
+
+export const meta: MetaFunction = () => {
+  return [{ title: "People | SJK Sign-Out" }];
+};
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);

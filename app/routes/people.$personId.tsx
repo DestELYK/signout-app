@@ -1,6 +1,10 @@
 import { Center, Text } from "@mantine/core";
-import { LoaderFunctionArgs } from "@remix-run/node";
-import { IconClipboard, IconInfoCircle, IconTimeline } from "@tabler/icons-react";
+import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import {
+  IconClipboard,
+  IconInfoCircle,
+  IconTimeline,
+} from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import DetailsPage from "~/DetailsPage";
@@ -8,6 +12,10 @@ import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { personWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  return [{ title: `${formatFullName(data.person)} | SJK Sign-Out` }];
+};
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.personId, "Expected params.personId");

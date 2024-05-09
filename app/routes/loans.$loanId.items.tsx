@@ -1,4 +1,4 @@
-import { Accordion, Flex, Skeleton, Text } from "@mantine/core";
+import { Accordion, Skeleton, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import {
   Outlet,
@@ -58,7 +58,7 @@ export default function Page() {
   const itemId = params.itemId;
 
   return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
+    <>
       {data &&
       (!navigation.location ||
         !navigation.location.pathname.endsWith("items")) ? (
@@ -93,6 +93,6 @@ export default function Page() {
       ) : (
         <Skeleton h={200} />
       )}
-    </Flex>
+    </>
   );
 }

@@ -7,6 +7,7 @@ import "@mantine/tiptap/styles.css";
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
+  Link,
   Links,
   LiveReload,
   Meta,
@@ -14,35 +15,32 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
-  useNavigate,
+  useMatches,
   useNavigation,
   useRevalidator,
   useRouteError,
 } from "@remix-run/react";
 
 import {
-  Box,
+  AppShell,
+  Burger,
   ColorSchemeScript,
-  Flex,
+  Group,
+  Image,
   LoadingOverlay,
   MantineProvider,
-  SegmentedControl,
-  Stack,
-  Text,
+  NavLink,
   createTheme,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications, notifications } from "@mantine/notifications";
-import {
-  IconClipboard,
-  IconDeviceImac,
-  IconHome,
-  IconSettings,
-  IconUser,
-} from "@tabler/icons-react";
+import { IconClipboard, IconDeviceImac, IconUser } from "@tabler/icons-react";
 import { clearInterval, setInterval } from "node:timers";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { ClientOnly } from "remix-utils/client-only";
 import ErrorPage from "./components/ErrorPage";
+import { ToggleSchemeButton } from "./components/ToggleSchemeButton.client";
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
@@ -100,10 +98,15 @@ export function ErrorBoundary() {
 
 export default function App() {
   const navigation = useNavigation();
-  const navigate = useNavigate();
-  const bodyRef = useRef<HTMLBodyElement>(null);
   const location = useLocation();
   const revalidator = useRevalidator();
+  const [opened, { toggle }] = useDisclosure();
+  const matches = useMatches();
+
+  const filteredMatches = matches.filter(
+    (match) => !match.pathname.endsWith("/")
+  );
+
   let value = "home";
 
   if (location.pathname === "/") {
@@ -114,19 +117,6 @@ export default function App() {
     value = "items";
   } else if (location.pathname.startsWith("/people")) {
     value = "people";
-  }
-
-  function onChange(value: string) {
-    switch (value) {
-      case "home":
-        if (location.pathname === "/") return;
-        navigate("/");
-        break;
-      default:
-        if (location.pathname === `/${value}`) return;
-        navigate(`/${value}?limit=15`);
-        break;
-    }
   }
 
   // Refresh data every 5 minutes
@@ -155,13 +145,95 @@ export default function App() {
         <MantineProvider defaultColorScheme="light" theme={theme}>
           <ModalsProvider>
             <Notifications />
-            <Flex
-              direction="column"
-              h="100dvh"
-              w="100dvw"
-              style={{ overflow: "hidden" }}
+            <AppShell
+              header={{ height: 60 }}
+              navbar={{
+                width: { base: 300, md: 200 },
+                breakpoint: "sm",
+                collapsed: { mobile: !opened },
+              }}
             >
-              <Box w="100%" h="calc(100% - 62px)">
+              <AppShell.Header>
+                <Group h="100%" px="md" justify="space-between">
+                  <Group>
+                    <Burger
+                      opened={opened}
+                      onClick={toggle}
+                      hiddenFrom="sm"
+                      size="sm"
+                    />
+                    <Link to="/">
+                      <Image
+                        src="/logo.png"
+                        alt="SJK"
+                        fit="contain"
+                        p={5}
+                        width={200}
+                        height={60}
+                      />
+                    </Link>
+                  </Group>
+                  <Group justify="end">
+                    <ClientOnly fallback={null}>
+                      {() => <ToggleSchemeButton />}
+                    </ClientOnly>
+                  </Group>
+                </Group>
+              </AppShell.Header>
+              <AppShell.Navbar py="md">
+                <NavLink
+                  href="/loans?limit=15"
+                  label="Loans"
+                  opened={value === "loans"}
+                  leftSection={<IconClipboard size={24} />}
+                  active={value === "loans"}
+                >
+                  {value === "loans" && filteredMatches.length > 1 && (
+                    <NavLink
+                      key={filteredMatches[1].pathname}
+                      href={filteredMatches[1].pathname}
+                      label={filteredMatches[1].pathname}
+                      active={filteredMatches[1].pathname === location.pathname}
+                    >
+                      {filteredMatches.length > 2 && (
+                        <NavLink
+                          key={filteredMatches[2].pathname}
+                          href={filteredMatches[2].pathname}
+                          label={filteredMatches[2].pathname}
+                          active={
+                            filteredMatches[2].pathname === location.pathname
+                          }
+                        >
+                          {filteredMatches.length > 3 && (
+                            <NavLink
+                              key={filteredMatches[3].pathname}
+                              href={filteredMatches[3].pathname}
+                              label={filteredMatches[3].pathname}
+                              active={
+                                filteredMatches[3].pathname ===
+                                location.pathname
+                              }
+                            ></NavLink>
+                          )}
+                        </NavLink>
+                      )}
+                    </NavLink>
+                  )}
+                </NavLink>
+                <NavLink
+                  href="/items?limit=15"
+                  label="Items"
+                  leftSection={<IconDeviceImac size={24} />}
+                  active={value === "items"}
+                />
+                <NavLink
+                  href="/people?limit=15"
+                  label="People"
+                  leftSection={<IconUser size={24} />}
+                  active={value === "people"}
+                />
+              </AppShell.Navbar>
+              <AppShell.Main w="100%" h="calc(100dvh - 120px)">
                 <LoadingOverlay
                   visible={
                     navigation.location !== undefined &&
@@ -170,8 +242,7 @@ export default function App() {
                   zIndex={1000}
                 />
                 <Outlet />
-              </Box>
-              <SegmentedControl
+                {/* <SegmentedControl
                 fullWidth
                 data={[
                   {
@@ -224,8 +295,9 @@ export default function App() {
                 value={value}
                 onChange={onChange}
                 onClick={() => onChange(value)}
-              />
-            </Flex>
+              /> */}
+              </AppShell.Main>
+            </AppShell>
             <ScrollRestoration />
             <Scripts />
             <LiveReload />

@@ -1,4 +1,4 @@
-import { Flex, Group } from "@mantine/core";
+import { Group } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import { OUT_COLOR } from "../OutstandingBadge";
@@ -38,7 +38,7 @@ export default function PersonInfoView({
   averageReturnTime,
 }: PersonInfoViewProps) {
   return (
-    <Flex direction="column" w="100%" h="100%" gap="sm">
+    <>
       {/* Person Card */}
       <PersonCard
         {...{ firstName, lastName, nickname, tags, notes, qrCode }}
@@ -58,7 +58,7 @@ export default function PersonInfoView({
       </Group>
 
       {/* Average Return Time */}
-      <Group align="stretch" grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         {lostItems && lostItems > 0 && (
           <StatCard color="red" value={lostItems} label="Lost Items" />
         )}
@@ -71,7 +71,7 @@ export default function PersonInfoView({
       </Group>
 
       {/* Created Date */}
-      <Group align="stretch" grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         <StatCard
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
@@ -85,6 +85,6 @@ export default function PersonInfoView({
           caption={formatDate(updatedDate)}
         />
       </Group>
-    </Flex>
+    </>
   );
 }

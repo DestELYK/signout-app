@@ -1,4 +1,4 @@
-import { Flex, Group, Stack, Text, Textarea, Title } from "@mantine/core";
+import { Group, Stack, Text, Textarea, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import StatCard from "../StatCard";
@@ -41,9 +41,8 @@ export default function ItemInfoView({
     lastLoan && lastLoan.dateReturned === null ? true : false;
 
   return (
-    <Flex direction="column" w="100%" h="100%" gap="sm">
+    <>
       {/* Item Card */}
-      <Title order={4}>Details</Title>
       <InfoView
         title={name}
         href={`/items/${id}`}
@@ -79,12 +78,16 @@ export default function ItemInfoView({
       {/* Last Loan Card */}
       {lastLoan && lastLoan.person && (
         <>
-          <Title order={4}>Last Loan</Title>
+          <Title order={4} mt="sm">
+            Last Loan
+          </Title>
           <LastLoanView {...lastLoan} />
         </>
       )}
       {/* Notes */}
-      <Title order={4}>Notes</Title>
+      <Title order={4} mt="sm">
+        Notes
+      </Title>
       <Textarea
         w="100%"
         minRows={5}
@@ -95,7 +98,7 @@ export default function ItemInfoView({
       />
 
       {/* Outstanding Items */}
-      <Group grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         <StatCard value={loans} label="Total Signouts" />
         {averageLoanTime && (
           <StatCard
@@ -106,7 +109,7 @@ export default function ItemInfoView({
       </Group>
 
       {/* Created Date */}
-      <Group grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         <StatCard
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
@@ -120,6 +123,6 @@ export default function ItemInfoView({
           caption={formatDate(updatedDate)}
         />
       </Group>
-    </Flex>
+    </>
   );
 }

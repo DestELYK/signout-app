@@ -1,4 +1,4 @@
-import { Flex, Group, ScrollArea, Textarea, Title } from "@mantine/core";
+import { Group, ScrollArea, Textarea, Title } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 
@@ -34,9 +34,8 @@ export default function LoanInfoView({
   outstandingItems,
 }: LoanInfoViewProps) {
   return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
+    <>
       {/* Loan Card */}
-      <Title order={4}>Details</Title>
       <InfoView
         title={`Loan #${id}`}
         rightSection={
@@ -61,10 +60,12 @@ export default function LoanInfoView({
       </InfoView>
 
       {/* Person Card */}
-      <Title order={4}>Person</Title>
+      <Title order={4} mt="sm">
+        Person
+      </Title>
       <PersonCard {...person} />
 
-      <Group grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         {/* Outstanding Items */}
         <StatCard value={outstandingItems} label="Outstanding Items" />
 
@@ -72,7 +73,7 @@ export default function LoanInfoView({
         <StatCard value={items} label="Total Items" />
       </Group>
 
-      <Group grow>
+      <Group w="100%" mt="sm" align="stretch" grow>
         {/* Created Date */}
         <StatCard
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
@@ -87,6 +88,6 @@ export default function LoanInfoView({
           caption={formatDate(updatedDate)}
         />
       </Group>
-    </Flex>
+    </>
   );
 }
