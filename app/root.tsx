@@ -15,7 +15,6 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
-  useMatches,
   useNavigation,
   useRevalidator,
   useRouteError,
@@ -101,11 +100,6 @@ export default function App() {
   const location = useLocation();
   const revalidator = useRevalidator();
   const [opened, { toggle }] = useDisclosure();
-  const matches = useMatches();
-
-  const filteredMatches = matches.filter(
-    (match) => !match.pathname.endsWith("/")
-  );
 
   let value = "home";
 
@@ -187,39 +181,7 @@ export default function App() {
                   opened={value === "loans"}
                   leftSection={<IconClipboard size={24} />}
                   active={value === "loans"}
-                >
-                  {value === "loans" && filteredMatches.length > 1 && (
-                    <NavLink
-                      key={filteredMatches[1].pathname}
-                      href={filteredMatches[1].pathname}
-                      label={filteredMatches[1].pathname}
-                      active={filteredMatches[1].pathname === location.pathname}
-                    >
-                      {filteredMatches.length > 2 && (
-                        <NavLink
-                          key={filteredMatches[2].pathname}
-                          href={filteredMatches[2].pathname}
-                          label={filteredMatches[2].pathname}
-                          active={
-                            filteredMatches[2].pathname === location.pathname
-                          }
-                        >
-                          {filteredMatches.length > 3 && (
-                            <NavLink
-                              key={filteredMatches[3].pathname}
-                              href={filteredMatches[3].pathname}
-                              label={filteredMatches[3].pathname}
-                              active={
-                                filteredMatches[3].pathname ===
-                                location.pathname
-                              }
-                            ></NavLink>
-                          )}
-                        </NavLink>
-                      )}
-                    </NavLink>
-                  )}
-                </NavLink>
+                />
                 <NavLink
                   href="/items?limit=15"
                   label="Items"
