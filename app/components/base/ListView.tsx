@@ -57,11 +57,9 @@ export default function ListView<T extends { id: number }>({
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
   const queryRef = useRef<HTMLInputElement>(null);
-  const [collapseOpened, { open: openCollapse, close: closeCollapse }] =
-    useDisclosure(searchParams.has("q", "qrCode"));
 
   const [createOpened, { open: openCreate, close: closeCreate }] =
-    useDisclosure(false);
+    useDisclosure(searchParams.has("create"));
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -101,18 +99,13 @@ export default function ListView<T extends { id: number }>({
   useEffect(() => {
     const query = searchParams.get("q");
     const qrCode = searchParams.get("qrCode");
+    const create = searchParams.has("create");
 
     form.setFieldValue("query", query || "");
     form.setFieldValue("qrCode", qrCode || "");
 
-    (query || qrCode) && openCollapse();
-  }, []);
-
-  useEffect(() => {
-    const create = searchParams.has("create");
-
     create ? openCreate() : closeCreate();
-  }, [searchParams.has("create")]);
+  }, [searchParams]);
 
   useEffect(() => {
     const offset = Number(searchParams.get("offset")) ?? 0;
@@ -262,7 +255,7 @@ export default function ListView<T extends { id: number }>({
               variant="outline"
               autoContrast
               visibleFrom="xs"
-              onClick={() =>
+              onClick={() => {
                 setSearchParams(
                   (prev) => {
                     prev.set("create", "");
@@ -271,8 +264,8 @@ export default function ListView<T extends { id: number }>({
                   {
                     replace: true,
                   }
-                )
-              }
+                );
+              }}
             >
               <IconPlus />
             </ActionIcon>

@@ -92,7 +92,7 @@ export default function CreatePersonForm({
     }
   );
 
-  const loading = submitNewPerson.state === "submitting";
+  const loading = submitNewPerson.state !== "idle";
 
   // updates on new person creation
   useEffect(() => {

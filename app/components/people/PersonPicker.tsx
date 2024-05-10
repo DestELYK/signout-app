@@ -94,6 +94,8 @@ export default function PersonPicker({
     } else {
       setOutstandingPerson(undefined);
       close();
+
+      updatePerson(person);
     }
   }
 
@@ -101,7 +103,7 @@ export default function PersonPicker({
     <>
       {outstandingPerson && (
         <Modal title="Outstanding Loans" opened={opened} onClose={close}>
-          <LoadingOverlay visible={fetcher.state === "loading"} zIndex={1000} />
+          <LoadingOverlay visible={fetcher.state !== "idle"} zIndex={1000} />
 
           <Stack>
             <Text c="red">

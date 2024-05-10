@@ -2,6 +2,7 @@ import "@mantine/charts/styles.css";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
+import "@mantine/nprogress/styles.css";
 import "@mantine/tiptap/styles.css";
 
 import { cssBundleHref } from "@remix-run/css-bundle";
@@ -11,6 +12,7 @@ import {
   Links,
   LiveReload,
   Meta,
+  NavLink as NavLinkRemix,
   Outlet,
   Scripts,
   ScrollRestoration,
@@ -20,15 +22,19 @@ import {
   useRouteError,
 } from "@remix-run/react";
 
+import { NavigationProgress, nprogress } from "@mantine/nprogress";
+
 import {
   AppShell,
   Burger,
+  Collapse,
   ColorSchemeScript,
   Group,
   Image,
-  LoadingOverlay,
   MantineProvider,
   NavLink,
+  Stack,
+  Text,
   createTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -41,7 +47,7 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 import { clearInterval, setInterval } from "node:timers";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ClientOnly } from "remix-utils/client-only";
 import ErrorPage from "./components/ErrorPage";
 import { ToggleSchemeButton } from "./components/ToggleSchemeButton.client";
@@ -105,6 +111,7 @@ export default function App() {
   const location = useLocation();
   const revalidator = useRevalidator();
   const [opened, { toggle }] = useDisclosure();
+  const [offline, setOffline] = useState(false);
 
   let value = "home";
 
@@ -131,6 +138,34 @@ export default function App() {
     return () => clearInterval(timer);
   });
 
+  // Start and stop nprogress depending on navigation state
+  useEffect(() => {
+    if (navigation.state !== "idle") {
+      nprogress.start();
+    } else {
+      nprogress.complete();
+    }
+
+    return () => {
+      nprogress.reset();
+    };
+  }, [navigation.state]);
+
+  // Check if the user is offline
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      try {
+        const response = await fetch("/api/health-check");
+
+        setOffline(response.status !== 200);
+      } catch (error) {
+        setOffline(true);
+      }
+    }, 1000 * 30);
+
+    return () => clearInterval(timer);
+  });
+
   return (
     <html lang="en">
       <head>
@@ -144,8 +179,9 @@ export default function App() {
         <MantineProvider defaultColorScheme="light" theme={theme}>
           <ModalsProvider>
             <Notifications />
+            <NavigationProgress />
             <AppShell
-              header={{ height: 60 }}
+              header={{ height: 60 + (offline ? 20 : 0) }}
               navbar={{
                 width: { base: 300, md: 200 },
                 breakpoint: "sm",
@@ -153,121 +189,75 @@ export default function App() {
               }}
             >
               <AppShell.Header>
-                <Group h="100%" px="md" justify="space-between">
-                  <Group>
-                    <Burger
-                      opened={opened}
-                      onClick={toggle}
-                      hiddenFrom="sm"
-                      size="sm"
-                    />
-                    <Link to="/">
-                      <Image
-                        src="/logo.png"
-                        alt="SJK"
-                        fit="contain"
-                        p={5}
-                        width={200}
-                        height={60}
+                <Stack gap={0}>
+                  <Group h="100%" px="md" justify="space-between">
+                    <Group>
+                      <Burger
+                        opened={opened}
+                        onClick={toggle}
+                        hiddenFrom="sm"
+                        size="sm"
                       />
-                    </Link>
+                      <Link to="/">
+                        <Image
+                          src="/logo.png"
+                          alt="SJK"
+                          fit="contain"
+                          p={5}
+                          width={200}
+                          height={60}
+                        />
+                      </Link>
+                    </Group>
+                    <Group justify="end">
+                      <ClientOnly fallback={null}>
+                        {() => <ToggleSchemeButton />}
+                      </ClientOnly>
+                    </Group>
                   </Group>
-                  <Group justify="end">
-                    <ClientOnly fallback={null}>
-                      {() => <ToggleSchemeButton />}
-                    </ClientOnly>
-                  </Group>
-                </Group>
+                  <Collapse h={20} in={offline}>
+                    <Text ta="center" bg="red" c="white">
+                      You are offline
+                    </Text>
+                  </Collapse>
+                </Stack>
               </AppShell.Header>
               <AppShell.Navbar py="md">
                 <NavLink
-                  href="/"
+                  to="/"
+                  component={NavLinkRemix}
                   label="Home"
                   leftSection={<IconHome size={24} />}
+                  onClick={toggle}
                   active={value === "home"}
                 />
                 <NavLink
-                  href="/loans?limit=15"
+                  to="/loans?limit=15"
+                  component={NavLinkRemix}
                   label="Loans"
                   leftSection={<IconClipboard size={24} />}
+                  onClick={toggle}
                   active={value === "loans"}
                 />
                 <NavLink
-                  href="/items?limit=15"
+                  to="/items?limit=15"
+                  component={NavLinkRemix}
                   label="Items"
                   leftSection={<IconDeviceImac size={24} />}
+                  onClick={toggle}
                   active={value === "items"}
                 />
                 <NavLink
-                  href="/people?limit=15"
+                  to="/people?limit=15"
+                  component={NavLinkRemix}
                   label="People"
                   leftSection={<IconUser size={24} />}
+                  onClick={toggle}
                   active={value === "people"}
                 />
               </AppShell.Navbar>
-              <AppShell.Main w="100%" h="calc(100dvh - 120px)">
-                <LoadingOverlay
-                  visible={
-                    navigation.location !== undefined &&
-                    navigation.location.pathname !== location.pathname
-                  }
-                  zIndex={1000}
-                />
+              <AppShell.Main w="100%" h="100dvh">
                 <Outlet />
-                {/* <SegmentedControl
-                fullWidth
-                data={[
-                  {
-                    value: "home",
-                    label: (
-                      <Stack align="center" gap={0}>
-                        <IconHome size={24} />
-                        <Text size="sm">Home</Text>
-                      </Stack>
-                    ),
-                  },
-                  {
-                    value: "loans",
-                    label: (
-                      <Stack align="center" gap={0}>
-                        <IconClipboard size={24} />
-                        <Text size="sm">Loans</Text>
-                      </Stack>
-                    ),
-                  },
-                  {
-                    value: "items",
-                    label: (
-                      <Stack align="center" gap={0}>
-                        <IconDeviceImac size={24} />
-                        <Text size="sm">Items</Text>
-                      </Stack>
-                    ),
-                  },
-                  {
-                    value: "people",
-                    label: (
-                      <Stack align="center" gap={0}>
-                        <IconUser size={24} />
-                        <Text size="sm">People</Text>
-                      </Stack>
-                    ),
-                  },
-                  {
-                    value: "settings",
-                    label: (
-                      <Stack align="center" gap={0}>
-                        <IconSettings size={24} />
-                        <Text size="sm">Settings</Text>
-                      </Stack>
-                    ),
-                    disabled: true,
-                  },
-                ]}
-                value={value}
-                onChange={onChange}
-                onClick={() => onChange(value)}
-              /> */}
               </AppShell.Main>
             </AppShell>
             <ScrollRestoration />
@@ -278,7 +268,4 @@ export default function App() {
       </body>
     </html>
   );
-}
-function rgb(arg0: number, arg1: number, arg2: number): string {
-  throw new Error("Function not implemented.");
 }

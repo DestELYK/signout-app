@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Box,
   Button,
   Divider,
   Fieldset,
@@ -94,7 +93,7 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
     }
   });
 
-  const loading = fetcher.state === "submitting";
+  const loading = fetcher.state !== "idle";
 
   function clear() {
     form.reset();
@@ -185,13 +184,11 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
           p="sm"
           {...(form.errors.person && { style: { borderColor: "red" } })}
         >
-          <Box pos="relative" h="100%">
-            <LoadingOverlay
-              zIndex={1000}
-              overlayProps={{ radius: "sm", blur: 2 }}
-            />
-            <PersonPicker value={person} onChanged={updatePerson} />
-          </Box>
+          <PersonPicker
+            value={person}
+            promptOutstanding
+            onChanged={updatePerson}
+          />
         </Fieldset>
         <Text size="xs" c="red" hidden={form.errors.person == undefined}>
           {form.errors.person}

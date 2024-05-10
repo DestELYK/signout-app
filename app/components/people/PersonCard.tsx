@@ -79,11 +79,11 @@ export default function PersonCard({
         <QRCodeWithComponent qrCode={qrCode} scale={qrScale || 2.5}>
           <Textarea
             w="100%"
-            value={notes || "No notes"}
             minRows={3}
             maxRows={3}
             autosize
-            readOnly
+            {...(!notes && { placeholder: "No notes" })}
+            value={notes || ""}
           />
         </QRCodeWithComponent>
       )}

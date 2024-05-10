@@ -1,8 +1,9 @@
-import { Group, ScrollArea, Textarea, Title } from "@mantine/core";
+import { Group, Title } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
+import EditableNotes from "../EditableNotes";
 import { createOutstandingTag } from "../OutstandingBadge";
 import StatCard from "../StatCard";
 import InfoView from "../base/InfoView";
@@ -47,16 +48,7 @@ export default function LoanInfoView({
           />
         }
       >
-        <ScrollArea.Autosize type="auto" scrollbars="y">
-          <Textarea
-            w="100%"
-            minRows={5}
-            maxRows={5}
-            autosize
-            value={notes || "No notes"}
-            readOnly
-          />
-        </ScrollArea.Autosize>
+        <EditableNotes action={`/loans/${id}`} value={notes} editable />
       </InfoView>
 
       {/* Person Card */}
