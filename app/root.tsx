@@ -17,6 +17,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
+  useNavigate,
   useNavigation,
   useRevalidator,
   useRouteError,
@@ -39,7 +40,7 @@ import {
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
-import { Notifications, notifications } from "@mantine/notifications";
+import { Notifications } from "@mantine/notifications";
 import {
   IconClipboard,
   IconDeviceImac,
@@ -109,9 +110,10 @@ export function ErrorBoundary() {
 export default function App() {
   const navigation = useNavigation();
   const location = useLocation();
+  const navigate = useNavigate();
   const revalidator = useRevalidator();
   const [opened, { toggle }] = useDisclosure();
-  const [offline, setOffline] = useState(false);
+  const [offline, setOffline] = useState<boolean | undefined>();
 
   let value = "home";
 
@@ -125,18 +127,19 @@ export default function App() {
     value = "people";
   }
 
-  // Refresh data every 5 minutes
-  useEffect(() => {
-    const timer = setInterval(() => {
-      notifications.show({
-        message: "Refreshing data...",
-      });
+  // TODO - Move to specific pages
+  // // Refresh data every 5 minutes
+  // useEffect(() => {
+  //   const timer = setInterval(() => {
+  //     notifications.show({
+  //       message: "Refreshing data...",
+  //     });
 
-      revalidator.revalidate();
-    }, 1000 * 60 * 5);
+  //     revalidator.revalidate();
+  //   }, 1000 * 60 * 5);
 
-    return () => clearInterval(timer);
-  });
+  //   return () => clearInterval(timer);
+  // });
 
   // Start and stop nprogress depending on navigation state
   useEffect(() => {
@@ -157,14 +160,22 @@ export default function App() {
       try {
         const response = await fetch("/api/health-check");
 
-        setOffline(response.status !== 200);
+        if (offline && response.status === 200) {
+          setOffline(false);
+          setTimeout(() => {
+            window.location.reload();
+            setOffline(undefined);
+          }, 2000);
+        } else {
+          setOffline(undefined);
+        }
       } catch (error) {
         setOffline(true);
       }
     }, 1000 * 30);
 
     return () => clearInterval(timer);
-  });
+  }, []);
 
   return (
     <html lang="en">
@@ -215,9 +226,9 @@ export default function App() {
                       </ClientOnly>
                     </Group>
                   </Group>
-                  <Collapse h={20} in={offline}>
-                    <Text ta="center" bg="red" c="white">
-                      You are offline
+                  <Collapse h={20} in={offline !== undefined}>
+                    <Text ta="center" bg={offline ? "red" : "green"} c="white">
+                      You are {offline ? "offline" : "online. Reloading..."}
                     </Text>
                   </Collapse>
                 </Stack>

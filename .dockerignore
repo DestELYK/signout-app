@@ -1,0 +1,33 @@
+# Ignore Node.js files
+node_modules
+npm-debug.log
+
+# Ignore Git files
+**/.git
+**/.gitignore
+
+# Ignore temporary files
+**/*~
+
+# Ignore log files
+**/*.log
+
+# Ignore Docker files
+Dockerfile
+docker-compose.yml
+
+# Ignore SSL certificates
+sslcert
+
+# Ignore VS Code settings
+.vscode
+
+# Ignore Remix files
+.remix
+build
+
+# Ignore environment variables
+.env
+
+# Ignore user scripts
+/*.sh

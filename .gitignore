@@ -3,7 +3,7 @@ node_modules
 /.cache
 /build
 /public/build
-.env
+.env*
 
 # Logs
 logs
@@ -142,5 +142,7 @@ prisma/*
 
 sslcert
 
-push-signout.sh
-start.sh
+/*.sh
+data.json
+/scripts
+
