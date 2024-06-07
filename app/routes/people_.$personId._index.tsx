@@ -1,11 +1,11 @@
 import { Center, Flex, Skeleton, Text } from "@mantine/core";
 import { useTypedRouteLoaderData } from "remix-typedjson";
 import PersonInfoView from "~/components/people/PersonInfoView";
-import { loader as personLoader } from "./people.$personId";
+import { loader as personLoader } from "./people_.$personId";
 
 export default function Page() {
   const data = useTypedRouteLoaderData<typeof personLoader>(
-    "routes/people.$personId"
+    "routes/people_.$personId"
   );
 
   return (

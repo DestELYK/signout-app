@@ -11,6 +11,7 @@ import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { itemWithTags } from "~/utils/types.server";
+import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [{ title: `${data.item.name} | SJK Sign-Out` }];
@@ -18,6 +19,10 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.itemId, "Expected params.itemId");
+
+  if (!isNumeric(params.itemId)) {
+    throw new Response(null, { status: 404 });
+  }
 
   try {
     const itemId = Number(params.itemId);

@@ -17,6 +17,7 @@ import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { PatchLoanFormData } from "~/utils/types.server";
+import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction = ({ params }) => {
   return [{ title: `Loan #${params.loanId}` }];
@@ -25,15 +26,13 @@ export const meta: MetaFunction = ({ params }) => {
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
 
-  const loanId = parseInt(params.loanId);
-
-  if (loanId === undefined) {
-    throw new Response(null, {
-      status: 404,
-    });
+  if (!isNumeric(params.loanId)) {
+    throw new Response(null, { status: 404 });
   }
 
   try {
+    const loanId = Number(params.loanId);
+
     return typedjson({
       loan: await prisma.loan.findFirstOrThrow({
         where: { id: loanId },

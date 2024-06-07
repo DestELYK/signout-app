@@ -4,6 +4,7 @@ import "@mantine/dates/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/nprogress/styles.css";
 import "@mantine/tiptap/styles.css";
+import "mantine-react-table/styles.css";
 
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
@@ -36,6 +37,7 @@ import {
   NavLink,
   Stack,
   Text,
+  Title,
   createTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -47,7 +49,6 @@ import {
   IconHome,
   IconUser,
 } from "@tabler/icons-react";
-import { clearInterval, setInterval } from "node:timers";
 import { useEffect, useState } from "react";
 import { ClientOnly } from "remix-utils/client-only";
 import ErrorPage from "./components/ErrorPage";
@@ -80,40 +81,21 @@ export const meta: MetaFunction = () => {
   return [{ name: "theme-color", content: "#ffffff" }];
 };
 
-export function ErrorBoundary() {
-  const error = useRouteError();
-
-  return (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <Meta />
-        <Links />
-        <ColorSchemeScript defaultColorScheme="light" />
-      </head>
-      <body style={{ width: "100dvw", height: "100dvh", overflow: "hidden" }}>
-        <MantineProvider defaultColorScheme="light" theme={theme}>
-          <ModalsProvider>
-            <Notifications />
-            <ErrorPage error={error} />
-            <ScrollRestoration />
-            <Scripts />
-            <LiveReload />
-          </ModalsProvider>
-        </MantineProvider>
-      </body>
-    </html>
-  );
-}
-
-export default function App() {
+function Root({
+  offline = false,
+  children,
+}: {
+  offline?: boolean;
+  children: React.ReactNode;
+}) {
   const navigation = useNavigation();
   const location = useLocation();
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const [opened, { toggle }] = useDisclosure();
-  const [offline, setOffline] = useState<boolean | undefined>();
+  const [_offline, setOffline] = useState<boolean | undefined>(
+    offline ? true : undefined
+  );
 
   let value = "home";
 
@@ -154,28 +136,40 @@ export default function App() {
     };
   }, [navigation.state]);
 
-  // Check if the user is offline
+  // // Check if the user is offline
+  // useEffect(() => {
+  //   const timer = setInterval(async () => {
+  //     try {
+  //       const response = await fetch("/api/health-check");
+
+  //       if (offline && response.status === 200) {
+  //         setOffline(false);
+  //         setTimeout(() => {
+  //           window.location.reload();
+  //           setOffline(undefined);
+  //         }, 2000);
+  //       } else {
+  //         setOffline(undefined);
+  //       }
+  //     } catch (error) {
+  //       setOffline(true);
+  //     }
+  //   }, 1000 * 30);
+
+  //   return () => clearInterval(timer);
+  // }, []);
+
   useEffect(() => {
-    const timer = setInterval(async () => {
-      try {
-        const response = await fetch("/api/health-check");
-
-        if (offline && response.status === 200) {
-          setOffline(false);
-          setTimeout(() => {
-            window.location.reload();
-            setOffline(undefined);
-          }, 2000);
-        } else {
-          setOffline(undefined);
-        }
-      } catch (error) {
-        setOffline(true);
-      }
-    }, 1000 * 30);
-
-    return () => clearInterval(timer);
-  }, []);
+    if (_offline && !offline) {
+      setOffline(false);
+      setTimeout(() => {
+        window.location.reload();
+        setOffline(undefined);
+      }, 2000);
+    } else {
+      setOffline(undefined);
+    }
+  }, [offline]);
 
   return (
     <html lang="en">
@@ -194,7 +188,7 @@ export default function App() {
             <AppShell
               header={{ height: 60 + (offline ? 20 : 0) }}
               navbar={{
-                width: { base: 300, md: 200 },
+                width: { base: 200, lg: 300 },
                 breakpoint: "sm",
                 collapsed: { mobile: !opened },
               }}
@@ -209,16 +203,27 @@ export default function App() {
                         hiddenFrom="sm"
                         size="sm"
                       />
-                      <Link to="/">
-                        <Image
-                          src="/logo.png"
-                          alt="SJK"
-                          fit="contain"
-                          p={5}
-                          width={200}
-                          height={60}
-                        />
-                      </Link>
+                      <Group gap={0} align="center">
+                        <Link to="/">
+                          <Image
+                            src="/logo.png"
+                            alt="SJK"
+                            fit="contain"
+                            p={5}
+                            width={200}
+                            height={60}
+                          />
+                        </Link>
+                        <Title
+                          pt={5}
+                          c="#006297"
+                          order={1}
+                          fw={500}
+                          style={{ fontFamily: "'Open Sans', sans-serif" }}
+                        >
+                          Signout
+                        </Title>
+                      </Group>
                     </Group>
                     <Group justify="end">
                       <ClientOnly fallback={null}>
@@ -226,9 +231,9 @@ export default function App() {
                       </ClientOnly>
                     </Group>
                   </Group>
-                  <Collapse h={20} in={offline !== undefined}>
-                    <Text ta="center" bg={offline ? "red" : "green"} c="white">
-                      You are {offline ? "offline" : "online. Reloading..."}
+                  <Collapse h={20} in={_offline !== undefined}>
+                    <Text ta="center" bg={_offline ? "red" : "green"} c="white">
+                      You are {_offline ? "offline" : "online. Reloading..."}
                     </Text>
                   </Collapse>
                 </Stack>
@@ -243,7 +248,7 @@ export default function App() {
                   active={value === "home"}
                 />
                 <NavLink
-                  to="/loans?limit=15"
+                  to="/loans"
                   component={NavLinkRemix}
                   label="Loans"
                   leftSection={<IconClipboard size={24} />}
@@ -251,7 +256,7 @@ export default function App() {
                   active={value === "loans"}
                 />
                 <NavLink
-                  to="/items?limit=15"
+                  to="/items"
                   component={NavLinkRemix}
                   label="Items"
                   leftSection={<IconDeviceImac size={24} />}
@@ -259,7 +264,7 @@ export default function App() {
                   active={value === "items"}
                 />
                 <NavLink
-                  to="/people?limit=15"
+                  to="/people"
                   component={NavLinkRemix}
                   label="People"
                   leftSection={<IconUser size={24} />}
@@ -268,7 +273,7 @@ export default function App() {
                 />
               </AppShell.Navbar>
               <AppShell.Main w="100%" h="100dvh">
-                <Outlet />
+                {children}
               </AppShell.Main>
             </AppShell>
             <ScrollRestoration />
@@ -278,5 +283,23 @@ export default function App() {
         </MantineProvider>
       </body>
     </html>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+
+  return (
+    <Root>
+      <ErrorPage error={error} />
+    </Root>
+  );
+}
+
+export default function App() {
+  return (
+    <Root>
+      <Outlet />
+    </Root>
   );
 }

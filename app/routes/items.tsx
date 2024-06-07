@@ -1,136 +1,15 @@
-import { Prisma } from "@prisma/client";
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  MetaFunction,
-} from "@remix-run/node";
-import { Outlet } from "@remix-run/react";
+import { Modal } from "@mantine/core";
+import { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { typedjson } from "remix-typedjson";
+import DataPage from "~/DataPage";
+import CreateItemForm from "~/components/items/CreateItemForm";
 import { handleError } from "~/lib/db.server";
+import { useCreateModal } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
 import { PostItemFormData, itemWithTags } from "~/utils/types.server";
 
 export const meta: MetaFunction = () => {
   return [{ title: "Items | SJK Sign-Out" }];
-};
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-
-  const loanId = url.searchParams.get("loanId");
-  const qrCode = url.searchParams.get("qrCode");
-  const name = url.searchParams.get("name");
-  const type = url.searchParams.get("type");
-  const query = url.searchParams.get("q") || url.searchParams.get("query");
-  const limit = url.searchParams.get("limit");
-  const offset = url.searchParams.get("offset");
-  const display = url.searchParams.get("display");
-
-  const filter = query
-    ? {
-        ...(display === "outstanding"
-          ? { loans: { some: { dateReturned: null } } }
-          : display === "missing" && {
-              tags: {
-                some: {
-                  OR: [
-                    { name: "Lost" },
-                    { name: "Missing" },
-                    {
-                      name: "Broken",
-                    },
-                  ],
-                },
-              },
-            }),
-        OR: [
-          {
-            AND: query.split(" ").map((s) => ({
-              name: {
-                contains: s,
-              },
-            })),
-          },
-          {
-            tags: {
-              some: {
-                name: {
-                  contains: query,
-                },
-              },
-            },
-          },
-        ],
-        ...(loanId && {
-          loans: {
-            some: {
-              loanId: parseInt(loanId),
-            },
-          },
-        }),
-      }
-    : ({
-        ...(loanId && {
-          loans: {
-            some: {
-              loanId: parseInt(loanId),
-            },
-          },
-        }),
-        ...(qrCode && { qrCode: qrCode }),
-        ...(name && { name: name }),
-        ...(type && { type: type }),
-        ...(display === "outstanding"
-          ? { loans: { some: { dateReturned: null } } }
-          : display === "missing" && {
-              tags: {
-                some: {
-                  OR: [
-                    { name: "Lost" },
-                    { name: "Missing" },
-                    {
-                      name: "Broken",
-                    },
-                  ],
-                },
-              },
-            }),
-      } satisfies Prisma.ItemWhereInput);
-
-  return typedjson({
-    totalCount: await prisma.item.count({
-      where: { ...filter, loans: undefined, tags: undefined },
-    }),
-    outstandingCount: await prisma.item.count({
-      where: {
-        ...filter,
-        loans: { some: { dateReturned: null } },
-        tags: undefined,
-      },
-    }),
-    missingCount: await prisma.item.count({
-      where: {
-        ...filter,
-        loans: undefined,
-        tags: {
-          some: {
-            OR: [{ name: "Lost" }, { name: "Missing" }, { name: "Broken" }],
-          },
-        },
-      },
-    }),
-    items: await prisma.item.findMany({
-      include: itemWithTags.include,
-      where: filter,
-      orderBy: [
-        {
-          name: "asc",
-        },
-      ],
-      take: limit ? parseInt(limit) : undefined,
-      skip: offset ? parseInt(offset) : undefined,
-    }),
-  });
 };
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -198,5 +77,29 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Page() {
-  return <Outlet />;
+  const [opened, { open, close }] = useCreateModal();
+
+  return (
+    <>
+      <Modal
+        opened={opened}
+        onClose={close}
+        centered={true}
+        title={"Create New Item"}
+      >
+        <CreateItemForm
+          onSubmitted={(data) => {
+            close();
+          }}
+        />
+      </Modal>
+      <DataPage
+        path="items"
+        title="Items"
+        createLabel="Create New Item"
+        tabs={["overview", "list"]}
+        onCreateClick={open}
+      />
+    </>
+  );
 }

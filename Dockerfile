@@ -13,7 +13,7 @@ FROM base as deps
 WORKDIR /app
 
 ADD package.json ./
-RUN npm install --include=dev
+RUN npm install --include=dev --loglevel verbose
 
 # Setup production node_modules
 FROM base as production-deps

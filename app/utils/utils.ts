@@ -113,3 +113,5 @@ export const filterTags = (
 };
 
 //#endregion
+
+export const isNumeric = (value: string) => /^\d+$/.test(value);

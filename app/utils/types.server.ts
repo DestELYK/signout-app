@@ -76,6 +76,8 @@ export const loanWithTagsAndItems = Prisma.validator<Prisma.LoanDefaultArgs>()({
     ...loanWithTags.include,
     items: {
       select: {
+        dateLoaned: true,
+        dateReturned: true,
         item: {
           select: {
             id: true,

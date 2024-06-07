@@ -22,7 +22,7 @@ import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
-import { loader as personLoader } from "./people.$personId";
+import { loader as personLoader } from "./people_.$personId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -77,7 +77,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function Page() {
   const params = useParams();
   const personData = useTypedRouteLoaderData<typeof personLoader>(
-    "routes/people.$personId"
+    "routes/people_.$personId"
   );
   const data = useTypedLoaderData<typeof loader>();
 

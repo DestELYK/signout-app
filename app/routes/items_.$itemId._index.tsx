@@ -1,11 +1,11 @@
 import { Center, Flex, Skeleton, Text } from "@mantine/core";
 import { useTypedRouteLoaderData } from "remix-typedjson";
 import ItemInfoView from "~/components/items/ItemInfoView";
-import { loader as itemLoader } from "./items.$itemId";
+import { loader as itemLoader } from "./items_.$itemId";
 
 export default function Page() {
   const data = useTypedRouteLoaderData<typeof itemLoader>(
-    "routes/items.$itemId"
+    "routes/items_.$itemId"
   );
 
   return (

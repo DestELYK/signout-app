@@ -1,4 +1,6 @@
+import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { useSearchParams } from "@remix-run/react";
 import { useEffect } from "react";
 import { UseDataFunctionReturn, useTypedFetcher } from "remix-typedjson";
 
@@ -19,8 +21,6 @@ export function useFetcherWithErrorHandler<T>(
         });
 
         onError?.(fetcher.data.error);
-
-
       } else {
         onData(fetcher.data);
       }
@@ -31,3 +31,35 @@ export function useFetcherWithErrorHandler<T>(
 }
 
 export function usePreventNavigation() {}
+
+export function useCreateModal(): [
+  boolean,
+  { open: () => void; close: () => void }
+] {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [opened, { open, close }] = useDisclosure(false);
+
+  useEffect(() => {
+    searchParams.has("create") ? open() : close();
+  }, [searchParams.has("create")]);
+
+  return [
+    opened,
+    {
+      open: () => {
+        open();
+        setSearchParams((prev) => {
+          prev.set("create", "");
+          return prev;
+        });
+      },
+      close: () => {
+        close();
+        setSearchParams((prev) => {
+          prev.delete("create");
+          return prev;
+        });
+      },
+    },
+  ];
+}

@@ -13,7 +13,7 @@ import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
-import { loader as itemLoader } from "./items.$itemId";
+import { loader as itemLoader } from "./items_.$itemId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -74,7 +74,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function Page() {
   const params = useParams();
   const itemData = useTypedRouteLoaderData<typeof itemLoader>(
-    "routes/items.$itemId"
+    "routes/items_.$itemId"
   );
   const data = useTypedLoaderData<typeof loader>();
 

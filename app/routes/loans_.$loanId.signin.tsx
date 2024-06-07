@@ -27,7 +27,7 @@ import PersonPicker from "~/components/people/PersonPicker";
 import TagGroup from "~/components/tags/TagGroup";
 import { prisma } from "~/lib/prisma.server";
 import { PatchLoanFormData } from "~/utils/types.server";
-import { action, loader as loanLoader } from "./loans.$loanId";
+import { action, loader as loanLoader } from "./loans_.$loanId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.loanId, "Expected params.loanId");
@@ -57,6 +57,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     }),
   });
 };
+
+// TODO - fix issue with page not updating after signing-in items
 
 export default function Page() {
   const loanData = useTypedRouteLoaderData<typeof loanLoader>(

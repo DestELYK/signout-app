@@ -1,154 +1,15 @@
-import { Prisma } from "@prisma/client";
-import {
-  ActionFunctionArgs,
-  LoaderFunctionArgs,
-  MetaFunction,
-} from "@remix-run/node";
-import { Outlet } from "@remix-run/react";
+import { Modal } from "@mantine/core";
+import { ActionFunctionArgs, MetaFunction } from "@remix-run/node";
 import { typedjson } from "remix-typedjson";
+import DataPage from "~/DataPage";
+import CreatePersonForm from "~/components/people/CreatePersonForm";
 import { handleError } from "~/lib/db.server";
+import { useCreateModal } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
 import { PostPersonFormData, personWithTags } from "~/utils/types.server";
 
 export const meta: MetaFunction = () => {
   return [{ title: "People | SJK Sign-Out" }];
-};
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const url = new URL(request.url);
-
-  const firstName = url.searchParams.get("firstName");
-  const lastName = url.searchParams.get("lastName");
-  const nickname = url.searchParams.get("nickname");
-  const qrCode = url.searchParams.get("qrCode");
-  const query = url.searchParams.get("q") || url.searchParams.get("query");
-  const limit = url.searchParams.get("limit");
-  const offset = url.searchParams.get("offset");
-  const display = url.searchParams.get("display");
-
-  const filter: Prisma.PersonWhereInput = query
-    ? ({
-        ...(display === "students"
-          ? {
-              tags: {
-                some: {
-                  AND: [
-                    {
-                      category: "Person Role",
-                    },
-                    {
-                      NOT: {
-                        name: "Staff",
-                      },
-                    },
-                  ],
-                },
-              },
-            }
-          : display === "staff" && { tags: { some: { name: "Staff" } } }),
-        OR: [
-          {
-            firstName: {
-              contains: query,
-            },
-          },
-          {
-            lastName: {
-              contains: query,
-            },
-          },
-          {
-            nickname: {
-              contains: query,
-            },
-          },
-          {
-            AND: {
-              OR: [
-                { firstName: { contains: query.split(" ", 2)[0] } },
-                { nickname: { contains: query.split(" ", 2)[0] } },
-              ],
-              lastName: { contains: query.split(" ", 2)[1] },
-            },
-          },
-        ],
-      } satisfies Prisma.PersonWhereInput)
-    : {
-        ...(firstName && { firstName: firstName }),
-        ...(lastName && { lastName: lastName }),
-        ...(nickname && { nickname: nickname }),
-        ...(qrCode && { qrCode: qrCode }),
-        ...(display === "students"
-          ? {
-              tags: {
-                some: {
-                  AND: [
-                    {
-                      category: "Person Role",
-                    },
-                    {
-                      NOT: {
-                        name: "Staff",
-                      },
-                    },
-                  ],
-                },
-              },
-            }
-          : display === "staff" && { tags: { some: { name: "Staff" } } }),
-      };
-
-  return typedjson({
-    totalCount: await prisma.person.count({
-      where: { ...filter, tags: undefined },
-    }),
-    studentCount: await prisma.person.count({
-      where: {
-        ...filter,
-        tags: {
-          some: {
-            AND: [
-              {
-                category: "Person Role",
-              },
-              {
-                NOT: {
-                  name: "Staff",
-                },
-              },
-            ],
-          },
-        },
-      },
-    }),
-    staffCount: await prisma.person.count({
-      where: {
-        ...filter,
-        tags: {
-          some: {
-            name: "Staff",
-          },
-        },
-      },
-    }),
-    people: await prisma.person.findMany({
-      where: filter,
-      include: personWithTags.include,
-      orderBy: [
-        {
-          firstName: "asc",
-        },
-        {
-          lastName: "asc",
-        },
-        {
-          nickname: "asc",
-        },
-      ],
-      take: limit ? parseInt(limit) : undefined,
-      skip: offset ? parseInt(offset) : undefined,
-    }),
-  });
 };
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -203,5 +64,29 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Page() {
-  return <Outlet />;
+  const [opened, { open, close }] = useCreateModal();
+
+  return (
+    <>
+      <Modal
+        opened={opened}
+        onClose={close}
+        centered={true}
+        title={"Create New Person"}
+      >
+        <CreatePersonForm
+          onSubmitted={(data) => {
+            close();
+          }}
+        />
+      </Modal>
+      <DataPage
+        path="people"
+        title="People"
+        createLabel="Create New Person"
+        tabs={["overview", "list"]}
+        onCreateClick={open}
+      />
+    </>
+  );
 }

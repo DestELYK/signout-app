@@ -1,16 +1,20 @@
+import { Center } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { useTypedRouteLoaderData } from "remix-typedjson";
-import { LoanList } from "~/components/loans/LoanList";
 import { loader as loansLoader } from "./loans";
 
 export default function Page() {
+  const matches = useMediaQuery("(min-width: 62em)");
   const data = useTypedRouteLoaderData<typeof loansLoader>("routes/loans");
 
   return (
-    <LoanList
-      count={data?.totalCount ?? 0}
-      outstandingCount={data?.outCount ?? 0}
-      returnedCount={data?.inCount ?? 0}
-      loans={(data && data.loans) || []}
-    />
+    <>
+      <Center h="100%" visibleFrom="md">
+        Dashboard content goes here
+      </Center>
+      <Center h="100%" hiddenFrom="md">
+        Dashboard content goes here
+      </Center>
+    </>
   );
 }

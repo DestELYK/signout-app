@@ -282,7 +282,7 @@ export default function CreateLoanForm({ onSubmitted }: CreateLoanFormProps) {
         />
         <DateTimePicker
           valueFormat="DD MMM, YYYY @ hh:mm A"
-          label="Date Returned"
+          label="Date Loaned"
           description="Optional date, will default to current time if left blank"
           placeholder={formatDate(new Date())}
           onClick={() =>

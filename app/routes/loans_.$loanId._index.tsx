@@ -1,10 +1,10 @@
 import { Center, Skeleton, Text } from "@mantine/core";
 import { useTypedRouteLoaderData } from "remix-typedjson";
 import LoanInfoView from "~/components/loans/LoanInfoView";
-import { loader } from "./loans.$loanId";
+import { loader } from "./loans_.$loanId";
 
 export default function Page() {
-  const data = useTypedRouteLoaderData<typeof loader>("routes/loans.$loanId");
+  const data = useTypedRouteLoaderData<typeof loader>("routes/loans_.$loanId");
 
   return (
     <>

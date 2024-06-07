@@ -11,7 +11,7 @@ import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 import { personWithTags } from "~/utils/types.server";
-import { formatFullName } from "~/utils/utils";
+import { formatFullName, isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [{ title: `${formatFullName(data.person)} | SJK Sign-Out` }];
@@ -20,18 +20,23 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.personId, "Expected params.personId");
 
+  if (!isNumeric(params.personId)) {
+    throw new Response(null, { status: 404 });
+  }
+
   try {
-    
     const person = await prisma.person.findFirstOrThrow({
-    where: { id: parseInt(params.personId) },
-    include: personWithTags.include,
-  })
+      where: { id: Number(params.personId) },
+      include: personWithTags.include,
+    });
 
     // Gather list of loaned items
     const loanedItems = await prisma.loanedItem.findMany({
-      where: { loan: {
-        personId: Number(params.personId)
-      }},
+      where: {
+        loan: {
+          personId: Number(params.personId),
+        },
+      },
       orderBy: [{ dateLoaned: "desc" }, { dateReturned: "desc" }],
       include: {
         loan: {
@@ -47,16 +52,19 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
         item: {
           include: {
             tags: true,
-          }
+          },
         },
         returnedBy: true,
       },
     });
 
-    const outstandingItems =
-      loanedItems.filter((li) => !li.dateReturned).length;
+    const outstandingItems = loanedItems.filter(
+      (li) => !li.dateReturned
+    ).length;
 
-    const lostItems = loanedItems.filter((li) => li.item.tags.some((t) => t.name === "Lost")).length;
+    const lostItems = loanedItems.filter((li) =>
+      li.item.tags.some((t) => t.name === "Lost")
+    ).length;
 
     const lastLoan = loanedItems[0];
 
@@ -64,7 +72,8 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     let averageReturnTime = 0;
     loanedItems.forEach((li) => {
       if (li.dateReturned) {
-        averageReturnTime += li.dateReturned.getTime() - li.dateLoaned.getTime();
+        averageReturnTime +=
+          li.dateReturned.getTime() - li.dateLoaned.getTime();
       }
     });
 
@@ -84,12 +93,15 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     const error = handleError(e, "no item was returned");
 
     if (error) {
-      return typedjson({ error: error, person: undefined, 
+      return typedjson({
+        error: error,
+        person: undefined,
         outstanding: undefined,
         lostItems: undefined,
         totalItems: undefined,
         averageReturnTime: undefined,
-        lastLoan: undefined, });
+        lastLoan: undefined,
+      });
     } else {
       throw new Response(String(e), {
         status: 500,

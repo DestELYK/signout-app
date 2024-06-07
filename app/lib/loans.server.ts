@@ -1,0 +1,197 @@
+import { Prisma } from "@prisma/client";
+import {
+  LoanWithTagsAndItems,
+  loanWithTagsAndItems,
+} from "~/utils/types.server";
+import { isNumeric } from "~/utils/utils";
+import { prisma } from "./prisma.server";
+
+export const getLoans = async (
+  filters: {
+    query?: string;
+    status?: "outstanding" | "returned";
+    person?: string;
+    items?: string;
+  },
+  limit?: number,
+  offset?: number
+): Promise<{
+  loans?: LoanWithTagsAndItems[];
+  totalCount?: number;
+  error?: string;
+}> => {
+  try {
+    const filter: Prisma.LoanWhereInput =
+      filters.query && filters.query.length > 0
+        ? {
+            ...(filters.status === "outstanding"
+              ? { items: { some: { dateReturned: null } } }
+              : filters.status === "returned" && {
+                  items: { none: { dateReturned: null } },
+                }),
+            OR: [
+              {
+                person: {
+                  OR: [
+                    {
+                      firstName: {
+                        contains: filters.query,
+                      },
+                    },
+                    {
+                      lastName: {
+                        contains: filters.query,
+                      },
+                    },
+                    {
+                      nickname: {
+                        contains: filters.query,
+                      },
+                    },
+                    {
+                      AND: {
+                        OR: [
+                          {
+                            firstName: {
+                              contains: filters.query.split(" ", 2)[0],
+                            },
+                          },
+                          {
+                            nickname: {
+                              contains: filters.query.split(" ", 2)[0],
+                            },
+                          },
+                        ],
+                        lastName: { contains: filters.query.split(" ", 2)[1] },
+                      },
+                    },
+                  ],
+                },
+              },
+              {
+                items: {
+                  some: {
+                    item: {
+                      AND: filters.query.split(" ").map((s) => ({
+                        name: {
+                          contains: s,
+                        },
+                      })),
+                    },
+                  },
+                },
+              },
+            ],
+          }
+        : {
+            person: filters.person
+              ? {
+                  OR: [
+                    {
+                      firstName: {
+                        contains: filters.person,
+                      },
+                    },
+                    {
+                      lastName: {
+                        contains: filters.person,
+                      },
+                    },
+                    {
+                      nickname: {
+                        contains: filters.person,
+                      },
+                    },
+                    {
+                      AND: {
+                        OR: [
+                          {
+                            firstName: {
+                              contains: filters.person.split(" ", 2)[0],
+                            },
+                          },
+                          {
+                            nickname: {
+                              contains: filters.person.split(" ", 2)[0],
+                            },
+                          },
+                        ],
+                        lastName: { contains: filters.person.split(" ", 2)[1] },
+                      },
+                    },
+                  ],
+                }
+              : undefined,
+            items:
+              filters.status || filters.items
+                ? {
+                    some: {
+                      item: filters.items
+                        ? {
+                            AND: filters.items.split(" ").map((s) => ({
+                              name: {
+                                contains: s,
+                              },
+                            })),
+                          }
+                        : undefined,
+                      dateReturned:
+                        filters.status === "outstanding"
+                          ? null
+                          : filters.status === "returned"
+                          ? { not: null }
+                          : undefined,
+                    },
+                  }
+                : undefined,
+          };
+
+    const loans = await prisma.loan.findMany({
+      where: filter,
+      include: loanWithTagsAndItems.include,
+      orderBy: {
+        id: "desc",
+      },
+      take: limit,
+      skip: offset,
+    });
+
+    return {
+      loans: loans,
+      totalCount: await prisma.loan.count({ where: filter }),
+    };
+  } catch (e) {
+    console.error(`Failed to get loans`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getLoanById = async (
+  id: string
+): Promise<{ loan?: LoanWithTagsAndItems; error?: string }> => {
+  try {
+    if (!isNumeric(id)) throw new Error("Invalid ID");
+
+    const loan = await prisma.loan.findUnique({
+      where: {
+        id: Number(id),
+      },
+      include: loanWithTagsAndItems.include,
+    });
+
+    if (!loan) throw new Error("Loan not found");
+
+    return { loan: loan };
+  } catch (e) {
+    console.error(`Failed to get loan by id`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};

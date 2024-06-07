@@ -2,7 +2,7 @@ import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useTypedFetcher } from "remix-typedjson";
-import { loader as itemsLoader } from "~/routes/items";
+import { loader as itemsLoader } from "~/routes/items.list";
 import { ItemWithTags } from "~/utils/types.server";
 import { itemNameValidator, qrCodeValidator } from "~/utils/validators.client";
 import SearchCombobox, { SearchFormValues } from "../base/SearchCombobox";
@@ -70,12 +70,12 @@ export default function ItemSearchCombobox({
     if (search && (search.name || search.qrCode)) {
       const searchParams = search.qrCode
         ? `qrCode=${search.qrCode}`
-        : `query=${search.name}`;
+        : `q=${search.name}`;
 
       console.log("Searching for items with query: %s", searchParams);
 
-      searchItemsFetcher.load(`/items?${searchParams}`);
-    } else {
+      searchItemsFetcher.load(`/items/list?${searchParams}`);
+    } else if (searchItemsFetcher.data) {
       searchItemsFetcher.data.items = [];
     }
   }

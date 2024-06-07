@@ -19,7 +19,7 @@ import DateTimeline, { TimelineItemValues } from "~/components/DateTimeline";
 import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
 import { prisma } from "~/lib/prisma.server";
 import { filterTags } from "~/utils/utils";
-import { loader as itemLoader } from "./items.$itemId";
+import { loader as itemLoader } from "./items_.$itemId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.itemId, "Expected params.itemId");
@@ -52,8 +52,9 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 };
 
 export default function Page() {
-  const parentData =
-    useTypedRouteLoaderData<typeof itemLoader>(`routes/items.$itemId`);
+  const parentData = useTypedRouteLoaderData<typeof itemLoader>(
+    `routes/items_.$itemId`
+  );
   const data = useTypedLoaderData<typeof loader>();
 
   const returnedLoans = data.loans.filter((l) => l.dateReturned !== null);

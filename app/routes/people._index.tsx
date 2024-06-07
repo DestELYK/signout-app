@@ -1,16 +1,14 @@
-import { useTypedRouteLoaderData } from "remix-typedjson";
-import PeopleList from "~/components/people/PeopleList";
-import { loader } from "./people";
+import { Center } from "@mantine/core";
 
 export default function Page() {
-  const data = useTypedRouteLoaderData<typeof loader>("routes/people");
-
   return (
-    <PeopleList
-      people={(data && data.people) || []}
-      totalCount={data?.totalCount ?? 0}
-      studentCount={data?.studentCount ?? 0}
-      staffCount={data?.staffCount ?? 0}
-    />
+    <>
+      <Center h="100%" visibleFrom="md">
+        Dashboard content goes here
+      </Center>
+      <Center h="100%" hiddenFrom="md">
+        Dashboard content goes here
+      </Center>
+    </>
   );
 }

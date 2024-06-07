@@ -2,7 +2,7 @@ import { Divider, Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 import { useTypedFetcher } from "remix-typedjson";
-import { loader as peopleLoader } from "~/routes/people";
+import { loader as peopleLoader } from "~/routes/people.list";
 import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 import {
@@ -71,12 +71,12 @@ export default function PersonSearchCombobox({
     if (search && (search.name || search.qrCode)) {
       const searchParams = search.qrCode
         ? `qrCode=${search.qrCode}`
-        : `query=${search.name}`;
+        : `q=${search.name}`;
 
       console.log("Searching for people with query: %s", searchParams);
 
-      searchPeopleFetcher.load(`/people?${searchParams}`);
-    } else {
+      searchPeopleFetcher.load(`/people/list?${searchParams}`);
+    } else if (searchPeopleFetcher.data) {
       searchPeopleFetcher.data.people = [];
     }
   }
