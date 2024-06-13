@@ -1,4 +1,4 @@
-import { Box, Center, Loader } from "@mantine/core";
+import { Center, Loader } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
@@ -20,6 +20,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const types = searchParams.get("type");
   const type = types ? types.split(",") : undefined;
 
+  const itemStatuses =
+    (await prisma.tag.findMany({
+      where: {
+        category: "Item Status",
+      },
+    })) ?? [];
+
   return typedjson({
     ...(await getItems(
       {
@@ -34,13 +41,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     statuses: [
       "Outstanding",
       "Available",
-      ...(
-        await prisma.tag.findMany({
-          where: {
-            category: "Item Status",
-          },
-        })
-      ).map((tag) => tag.name),
+      ...itemStatuses.map((tag) => tag.name),
     ],
     types: await prisma.tag.findMany({
       where: {
@@ -59,17 +60,13 @@ export default function Page() {
       <Loader />
     </Center>
   ) : matches ? (
-    <Box w="100%" mb={4} visibleFrom="md">
-      <ItemTable
-        data={data?.items}
-        totalCount={data?.totalCount}
-        statuses={data.statuses}
-        types={data.types}
-      />
-    </Box>
+    <ItemTable
+      data={data?.items}
+      totalCount={data?.totalCount}
+      statuses={data.statuses}
+      types={data.types}
+    />
   ) : (
-    <Box w="100%" hiddenFrom="md">
-      <ItemList items={data?.items} totalCount={data?.totalCount} />
-    </Box>
+    <ItemList items={data?.items} totalCount={data?.totalCount} />
   );
 }

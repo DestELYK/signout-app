@@ -18,9 +18,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLocation,
-  useNavigate,
   useNavigation,
-  useRevalidator,
   useRouteError,
 } from "@remix-run/react";
 
@@ -90,9 +88,9 @@ function Root({
 }) {
   const navigation = useNavigation();
   const location = useLocation();
-  const navigate = useNavigate();
-  const revalidator = useRevalidator();
-  const [opened, { toggle }] = useDisclosure();
+  // const navigate = useNavigate();
+  // const revalidator = useRevalidator();
+  const [opened, { open, close, toggle }] = useDisclosure();
   const [_offline, setOffline] = useState<boolean | undefined>(
     offline ? true : undefined
   );
@@ -188,7 +186,7 @@ function Root({
             <AppShell
               header={{ height: 60 + (offline ? 20 : 0) }}
               navbar={{
-                width: { base: 200, lg: 300 },
+                width: { base: 200, md: 150 },
                 breakpoint: "sm",
                 collapsed: { mobile: !opened },
               }}
@@ -244,7 +242,7 @@ function Root({
                   component={NavLinkRemix}
                   label="Home"
                   leftSection={<IconHome size={24} />}
-                  onClick={toggle}
+                  onClick={close}
                   active={value === "home"}
                 />
                 <NavLink
@@ -252,7 +250,7 @@ function Root({
                   component={NavLinkRemix}
                   label="Loans"
                   leftSection={<IconClipboard size={24} />}
-                  onClick={toggle}
+                  onClick={close}
                   active={value === "loans"}
                 />
                 <NavLink
@@ -260,7 +258,7 @@ function Root({
                   component={NavLinkRemix}
                   label="Items"
                   leftSection={<IconDeviceImac size={24} />}
-                  onClick={toggle}
+                  onClick={close}
                   active={value === "items"}
                 />
                 <NavLink
@@ -268,7 +266,7 @@ function Root({
                   component={NavLinkRemix}
                   label="People"
                   leftSection={<IconUser size={24} />}
-                  onClick={toggle}
+                  onClick={close}
                   active={value === "people"}
                 />
               </AppShell.Navbar>

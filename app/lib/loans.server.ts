@@ -21,6 +21,14 @@ export const getLoans = async (
   error?: string;
 }> => {
   try {
+    filters.query = filters.query?.trim().toLocaleLowerCase();
+    filters.person = filters.person?.trim().toLocaleLowerCase();
+    filters.items = filters.items?.trim().toLocaleLowerCase();
+    filters.status = filters.status?.trim().toLocaleLowerCase() as
+      | "outstanding"
+      | "returned"
+      | undefined;
+
     const filter: Prisma.LoanWhereInput =
       filters.query && filters.query.length > 0
         ? {

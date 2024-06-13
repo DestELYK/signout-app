@@ -3,12 +3,19 @@ import {
   Button,
   Group,
   SegmentedControl,
+  Space,
   Tabs,
   Title,
 } from "@mantine/core";
 import { upperFirst } from "@mantine/hooks";
-import { Outlet, useLocation, useNavigate } from "@remix-run/react";
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "@remix-run/react";
 import { IconPlus } from "@tabler/icons-react";
+import { useDesktopOnly } from "./lib/hooks";
 
 export interface DataPageProps {
   path: string;
@@ -25,8 +32,10 @@ export default function DataPage({
   createLabel = "New",
   onCreateClick,
 }: DataPageProps) {
+  const desktopOnly = useDesktopOnly();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   let currentLocation = location.pathname.split("/").pop();
 
@@ -43,15 +52,17 @@ export default function DataPage({
   };
 
   return (
-    <Box p="md">
-      <Group align="center" justify="space-between" pb="md">
+    <Box w="100%" h="calc(100dvh - 11rem)" p="md">
+      <Group align="center" justify="space-between" pb="md" visibleFrom="md">
         <Title order={1}>{title}</Title>
         <Button onClick={onCreateClick} rightSection={<IconPlus />}>
           {createLabel}
         </Button>
       </Group>
+
       <Tabs
         w="100%"
+        mb="sm"
         visibleFrom="md"
         value={currentLocation || tabs[0]}
         onChange={handleTabChange}
@@ -66,6 +77,7 @@ export default function DataPage({
       </Tabs>
       <SegmentedControl
         w="100%"
+        mb="sm"
         hiddenFrom="md"
         value={currentLocation || tabs[0]}
         onChange={handleTabChange}
@@ -76,7 +88,18 @@ export default function DataPage({
           };
         })}
       />
+
+      <Button
+        w="100%"
+        onClick={onCreateClick}
+        rightSection={<IconPlus />}
+        mb="md"
+        hiddenFrom="md"
+      >
+        {createLabel}
+      </Button>
       <Outlet />
+      <Space h="sm" />
     </Box>
   );
 }

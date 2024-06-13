@@ -1,4 +1,4 @@
-import { useDisclosure } from "@mantine/hooks";
+import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { useSearchParams } from "@remix-run/react";
 import { useEffect } from "react";
@@ -62,4 +62,10 @@ export function useCreateModal(): [
       },
     },
   ];
+}
+
+export function useDesktopOnly() {
+  const matches = useMediaQuery("(min-width: 62em)");
+
+  return matches;
 }

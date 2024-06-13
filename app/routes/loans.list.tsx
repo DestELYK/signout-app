@@ -1,9 +1,9 @@
-import { Box, Center, Loader } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { Center, Loader } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import { LoanList } from "~/components/loans/LoanList";
 import LoanTable from "~/components/tables/LoanTable";
+import { useDesktopOnly } from "~/lib/hooks";
 import { getLoans } from "~/lib/loans.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -32,20 +32,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Page() {
-  const matches = useMediaQuery("(min-width: 62em)");
+  const desktopOnly = useDesktopOnly();
   const data = useTypedLoaderData<typeof loader>();
 
-  return matches === undefined ? (
+  return desktopOnly === undefined ? (
     <Center w="100%" h="100%">
       <Loader />
     </Center>
-  ) : matches ? (
-    <Box w="100%" mb={4} visibleFrom="md">
-      <LoanTable data={data?.loans} totalCount={data?.totalCount} />
-    </Box>
+  ) : desktopOnly ? (
+    <LoanTable data={data?.loans} totalCount={data?.totalCount} />
   ) : (
-    <Box w="100%" hiddenFrom="md">
-      <LoanList loans={data?.loans} totalCount={data?.totalCount} />
-    </Box>
+    <LoanList loans={data?.loans} totalCount={data?.totalCount} />
   );
 }

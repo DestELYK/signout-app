@@ -20,6 +20,13 @@ export const getPeople = async (
   totalCount?: number;
   error?: string;
 }> => {
+  filters.firstName = filters.firstName?.trim().toLocaleLowerCase();
+  filters.lastName = filters.lastName?.trim().toLocaleLowerCase();
+  filters.nickname = filters.nickname?.trim().toLocaleLowerCase();
+  filters.query = filters.query?.trim().toLocaleLowerCase();
+  filters.qrCode = filters.qrCode?.trim().toLocaleLowerCase();
+  filters.roles = filters.roles?.map((r) => r.trim().toLocaleLowerCase());
+
   try {
     const filter: Prisma.PersonWhereInput =
       filters.query && filters.query.length > 0

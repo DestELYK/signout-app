@@ -1,4 +1,5 @@
 import { ActionIcon, Badge, Button, Group, Text, Tooltip } from "@mantine/core";
+import { upperFirst } from "@mantine/hooks";
 import { useNavigate, useSearchParams } from "@remix-run/react";
 import { IconClipboardCheck } from "@tabler/icons-react";
 import { MRT_ColumnDef } from "mantine-react-table";
@@ -7,6 +8,7 @@ import { LoanWithTagsAndItems } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import OutstandingBadge from "../OutstandingBadge";
 import TableView from "../base/TableView";
+import HighlightCell from "./HighlightCell";
 
 export interface LoanTableProps {
   data: LoanWithTagsAndItems[] | undefined;
@@ -28,10 +30,11 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
       {
         id: "status",
         header: "Status",
-        size: 10,
+        size: 120,
         filterVariant: "select",
         mantineFilterSelectProps: {
           data: ["Outstanding", "Returned"],
+          style: { minWidth: 120 },
         },
         accessorFn: (loan) => {
           return loan.items.some((item) => !item.dateReturned)
@@ -47,34 +50,22 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
         },
       },
       {
-        accessorKey: "person",
+        id: "person",
         header: "Person",
         size: 150,
-        filterFn: (row, query) =>
-          formatFullName(row.original.person).includes(query),
         accessorFn: (loan) => {
           return formatFullName(loan.person);
         },
-        Cell: ({ row, renderedCellValue }) => (
-          <Text lineClamp={1} size="sm">
-            {renderedCellValue}
-          </Text>
-        ),
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
-        accessorKey: "items",
+        id: "items",
         header: "Items",
         size: 150,
-        filterFn: (row, query) =>
-          row.original.items.some((item) => item.item.name.includes(query)),
         accessorFn: (loan) => {
           return loan.items.map((item) => item.item.name).join(", ");
         },
-        Cell: ({ renderedCellValue }) => (
-          <Text size="sm" lineClamp={2}>
-            {renderedCellValue}
-          </Text>
-        ),
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "createdDate",
@@ -82,18 +73,22 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
         enableColumnFilter: false,
         mantineFilterDateInputProps: {},
         size: 200,
-        Cell: ({ row }) => (
-          <Text size="sm" lineClamp={1}>
-            {formatDate(row.original.createdDate, {
-              month: "long",
-              day: "2-digit",
-              year: "numeric",
-            })}
-            <b>{` (${dateDiff({
-              date: row.original.createdDate,
-            })})`}</b>
-          </Text>
-        ),
+        Cell: ({ cell }) => {
+          const date = cell.getValue<Date>();
+
+          return (
+            <Text size="sm" lineClamp={2}>
+              {formatDate(date, {
+                month: "long",
+                day: "2-digit",
+                year: "numeric",
+              })}
+              <b>{` (${dateDiff({
+                date: date,
+              })})`}</b>
+            </Text>
+          );
+        },
       },
       {
         accessorKey: "tags",
@@ -118,6 +113,20 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
       columns={columns}
       totalCount={totalCount}
       columnOrder={["id", "status", "person", "items", "createdDate", "tags"]}
+      columnFilters={[
+        { id: "status", type: "string" },
+        { id: "person", type: "string" },
+        { id: "items", type: "array" },
+      ]}
+      handleColumnFilter={(id, value, type) => {
+        if (id === "status") {
+          return type === "get"
+            ? upperFirst(value as string)
+            : (value as string).toLocaleLowerCase();
+        } else {
+          return value;
+        }
+      }}
       renderRowActions={(loan) => (
         <Group w="100%">
           {loan.row.original._count.items > 0 && (
@@ -135,61 +144,20 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
           )}
         </Group>
       )}
-      onColumnFilterChange={(filters) => {
-        setSearchParams(
-          (prev) => {
-            columns.forEach((column) => {
-              prev.delete(column.id ?? "");
-            });
-
-            filters.forEach((filter) => {
-              const value = String(filter.value).trim().toLowerCase();
-              prev.set(filter.id, value);
-            });
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
-      onGlobalFilterChange={(filter) => {
-        setSearchParams(
-          (prev) => {
-            if (!filter || filter === "") {
-              prev.delete("q");
-            } else {
-              prev.set("q", filter);
-            }
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
-      columnFilters={[
-        {
-          id: "status",
-          value: searchParams.get("status") ?? "",
-        },
-        {
-          id: "person",
-          value: searchParams.get("person") ?? "",
-        },
-        {
-          id: "items",
-          value: searchParams.get("items") ?? "",
-        },
-      ]}
       renderTopToolbarCustomActions={() => {
-        const viewingOutstanding = searchParams.get("status") === "outstanding";
+        const viewingOutstanding =
+          searchParams.get("status")?.toLocaleLowerCase() === "outstanding";
 
         return viewingOutstanding ? (
           <Button
             onClick={() =>
-              setSearchParams((prev) => {
-                prev.delete("status");
-                return prev;
-              })
+              setSearchParams(
+                (prev) => {
+                  prev.delete("status");
+                  return prev;
+                },
+                { replace: true }
+              )
             }
           >
             View All
@@ -197,10 +165,13 @@ export default function LoanTable({ data, totalCount }: LoanTableProps) {
         ) : (
           <Button
             onClick={() =>
-              setSearchParams((prev) => {
-                prev.set("status", "outstanding");
-                return prev;
-              })
+              setSearchParams(
+                (prev) => {
+                  prev.set("status", "outstanding");
+                  return prev;
+                },
+                { replace: true }
+              )
             }
           >
             View Outstanding

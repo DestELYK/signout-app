@@ -14,7 +14,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
-import { loader } from "~/routes/loans";
+import { loader } from "~/routes/loans.list";
 import { PersonWithTags } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 import LoanSimpleView, { LoanSimpleViewProps } from "../loans/LoanSimpleView";
@@ -61,14 +61,12 @@ export default function PersonPicker({
       outstandingPerson
     ) {
       setOutstandingLoans(
-        fetcher.data.loans.map((li) => ({
+        fetcher.data.loans?.map((li) => ({
           id: li.id,
           dateLoaned: li.createdDate,
           itemCount: li.items.length,
-        }))
+        })) ?? []
       );
-
-      console.log(fetcher.data.loans.length);
     }
 
     return () => {
@@ -123,7 +121,7 @@ export default function PersonPicker({
                 variant="outline"
                 onClick={(event) => {
                   fetcher.load(
-                    `/loans?display=outstanding&personId=${outstandingPerson.id}`
+                    `/loans/list?status=outstanding&personId=${outstandingPerson.id}`
                   );
                 }}
               >

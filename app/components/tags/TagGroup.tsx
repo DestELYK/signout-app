@@ -22,7 +22,7 @@ export default function TagGroup({
   const filteredTags = filterTags(tags, categories, blacklist);
 
   return filteredTags.length > 0 ? (
-    <Group {...groupProps}>
+    <Group justify="end" gap={2} {...groupProps}>
       {filteredTags.slice(0, limit).map((t) => (
         <Badge key={t.id} color={t.color} autoContrast {...badgeProps}>
           {t.name}

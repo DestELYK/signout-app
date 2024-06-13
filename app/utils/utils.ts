@@ -1,15 +1,19 @@
 import { Tag } from "@prisma/client";
 import dayjs from "dayjs";
 
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import duration from "dayjs/plugin/duration.js";
 import isToday from "dayjs/plugin/isToday.js";
 import isYesterday from "dayjs/plugin/isYesterday.js";
+import localeData from "dayjs/plugin/localeData.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
 
 dayjs.extend(duration);
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
 dayjs.extend(relativeTime);
+dayjs.extend(customParseFormat);
+dayjs.extend(localeData);
 
 //#region Date Utils
 

@@ -1,4 +1,5 @@
 import { Badge, Text } from "@mantine/core";
+import { upperFirst } from "@mantine/hooks";
 import { Tag } from "@prisma/client";
 import { useNavigate, useSearchParams } from "@remix-run/react";
 import { MRT_ColumnDef } from "mantine-react-table";
@@ -7,6 +8,7 @@ import { ItemWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 import { createOutstandingTag } from "../OutstandingBadge";
 import TableView from "../base/TableView";
+import HighlightCell from "./HighlightCell";
 
 export interface ItemTableProps {
   data: ItemWithTags[] | undefined;
@@ -37,10 +39,11 @@ export default function ItemTable({
       {
         id: "status",
         header: "Status",
-        size: 10,
+        size: 150,
         filterVariant: "select",
         mantineFilterSelectProps: {
           data: statuses,
+          style: { minWidth: 150 },
         },
         accessorFn: (item) => {
           const itemStatus = item.tags.find(
@@ -66,12 +69,7 @@ export default function ItemTable({
         accessorKey: "name",
         header: "Name",
         size: 150,
-        filterFn: (row, query) => row.original.name.includes(query),
-        Cell: ({ row, renderedCellValue }) => (
-          <Text lineClamp={1} size="sm">
-            {renderedCellValue}
-          </Text>
-        ),
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "type",
@@ -101,7 +99,7 @@ export default function ItemTable({
         mantineFilterDateInputProps: {},
         size: 200,
         Cell: ({ row }) => (
-          <Text size="sm" lineClamp={1}>
+          <Text size="sm" lineClamp={2}>
             {formatDate(row.original.createdDate, {
               month: "long",
               day: "2-digit",
@@ -162,47 +160,20 @@ export default function ItemTable({
       columns={columns}
       totalCount={totalCount}
       columnOrder={["id", "status", "name", "type", "createdDate", "tags"]}
-      onColumnFilterChange={(filters) => {
-        setSearchParams(
-          (prev) => {
-            columns.forEach((column) => {
-              prev.delete(column.id ?? "");
-            });
-
-            filters.forEach((filter) => {
-              const value = String(filter.value).trim().toLowerCase();
-              prev.set(filter.id, value);
-            });
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
-      onGlobalFilterChange={(filter) => {
-        setSearchParams(
-          (prev) => {
-            if (!filter || filter === "") {
-              prev.delete("q");
-            } else {
-              prev.set("q", filter);
-            }
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
       columnFilters={[
-        {
-          id: "name",
-          value: searchParams.get("name") ?? "",
-        },
-        {
-          id: "type",
-          value: searchParams.get("type") ?? "",
-        },
+        { id: "status", type: "string" },
+        { id: "name", type: "string" },
+        { id: "type", type: "array" },
       ]}
+      handleColumnFilter={(id, value, type) => {
+        if (id === "status") {
+          return type === "get"
+            ? upperFirst(value as string)
+            : (value as string).toLocaleLowerCase();
+        } else {
+          return value;
+        }
+      }}
       onRowClick={(item) => {
         navigate(`/items/${item.id}`);
       }}

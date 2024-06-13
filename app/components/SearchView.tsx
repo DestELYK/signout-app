@@ -34,14 +34,7 @@ export default function SearchView({
   }
 
   return (
-    <Flex
-      w="100%"
-      direction="column"
-      align="center"
-      wrap="nowrap"
-      gap="sm"
-      p="sm"
-    >
+    <Flex w="100%" direction="column" align="center" wrap="nowrap" gap="sm">
       <Flex w="100%" direction="row" align="center" gap="xs">
         <TextInput
           data-autofocus
@@ -52,7 +45,14 @@ export default function SearchView({
             loading ? (
               <Loader size="xs" />
             ) : (
-              <CloseButton onClick={() => onChanged("", "")} />
+              query.length > 0 && (
+                <CloseButton
+                  onClick={() => {
+                    setQuery("");
+                    onChanged("", qrCode);
+                  }}
+                />
+              )
             )
           }
           placeholder={placeholder}

@@ -3,21 +3,27 @@ import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
   MRT_ColumnOrderState,
+  MRT_PaginationState,
   MRT_RowData,
   MRT_TableOptions,
   MantineReactTable,
+  useMantineReactTable,
 } from "mantine-react-table";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ITEMS_PER_PAGE } from "~/utils/consts.server";
 
 export interface TableViewProps<T extends MRT_RowData> {
   data: T[] | undefined;
   columns: MRT_ColumnDef<T>[];
   totalCount?: number;
   columnOrder?: MRT_ColumnOrderState;
-  columnFilters?: MRT_ColumnFiltersState;
+  columnFilters?: { id: string; type: "string" | "array" }[];
+  handleColumnFilter?: (
+    id: string,
+    value: string | string[],
+    type: "set" | "get"
+  ) => string | string[] | undefined;
   onRowClick?: (row: T) => void;
-  onGlobalFilterChange?: (filter: string) => void;
-  onColumnFilterChange?: (filters: MRT_ColumnFiltersState) => void;
   renderRowActions?: MRT_TableOptions<T>["renderRowActions"];
   renderDetailPanel?: MRT_TableOptions<T>["renderDetailPanel"];
   renderTopToolbarCustomActions?: MRT_TableOptions<T>["renderTopToolbarCustomActions"];
@@ -27,114 +33,252 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
   data,
   columns,
   totalCount,
+  columnOrder,
   columnFilters,
+  handleColumnFilter,
   onRowClick,
-  onGlobalFilterChange,
-  onColumnFilterChange,
   renderRowActions,
   renderDetailPanel,
   renderTopToolbarCustomActions,
 }: TableViewProps<T>) {
   const navigation = useNavigation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams(
-    new URLSearchParams({
-      limit: "10",
-      page: "0",
-    })
-  );
-  const [pagination, setPagination] = useState({
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pagination, setPagination] = useState<MRT_PaginationState>({
     pageSize: searchParams.get("limit")
       ? Number(searchParams.get("limit"))
-      : 10,
+      : ITEMS_PER_PAGE,
     pageIndex: searchParams.get("page") ? Number(searchParams.get("page")) : 0,
   });
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [_columnFilters, _setColumnFilters] = useState<MRT_ColumnFiltersState>(
+  const [globalFilter, setGlobalFilter] = useState<string | undefined>(
+    undefined
+  );
+
+  const [enableColumnFilters, setEnableColumnFilters] = useState<boolean>(true);
+
+  const pageSize = searchParams.get("limit");
+  const pageIndex = searchParams.get("page");
+
+  useEffect(() => {
+    if (
+      (pageSize && pagination.pageSize != Number(pageSize)) ||
+      (pageIndex && pagination.pageIndex != Number(pageIndex))
+    ) {
+      setPagination((prev) => {
+        if (pageSize && prev.pageSize != Number(pageSize)) {
+          prev.pageSize = Number(pageSize);
+        }
+        if (pageIndex && prev.pageIndex != Number(pageIndex)) {
+          prev.pageIndex = Number(pageIndex);
+        }
+        return prev;
+      });
+    }
+  }, [pageSize, pageIndex]);
+
+  const searchQuery = searchParams.get("q");
+
+  useEffect(() => {
+    if (searchQuery !== globalFilter) {
+      setGlobalFilter(searchQuery ?? undefined);
+    }
+  }, [searchQuery]);
+
+  const [_columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>(
     []
   );
 
-  useEffect(() => {
-    const pageSize = searchParams.get("limit");
-    const pageIndex = searchParams.get("page");
+  const filters = useMemo(
+    () =>
+      columnFilters?.map((filter) => {
+        const param = searchParams.get(filter.id);
 
-    if (
-      pageSize !== pagination.pageSize.toString() ||
-      pageIndex !== pagination.pageIndex.toString()
-    ) {
-      setSearchParams(
-        (prev) => {
-          prev.set("limit", pagination.pageSize.toString());
-          prev.set("page", pagination.pageIndex.toString());
-          return prev;
-        },
-        { replace: true }
-      );
-    }
-  }, [pagination.pageSize, pagination.pageIndex]);
-
-  useEffect(() => {
-    onGlobalFilterChange?.(globalFilter);
-  }, [globalFilter]);
-
-  useEffect(() => {
-    onColumnFilterChange?.(_columnFilters);
-  }, [_columnFilters]);
-
-  useEffect(() => {
-    _setColumnFilters(_columnFilters);
-  }, [columnFilters]);
-
-  return (
-    <MantineReactTable
-      data={data ?? []}
-      columns={columns}
-      getRowId={(row) => row.id.toString()}
-      enableColumnResizing={false}
-      enableDensityToggle={false}
-      enableRowDragging={false}
-      enableColumnOrdering={false}
-      enableColumnActions={false}
-      enableSorting={false}
-      enableHiding={false}
-      enableColumnFilters={true}
-      manualFiltering={true}
-      manualPagination={true}
-      onGlobalFilterChange={setGlobalFilter}
-      onColumnFiltersChange={_setColumnFilters}
-      renderDetailPanel={renderDetailPanel ?? undefined}
-      enableTableFooter={true}
-      mantineTableContainerProps={{
-        style: { height: "calc(100dvh - 20rem)" },
-      }}
-      mantineTableBodyRowProps={(row) => ({
-        onClick: () => onRowClick?.(row.row.original),
-        style: {
-          cursor: onRowClick ? "pointer" : undefined,
-        },
-      })}
-      initialState={{
-        showGlobalFilter: true,
-        showColumnFilters: true,
-      }}
-      state={{
-        showLoadingOverlay: data === undefined,
-        showProgressBars: navigation.state === "loading",
-        pagination: pagination,
-        globalFilter: globalFilter,
-        columnFilters: _columnFilters,
-      }}
-      renderRowActions={renderRowActions}
-      renderTopToolbarCustomActions={renderTopToolbarCustomActions}
-      positionActionsColumn="last"
-      enableRowActions={renderRowActions ? true : false}
-      pageCount={Math.ceil(
-        totalCount ??
-          0 /
-            (searchParams.has("limit") ? Number(searchParams.get("limit")) : 30)
-      )}
-      rowCount={totalCount}
-      onPaginationChange={setPagination}
-    />
+        if (filter.type === "array") {
+          return {
+            id: filter.id,
+            value: param ? param.split(",") : null,
+          };
+        } else {
+          return {
+            id: filter.id,
+            value: param ? param : null,
+          };
+        }
+      }),
+    [searchParams]
   );
+
+  useEffect(() => {
+    const newFilters: MRT_ColumnFiltersState = [];
+
+    filters?.forEach((filter) => {
+      if (filter.value) {
+        newFilters.push({
+          id: filter.id,
+          value:
+            handleColumnFilter?.(filter.id, filter.value, "get") ??
+            filter.value,
+        });
+      }
+    }) ?? [];
+
+    if (newFilters != _columnFilters) {
+      setColumnFilters(newFilters);
+    }
+  }, [filters]);
+
+  const table = useMantineReactTable<T>({
+    data: data ?? [],
+    columns: columns,
+    getRowId: (row: T) => row.id.toString(),
+    enableColumnResizing: false,
+    enableDensityToggle: false,
+    enableRowDragging: false,
+    enableStickyHeader: true,
+    enableColumnOrdering: false,
+    enableColumnActions: false,
+    enableSorting: false,
+    enableHiding: false,
+    enableColumnFilters: enableColumnFilters,
+    manualFiltering: true,
+    manualPagination: true,
+    enableFilterMatchHighlighting: true,
+    renderDetailPanel: renderDetailPanel ?? undefined,
+    enableTableFooter: true,
+    mantineTableContainerProps: {
+      style: { height: "calc(100dvh - 20rem)", minHeight: 300 },
+    },
+    mantineTableBodyRowProps: (row) => ({
+      onClick: () => onRowClick?.(row.row.original),
+      style: {
+        cursor: onRowClick ? "pointer" : undefined,
+        fontSize: "sm",
+      },
+    }),
+    renderRowActions: renderRowActions,
+    renderTopToolbarCustomActions: renderTopToolbarCustomActions,
+    positionActionsColumn: "last",
+    enableRowActions: renderRowActions ? true : false,
+    pageCount: totalCount ?? 0,
+    rowCount: totalCount,
+    initialState: {
+      showGlobalFilter: true,
+      showColumnFilters: true,
+    },
+    state: {
+      showLoadingOverlay: data === undefined,
+      showProgressBars: navigation.state === "loading",
+      pagination: pagination,
+      globalFilter: globalFilter,
+      columnFilters: _columnFilters,
+      columnOrder: columnOrder,
+    },
+    onPaginationChange: (value) => {
+      const newValue = value instanceof Function ? value(pagination) : value;
+
+      if (
+        newValue.pageSize !== (pageSize ?? ITEMS_PER_PAGE) ||
+        newValue.pageIndex !== (pageIndex ?? 0)
+      ) {
+        setSearchParams(
+          (prev) => {
+            prev.set("limit", newValue.pageSize.toString());
+            prev.set("page", newValue.pageIndex.toString());
+            return prev;
+          },
+          { replace: true }
+        );
+      }
+    },
+    onGlobalFilterChange: (value) => {
+      const newValue = value instanceof Function ? value(searchQuery) : value;
+
+      if (newValue !== searchQuery) {
+        if (
+          newValue != undefined &&
+          typeof newValue === "string" &&
+          newValue !== ""
+        ) {
+          console.log("Clearing column filters due to global");
+          // clear filters when global filter is set
+          setColumnFilters([]);
+
+          columnFilters?.forEach((filter) => {
+            setSearchParams(
+              (prev) => {
+                prev.delete(filter.id);
+                return prev;
+              },
+              { replace: true }
+            );
+          });
+        }
+
+        setEnableColumnFilters(!newValue);
+
+        setGlobalFilter(newValue);
+        setSearchParams(
+          (prev) => {
+            if (newValue === undefined || newValue === "") {
+              prev.delete("q");
+            } else {
+              prev.set("q", newValue);
+            }
+            return prev;
+          },
+          { replace: true }
+        );
+      }
+    },
+    onColumnFiltersChange: (value) => {
+      const newValue =
+        value instanceof Function ? value(_columnFilters) : value;
+
+      const added = newValue.filter(
+        (filter) =>
+          !_columnFilters.find(
+            (f) => f.id === filter.id && f.value === filter.value
+          )
+      );
+
+      const removed = _columnFilters.filter(
+        (filter) =>
+          !newValue.find((f) => f.id === filter.id && f.value === filter.value)
+      );
+
+      if (added.length > 0 || removed.length > 0) {
+        console.log("Column filters changed", added, removed);
+        setColumnFilters(newValue);
+        setSearchParams(
+          (prev) => {
+            removed?.forEach((filter) => {
+              prev.delete(filter.id);
+            });
+
+            added.forEach((filter) => {
+              const newFilter = handleColumnFilter?.(
+                filter.id,
+                String(filter.value),
+                "set"
+              );
+
+              prev.set(
+                filter.id,
+                typeof newFilter === "string"
+                  ? newFilter
+                  : newFilter
+                  ? newFilter.join(",")
+                  : String(filter.value)
+              );
+            });
+
+            return prev;
+          },
+          { replace: true }
+        );
+      }
+    },
+  });
+
+  return <MantineReactTable table={table} />;
 }

@@ -1,4 +1,4 @@
-import { Flex, Highlight, Text, Title } from "@mantine/core";
+import { Flex, Highlight, Space, Text, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { IconArrowRight } from "@tabler/icons-react";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
@@ -37,7 +37,7 @@ export default function LoanListView({
   qrCode,
 }: LoanListViewProps) {
   return (
-    <Flex direction="row" align="center" justify="space-between">
+    <Flex direction="row" align="center" justify="space-between" gap="xs">
       <Flex w="100%" direction="column">
         <Flex
           direction="row"
@@ -76,8 +76,10 @@ export default function LoanListView({
             ...and {items.length - 2} other items
           </Text>
         )}
-        <Text size="xs" mt="sm">
-          Created: {formatDate(createdDate)} ({dateDiff({ date: createdDate })})
+        {items.length > 0 && <Space h="sm" />}
+        <Text size="xs">
+          Created: {formatDate(createdDate)}{" "}
+          <b>({dateDiff({ date: createdDate })})</b>
         </Text>
       </Flex>
       <IconArrowRight />

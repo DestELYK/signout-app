@@ -19,6 +19,12 @@ export const getItems = async (
   error?: string;
 }> => {
   try {
+    filters.query = filters.query?.trim().toLocaleLowerCase();
+    filters.qrCode = filters.qrCode?.trim().toLocaleLowerCase();
+    filters.name = filters.name?.trim().toLocaleLowerCase();
+    filters.status = filters.status?.trim().toLocaleLowerCase();
+    filters.types = filters.types?.map((t) => t.trim().toLocaleLowerCase());
+
     const tagFilter: Prisma.TagListRelationFilter | undefined =
       filters.types || filters.status
         ? filters.status === "outstanding"

@@ -7,9 +7,18 @@ import LoanListView from "./LoanListView";
 export interface LoanListProps {
   loans?: LoanWithTagsAndItems[];
   totalCount?: number;
+  withDetails?: boolean;
+  withSearch?: boolean;
+  initialItemsPerPage?: number;
 }
 
-export function LoanList({ loans, totalCount }: LoanListProps) {
+export function LoanList({
+  loans,
+  totalCount,
+  withDetails = true,
+  withSearch = true,
+  initialItemsPerPage,
+}: LoanListProps) {
   const navigation = useNavigation();
 
   return (
@@ -17,18 +26,20 @@ export function LoanList({ loans, totalCount }: LoanListProps) {
       data={loans}
       totalCount={totalCount}
       loading={navigation.state === "loading"}
+      withSearch={withSearch}
+      initialItemsPerPage={initialItemsPerPage}
     >
       {(item, query, qrCode) => (
         <UnstyledButton w="100%" component={NavLink} to={`/loans/${item.id}`}>
           <LoanListView
             id={item.id}
             person={item.person}
-            items={item.items.map((i) => i.item)}
+            items={withDetails ? item.items.map((i) => i.item) : []}
             tags={item.tags}
             createdDate={item.createdDate}
             outstandingLoans={item._count.items}
-            query={query}
-            qrCode={qrCode}
+            query={withDetails ? query : undefined}
+            qrCode={withDetails ? qrCode : undefined}
           />
         </UnstyledButton>
       )}

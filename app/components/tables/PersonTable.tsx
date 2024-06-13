@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { PersonWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 import TableView from "../base/TableView";
+import HighlightCell from "./HighlightCell";
 
 export interface PersonTableProps {
   data: PersonWithTags[] | undefined;
@@ -30,56 +31,48 @@ export default function PersonTable({
         header: "ID",
         enableColumnFilter: false,
         size: 5,
+        mantineTableBodyCellProps: {
+          style: { minWidth: 5, maxWidth: 5 },
+        },
       },
       {
         accessorKey: "firstName",
         header: "First Name",
-        size: 80,
-        filterFn: (row, query) => row.original.firstName.includes(query),
-        Cell: ({ row, renderedCellValue }) => (
-          <Text lineClamp={1} size="sm">
-            {renderedCellValue}
-          </Text>
-        ),
+        size: 150,
+        mantineFilterTextInputProps: {
+          style: { minWidth: 150 },
+        },
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "lastName",
         header: "Last Name",
-        size: 80,
-        filterFn: (row, query) => row.original.lastName.includes(query),
-        Cell: ({ row, renderedCellValue }) => (
-          <Text lineClamp={1} size="sm">
-            {renderedCellValue}
-          </Text>
-        ),
+        size: 150,
+        mantineFilterTextInputProps: {
+          style: { minWidth: 150 },
+        },
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "nickname",
         header: "Nickname",
-        size: 80,
-        filterFn: (row, query) =>
-          row.original.nickname?.includes(query) ?? false,
+        size: 150,
+        mantineFilterTextInputProps: {
+          style: { minWidth: 150 },
+        },
         accessorFn: (person) => person.nickname ?? "None",
-        Cell: ({ row, renderedCellValue }) => (
-          <Text
-            lineClamp={1}
-            size="sm"
-            {...(!row.original.nickname && { c: "dimmed" })}
-          >
-            {renderedCellValue}
-          </Text>
-        ),
+        Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "role",
         header: "Role",
         size: 100,
         filterVariant: "multi-select",
-        mantineFilterSelectProps: {
+        mantineFilterMultiSelectProps: {
           data: roleNames,
           placeholder: "Select Role",
+          style: { minWidth: 100, maxWidth: 200 },
         },
-        filterFn: (row, query) => row.original.firstName.includes(query),
         accessorFn: (person) => {
           return person.tags.find((tag) => tag.category === "Person Role");
         },
@@ -96,7 +89,7 @@ export default function PersonTable({
         mantineFilterDateInputProps: {},
         size: 200,
         Cell: ({ row }) => (
-          <Text size="sm" lineClamp={1}>
+          <Text size="sm" lineClamp={2}>
             {formatDate(row.original.createdDate, {
               month: "long",
               day: "2-digit",
@@ -151,56 +144,11 @@ export default function PersonTable({
         "createdDate",
         "tags",
       ]}
-      onColumnFilterChange={(filters) => {
-        setSearchParams(
-          (prev) => {
-            columns.forEach((column) => {
-              prev.delete(column.id ?? "");
-            });
-
-            filters.forEach((filter) => {
-              const value = String(filter.value).trim().toLowerCase();
-              if (value !== "") {
-                prev.set(filter.id, value);
-              }
-            });
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
-      onGlobalFilterChange={(filter) => {
-        setSearchParams(
-          (prev) => {
-            if (!filter || filter === "") {
-              prev.delete("q");
-            } else {
-              prev.set("q", filter);
-            }
-
-            return prev;
-          },
-          { replace: true }
-        );
-      }}
       columnFilters={[
-        {
-          id: "firstName",
-          value: searchParams.get("firstName") ?? "",
-        },
-        {
-          id: "lastName",
-          value: searchParams.get("lastName") ?? "",
-        },
-        {
-          id: "nickname",
-          value: searchParams.get("nickname") ?? "",
-        },
-        {
-          id: "role",
-          value: searchParams.get("role") ?? "",
-        },
+        { id: "firstName", type: "string" },
+        { id: "lastName", type: "string" },
+        { id: "nickname", type: "string" },
+        { id: "role", type: "array" },
       ]}
       onRowClick={(person) => {
         navigate(`/people/${person.id}`);

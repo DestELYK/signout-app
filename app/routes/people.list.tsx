@@ -1,4 +1,4 @@
-import { Box, Center, Loader } from "@mantine/core";
+import { Center, Loader } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
@@ -31,7 +31,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         lastName: lastName ?? undefined,
         nickname: nickname ?? undefined,
         roles: roles ?? undefined,
-        outstanding: outstanding === null ? undefined : outstanding === "true",
+        outstanding:
+          outstanding === null
+            ? undefined
+            : outstanding.toLocaleLowerCase() === "true",
       },
       limit ? Number(limit) : undefined,
       page && limit ? Number(page) * Number(limit) : undefined
@@ -53,16 +56,12 @@ export default function Page() {
       <Loader />
     </Center>
   ) : matches ? (
-    <Box w="100%" mb={4} visibleFrom="md">
-      <PersonTable
-        data={data?.people}
-        totalCount={data?.totalCount}
-        roles={data.roles}
-      />
-    </Box>
+    <PersonTable
+      data={data?.people}
+      totalCount={data?.totalCount}
+      roles={data.roles}
+    />
   ) : (
-    <Box w="100%" hiddenFrom="md">
-      <PeopleList people={data?.people} totalCount={data?.totalCount} />
-    </Box>
+    <PeopleList people={data?.people} totalCount={data?.totalCount} />
   );
 }

@@ -40,3 +40,7 @@ export const DEFAULT_TAGS = [
   { name: "Helpdesk", color: "green", category: "Location" },
   //#endregion
 ] satisfies Partial<Tag>[];
+
+export const ITEMS_PER_PAGE = 10;
+
+export const MAX_RECENT_ITEMS = 5;

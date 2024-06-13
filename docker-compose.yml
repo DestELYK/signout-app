@@ -4,14 +4,15 @@ services:
     image: mariadb
     restart: always
     environment:
-      MARIADB_RANDOM_ROOT_PASSWORD: 1
-      MYSQL_DATABASE: app
-      MYSQL_USER: signout-app
-      MYSQL_PASSWORD: mypassword
+      - MARIADB_RANDOM_ROOT_PASSWORD=1
+      - MYSQL_DATABASE=app
+      - MYSQL_USER=signout-app
+      - MYSQL_PASSWORD=mypassword
+      - TZ=America/Toronto
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
       timeout: 20s
       retries: 10
 
@@ -26,6 +27,7 @@ services:
       - mariadb
     environment:
       - DATABASE_URL=mysql://signout-app:mypassword@mariadb:3306/app
+      - TZ=America/Toronto
     command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]        
     healthcheck:
       test: curl --fail http://localhost:3000/api/health-check || exit 1
