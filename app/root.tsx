@@ -42,6 +42,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import {
+  IconBug,
   IconClipboard,
   IconDeviceImac,
   IconHome,
@@ -269,6 +270,16 @@ function Root({
                   onClick={close}
                   active={value === "people"}
                 />
+                <Stack mt="auto">
+                  <NavLink
+                    to="https://forms.gle/u45D3TcSGS79f2hq9"
+                    component={NavLinkRemix}
+                    label="Report"
+                    leftSection={<IconBug size={24} />}
+                    onClick={close}
+                    target="_blank"
+                  />
+                </Stack>
               </AppShell.Navbar>
               <AppShell.Main w="100%" h="100dvh">
                 {children}
