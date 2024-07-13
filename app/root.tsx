@@ -5,6 +5,7 @@ import "@mantine/notifications/styles.css";
 import "@mantine/nprogress/styles.css";
 import "@mantine/tiptap/styles.css";
 import "mantine-react-table/styles.css";
+import "./styles.css";
 
 import { cssBundleHref } from "@remix-run/css-bundle";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";

@@ -5,8 +5,12 @@ import { useNavigate, useSearchParams } from "@remix-run/react";
 import { MRT_ColumnDef } from "mantine-react-table";
 import { useMemo } from "react";
 import { ItemWithTags } from "~/utils/types.server";
-import { dateDiff, formatDate } from "~/utils/utils";
-import { createOutstandingTag } from "../OutstandingBadge";
+import {
+  createOutstandingTag,
+  dateDiff,
+  filterTags,
+  formatDate,
+} from "~/utils/utils";
 import TableView from "../base/TableView";
 import HighlightCell from "./HighlightCell";
 
@@ -80,7 +84,7 @@ export default function ItemTable({
           data: typeNames,
         },
         accessorFn: (item) => {
-          return item.tags.filter((tag) => tag.category === "Item Type");
+          return filterTags(item.tags, "Item Type");
         },
         Cell: ({ cell }) => {
           const tags = cell.getValue<Tag[]>();

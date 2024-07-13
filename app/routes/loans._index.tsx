@@ -18,13 +18,12 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import MonthCombobox from "~/components/MonthCombobox";
-import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
 import StatCard from "~/components/StatCard";
 import InfoView from "~/components/base/InfoView";
 import { LoanList } from "~/components/loans/LoanList";
 import { useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
-import { MAX_RECENT_ITEMS } from "~/utils/consts.server";
+import { IN_COLOR, MAX_RECENT_ITEMS, OUT_COLOR } from "~/utils/consts";
 import { loanWithTagsAndItems } from "~/utils/types.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -227,13 +226,26 @@ export default function Page() {
         <Flex
           w="100%"
           mih={600}
-          h="100%"
+          h="calc(100dvh - 13rem)"
           direction="row"
           wrap="nowrap"
           gap="sm"
           visibleFrom="md"
         >
           <Stack miw={200} w="100%" h="100%">
+            <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
+              <StatCard
+                label="Total Loans"
+                value={data.totalLoans}
+                cardProps={{ h: "100%" }}
+              />
+              <StatCard
+                label="Total Outstanding Loans"
+                value={data.totalOutstandingItems}
+                color={OUT_COLOR}
+                cardProps={{ w: 120, h: "100%" }}
+              />
+            </Group>
             <InfoView
               title={`Loans in ${dayjs(selectedMonth, "MM-YYYY").format(
                 "MMMM YYYY"
@@ -269,14 +281,14 @@ export default function Page() {
                     <Stack visibleFrom="lg">
                       <StatCard
                         orientation="horizontal"
-                        label="Total Loans"
+                        label="Loans"
                         value={loansInCurrentMonth.totalLoans}
                         withBorder={false}
                         cardProps={{ p: 0 }}
                       />
                       <StatCard
                         orientation="horizontal"
-                        label="Returned Loans"
+                        label="Returned"
                         value={loansInCurrentMonth.totalReturns}
                         withBorder={false}
                         cardProps={{ p: 0 }}
@@ -285,14 +297,14 @@ export default function Page() {
                     <Stack hiddenFrom="lg">
                       <StatCard
                         orientation="vertical"
-                        label="Total Loans"
+                        label="Loans"
                         value={loansInCurrentMonth.totalLoans}
                         withBorder={false}
                         cardProps={{ p: 0 }}
                       />
                       <StatCard
                         orientation="vertical"
-                        label="Returned Loans"
+                        label="Returned"
                         value={loansInCurrentMonth.totalReturns}
                         withBorder={false}
                         cardProps={{ p: 0 }}
@@ -398,10 +410,7 @@ export default function Page() {
                 <Text ta="center">
                   {data.totalOutstandingLoans} outstanding loans
                 </Text>
-                <Button
-                  component={Link}
-                  to="/loans/list?limit=10&page=0&status=outstanding"
-                >
+                <Button component={Link} to="/loans/list?status=outstanding">
                   View All Outstanding Loans
                 </Button>
               </Stack>
@@ -449,11 +458,25 @@ export default function Page() {
           w="100%"
           mih={400}
           h="100%"
+          pos="relative"
           direction="column"
           wrap="nowrap"
           gap="sm"
           hiddenFrom="md"
         >
+          <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
+            <StatCard
+              label="Total Loans"
+              value={data.totalLoans}
+              cardProps={{ h: "100%" }}
+            />
+            <StatCard
+              label="Total Outstanding Loans"
+              value={data.totalOutstandingItems}
+              color={OUT_COLOR}
+              cardProps={{ w: 120, h: "100%" }}
+            />
+          </Group>
           <InfoView
             title={`Loans in ${dayjs(selectedMonth, "MM-YYYY").format(
               "MMMM YYYY"
@@ -494,7 +517,7 @@ export default function Page() {
                   />
                   <StatCard
                     orientation="vertical"
-                    label="Total Loans"
+                    label="Loans"
                     value={loansInCurrentMonth.totalLoans}
                     withBorder={false}
                     cardProps={{ p: 0 }}
@@ -511,7 +534,7 @@ export default function Page() {
                   />
                   <StatCard
                     orientation="vertical"
-                    label="Returned Loans"
+                    label="Returned"
                     value={loansInCurrentMonth.totalReturns}
                     withBorder={false}
                     cardProps={{ p: 0 }}
@@ -560,10 +583,7 @@ export default function Page() {
             <Text ta="center">
               {data.totalOutstandingLoans} outstanding loans
             </Text>
-            <Button
-              component={Link}
-              to="/loans/list?limit=10&page=0&status=outstanding"
-            >
+            <Button component={Link} to="/loans/list?status=outstanding">
               View All Outstanding Loans
             </Button>
           </Stack>

@@ -114,6 +114,28 @@ const itemList = [
     ],
   },
   {
+    name: "Dell Laptop",
+    tags: [
+      {
+        name: "Dell",
+      },
+      {
+        name: "Laptop",
+      },
+    ],
+  },
+  {
+    name: "Lenovo Laptop",
+    tags: [
+      {
+        name: "Lenovo",
+      },
+      {
+        name: "Laptop",
+      },
+    ],
+  },
+  {
     name: "USB-C Cable",
     tags: [
       {
@@ -122,16 +144,8 @@ const itemList = [
       {
         name: "Cable",
       },
-    ],
-  },
-  {
-    name: "USB-C Block",
-    tags: [
       {
-        name: "USB-C",
-      },
-      {
-        name: "Block",
+        name: "USB-C Cable",
       },
     ],
   },
@@ -144,6 +158,9 @@ const itemList = [
       {
         name: "Cable",
       },
+      {
+        name: "Lightning Cable",
+      },
     ],
   },
   {
@@ -154,6 +171,124 @@ const itemList = [
       },
       {
         name: "Block",
+      },
+      {
+        name: "USB-A Block",
+      },
+    ],
+  },
+  {
+    name: "Aux Cable",
+    tags: [
+      {
+        name: "Audio",
+      },
+      {
+        name: "Cable",
+      },
+      {
+        name: "Aux Cable",
+      },
+    ],
+  },
+  {
+    name: "USB-C Charger",
+    tags: [
+      {
+        name: "USB-C",
+      },
+      {
+        name: "Charger",
+      },
+      {
+        name: "Laptop Charger",
+      },
+    ],
+  },
+  {
+    name: "MagSafe 2 Charger",
+    tags: [
+      {
+        name: "Apple",
+      },
+      {
+        name: "MagSafe",
+      },
+      {
+        name: "Charger",
+      },
+      {
+        name: "Laptop Charger",
+      },
+    ],
+  },
+  {
+    name: "Micro-USB Cable",
+    tags: [
+      {
+        name: "Micro-USB",
+      },
+      {
+        name: "USB-A",
+      },
+      {
+        name: "Cable",
+      },
+      {
+        name: "Micro-USB Cable",
+      },
+    ],
+  },
+  {
+    name: "Mini-USB Cable",
+    tags: [
+      {
+        name: "Mini-USB",
+      },
+      {
+        name: "USB-A",
+      },
+      {
+        name: "Cable",
+      },
+      {
+        name: "Mini-USB Cable",
+      },
+    ],
+  },
+  {
+    name: "USB-C Block",
+    tags: [
+      {
+        name: "USB-C",
+      },
+      {
+        name: "Block",
+      },
+      {
+        name: "USB-C Block",
+      },
+    ],
+  },
+  {
+    name: "USB-C Adapter",
+    tags: [
+      {
+        name: "USB-C",
+      },
+      {
+        name: "Adapter",
+      },
+    ],
+  },
+  {
+    name: "USB-C Hub",
+    tags: [
+      {
+        name: "USB-C",
+      },
+      {
+        name: "Hub",
       },
     ],
   },
@@ -191,7 +326,7 @@ async function main() {
     where: { name: "Helpdesk" },
   });
 
-  for (let i = 0; i < 50; i++) {
+  for (let i = 0; i < 150; i++) {
     const listItem = itemList[randomInt(0, itemList.length)];
     const description =
       randomInt(0, 100) > 50 ? LOREM_IPSUM.slice(0, 100) : null;
@@ -316,27 +451,32 @@ async function main() {
 
   const noItems: number[] = [];
 
+  let currentDate = dayjs()
+    .subtract(dayjs.duration({ months: 6 }))
+    .set("hour", 8)
+    .set("minute", 0)
+    .set("second", 0)
+    .set("millisecond", 0);
+
   // Creates 1000 loaned items for testing
-  for (let i = 0, o = 0; i < 1000; i++, o++) {
+  for (let i = 0, o = 0; i < 100; i++, o++) {
+    console.log("Current Date: %s", currentDate.format("YYYY-MM-DD HH:mm:ss"));
+
+    const item = items[randomInt(0, items.length)];
+    const person = people[randomInt(0, people.length)];
+    let dateCreated = dayjs(currentDate).add(
+      dayjs.duration({ minutes: randomInt(2, 30), seconds: randomInt(0, 60) })
+    );
+    console.log("Date Created: %s", dateCreated.format("YYYY-MM-DD HH:mm:ss"));
+
+    const tags =
+      randomInt(0, 100) > 60
+        ? loanInfoTags[randomInt(loanInfoTags.length)]
+        : undefined;
+
     try {
-      const item = items[randomInt(0, items.length)];
-      const person = people[randomInt(0, people.length)];
-      let dateCreated = dayjs().subtract(
-        dayjs.duration({
-          months: randomInt(0, 4),
-          hours: randomInt(1, 24),
-          minutes: randomInt(0, 60),
-        })
-      );
-      const tags =
-        randomInt(0, 100) > 60
-          ? loanInfoTags[randomInt(loanInfoTags.length)]
-          : undefined;
-
-      if (noItems.includes(item.id)) continue;
-
-      const loanedItem = await prisma.loanedItem.findFirst({
-        where: { itemId: item.id, dateReturned: null },
+      const lastItem = await prisma.loanedItem.findFirst({
+        where: { itemId: item.id },
         include: {
           loan: {
             include: {
@@ -344,66 +484,64 @@ async function main() {
             },
           },
         },
+        orderBy: {
+          dateLoaned: "desc",
+        },
       });
 
-      if (loanedItem) {
-        const loanedDateReturned = dayjs(loanedItem.dateLoaned).add(
-          dayjs.duration({
-            days: randomInt(0, 7),
-            hours: randomInt(1, 24),
-            minutes: randomInt(0, 60),
-          })
-        );
+      if (lastItem) {
+        if (lastItem.dateReturned) {
+          dateCreated = dayjs(lastItem.dateReturned).add(
+            dayjs.duration({
+              minutes: randomInt(2, 120),
+              seconds: randomInt(0, 60),
+            })
+          );
+          console.log(
+            "Date Created After Return: %s",
+            dateCreated.format("YYYY-MM-DD HH:mm:ss")
+          );
+        } else {
+          const dateReturned = dayjs(lastItem.dateLoaned).add(
+            dayjs.duration({
+              days: randomInt(0, 3),
+              minutes: randomInt(2, 120),
+              seconds: randomInt(0, 60),
+            })
+          );
+          console.log(
+            "Date Loaned: %s",
+            dayjs(lastItem.dateLoaned).format("YYYY-MM-DD HH:mm:ss")
+          );
+          console.log(
+            "Date Returned: %s",
+            dateReturned.format("YYYY-MM-DD HH:mm:ss")
+          );
 
-        if (dayjs(loanedDateReturned).isAfter()) {
-          noItems.push(loanedItem.itemId);
-
-          const status =
-            randomInt(0, 100) > 50
-              ? itemStatus[randomInt(0, itemStatus.length)]
-              : null;
-
-          if (status) {
-            await prisma.item.update({
-              where: { id: loanedItem.itemId },
-              data: {
-                tags: {
-                  connect: {
-                    id: status.id,
-                  },
+          await prisma.loanedItem.update({
+            where: {
+              loanId_itemId: {
+                itemId: lastItem.itemId,
+                loanId: lastItem.loanId,
+              },
+            },
+            data: {
+              dateReturned: dateReturned.toDate(),
+              returnedBy: {
+                connect: {
+                  id: lastItem.loan.personId,
                 },
               },
-            });
-          }
-
-          continue;
-        }
-
-        const result = await prisma.loanedItem.update({
-          where: {
-            loanId_itemId: {
-              itemId: loanedItem.itemId,
-              loanId: loanedItem.loanId,
             },
-          },
-          data: {
-            dateReturned: loanedDateReturned.toDate(),
-            returnedBy: {
-              connect: {
-                id: loanedItem.loan.personId,
-              },
-            },
-          },
-        });
+          });
 
-        dateCreated = loanedDateReturned.add(
-          dayjs.duration({ days: randomInt(1, 14) })
-        );
-
-        if (dateCreated.isAfter()) {
-          noItems.push(loanedItem.itemId);
-
-          continue;
+          dateCreated = dayjs(
+            dateReturned.isAfter(dateCreated) ? dateReturned : dateCreated
+          ).add(dayjs.duration({ minutes: randomInt(2, 30) }));
+          console.log(
+            "Date Created After Update: %s",
+            dateCreated.format("YYYY-MM-DD HH:mm:ss")
+          );
         }
       } else {
         await prisma.item.update({
@@ -442,7 +580,45 @@ async function main() {
         },
       });
     } catch (e) {
-      continue;
+      console.warn("Skipping %i", i);
+    }
+
+    console.log();
+
+    currentDate = dayjs(dateCreated)
+      .set("hour", 8)
+      .add(
+        dayjs.duration({
+          days: randomInt(0, 3),
+          hours: randomInt(1, 3),
+          minutes: randomInt(2, 30),
+        })
+      );
+  }
+
+  const loanedItems = await prisma.loanedItem.findMany({
+    select: {
+      itemId: true,
+      loanId: true,
+      dateLoaned: true,
+      dateReturned: true,
+    },
+  });
+
+  for (let i = 0; i < loanedItems.length; i++) {
+    const generateInvalid = randomInt(0, 100) > 50;
+
+    if (generateInvalid) {
+      await prisma.item.update({
+        where: { id: loanedItems[i].itemId },
+        data: {
+          tags: {
+            connect: {
+              id: itemStatus[randomInt(itemStatus.length)].id,
+            },
+          },
+        },
+      });
     }
   }
 }

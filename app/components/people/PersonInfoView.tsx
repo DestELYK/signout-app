@@ -1,7 +1,7 @@
 import { Group } from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { OUT_COLOR } from "~/utils/consts";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
-import { OUT_COLOR } from "../OutstandingBadge";
 import StatCard from "../StatCard";
 import PersonCard from "./PersonCard";
 

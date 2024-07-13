@@ -1,7 +1,6 @@
-import { UnstyledButton } from "@mantine/core";
-import { NavLink, useNavigation } from "@remix-run/react";
+import { useNavigation } from "@remix-run/react";
 import { ItemWithTags } from "~/utils/types.server";
-import { createOutstandingTag } from "../OutstandingBadge";
+import { createOutstandingTag } from "~/utils/utils";
 import ListView from "../base/ListView";
 import ItemListView from "./ItemListView";
 
@@ -21,20 +20,18 @@ export default function ItemList({ items, totalCount }: ItemListProps) {
     >
       {(item, query, qrCode) => {
         return (
-          <UnstyledButton w="100%" component={NavLink} to={`/items/${item.id}`}>
-            <ItemListView
-              {...item}
-              tags={[
-                ...item.tags,
-                createOutstandingTag({
-                  out: item._count.loans > 0,
-                  inLabel: "Available",
-                }),
-              ]}
-              query={query}
-              qrCode={qrCode}
-            />
-          </UnstyledButton>
+          <ItemListView
+            {...item}
+            tags={[
+              ...item.tags,
+              createOutstandingTag({
+                out: item._count.loans > 0,
+                inLabel: "Available",
+              }),
+            ]}
+            query={query}
+            qrCode={qrCode}
+          />
         );
       }}
     </ListView>

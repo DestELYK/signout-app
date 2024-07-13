@@ -25,6 +25,8 @@ export const getItems = async (
     filters.status = filters.status?.trim().toLocaleLowerCase();
     filters.types = filters.types?.map((t) => t.trim().toLocaleLowerCase());
 
+    if (limit && limit <= 0) limit = undefined;
+
     const tagFilter: Prisma.TagListRelationFilter | undefined =
       filters.types || filters.status
         ? filters.status === "outstanding"

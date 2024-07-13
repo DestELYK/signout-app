@@ -3,8 +3,8 @@ import { PersonWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
+import { createOutstandingTag } from "~/utils/utils";
 import EditableNotes from "../EditableNotes";
-import { createOutstandingTag } from "../OutstandingBadge";
 import StatCard from "../StatCard";
 import InfoView from "../base/InfoView";
 import PersonCard from "../people/PersonCard";

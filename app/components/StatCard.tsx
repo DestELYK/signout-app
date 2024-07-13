@@ -15,6 +15,7 @@ export interface DateCardProps {
   caption?: string;
   withBorder?: boolean;
   cardProps?: CardProps;
+  onClick?: () => void;
 }
 
 export default function StatCard({
@@ -25,9 +26,16 @@ export default function StatCard({
   caption,
   withBorder = true,
   cardProps,
+  onClick,
 }: DateCardProps) {
   return (
-    <Card withBorder={withBorder} p="sm" {...cardProps}>
+    <Card
+      withBorder={withBorder}
+      p="sm"
+      onClick={onClick}
+      {...(onClick && { style: { cursor: "pointer" } })}
+      {...cardProps}
+    >
       {orientation === "vertical" ? (
         <Flex
           h="100%"

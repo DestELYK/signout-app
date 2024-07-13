@@ -4,7 +4,6 @@ import {
   CardSectionProps,
   Collapse,
   Flex,
-  LoadingOverlay,
   Text,
 } from "@mantine/core";
 import { Link } from "@remix-run/react";
@@ -84,7 +83,7 @@ export default function InfoView({
           )}
         </Card.Section>
       )}
-      <LoadingOverlay visible={loading} zIndex={1000} />
+      {/* <LoadingOverlay visible={loading} zIndex={1000} /> */}
       {children}
       {bottomSection && (
         <Card.Section inheritPadding mt="auto" py="sm">

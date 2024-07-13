@@ -19,7 +19,7 @@ model Person {
   lastName  String
   nickname  String?
   tags      Tag[]
-  notes     String  @default("")
+  notes     String  @default("") @db.VarChar(200)
   qrCode    String?
 
   loans         Loan[]
@@ -35,8 +35,8 @@ model Item {
   id     Int     @id @default(autoincrement())
   qrCode String?
   name   String  @unique
-  description String @default("")
-  notes  String  @default("")
+  description String @default("") @db.VarChar(50)
+  notes  String  @default("") @db.VarChar(200)
 
   tags Tag[]
 
@@ -52,7 +52,7 @@ model Loan {
   id     Int          @id @default(autoincrement())
   person Person       @relation(fields: [personId], references: [id])
   items  LoanedItem[]
-  notes  String       @default("")
+  notes  String       @default("") @db.VarChar(200)
   tags   Tag[]
 
   createdDate DateTime @default(now())

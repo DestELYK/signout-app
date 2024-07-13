@@ -16,8 +16,8 @@ import {
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import DateTimeline, { TimelineItemValues } from "~/components/DateTimeline";
-import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
 import { prisma } from "~/lib/prisma.server";
+import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 import { filterTags } from "~/utils/utils";
 import { loader as itemLoader } from "./items_.$itemId";
 

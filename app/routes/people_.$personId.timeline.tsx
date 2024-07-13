@@ -5,8 +5,8 @@ import dayjs from "dayjs";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import DateTimeline, { TimelineItemValues } from "~/components/DateTimeline";
-import { IN_COLOR, OUT_COLOR } from "~/components/OutstandingBadge";
 import { prisma } from "~/lib/prisma.server";
+import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
   invariant(params.personId, "Expected params.personId");

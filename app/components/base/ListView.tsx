@@ -15,7 +15,7 @@ import {
 import { useForm } from "@mantine/form";
 import { useNavigation, useSearchParams } from "@remix-run/react";
 import { useEffect, useRef, useState } from "react";
-import { ITEMS_PER_PAGE } from "~/utils/consts.server";
+import { INITIAL_PAGE_SIZE } from "~/utils/consts";
 import SearchView from "../SearchView";
 
 // TODO - implement importing and exporting data
@@ -31,6 +31,7 @@ export interface ListViewProps<T extends { id: number }> {
   loading?: boolean;
   withSearch?: boolean;
   initialItemsPerPage?: number;
+  showPagination?: boolean;
   children: (item: T, query?: string, qrCode?: string) => React.ReactNode;
 }
 
@@ -40,7 +41,8 @@ export default function ListView<T extends { id: number }>({
   totalCount = data?.length ?? 0,
   loading,
   withSearch = true,
-  initialItemsPerPage = ITEMS_PER_PAGE,
+  initialItemsPerPage = INITIAL_PAGE_SIZE,
+  showPagination = true,
   children,
 }: ListViewProps<T>) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -126,7 +128,7 @@ export default function ListView<T extends { id: number }>({
               }
             }}
           />
-          {filteredItems.length > 0 && <Divider mt="sm" />}
+          {filteredItems.length > 0 && <Divider my="sm" />}
         </Stack>
       )}
       {filteredItems.length === 0 && (data !== undefined || !loading) ? (
@@ -136,34 +138,61 @@ export default function ListView<T extends { id: number }>({
           </Center>
         </Paper>
       ) : (
-        <ScrollArea
+        <ScrollArea.Autosize
           w="100%"
           h="100%"
           type="always"
           scrollbars="y"
           viewportRef={scrollRef}
         >
-          <Card m="sm" withBorder>
+          <Card withBorder>
             {data === undefined || loading
               ? Array(initialItemsPerPage)
                   .fill(0)
-                  .map((item, index) => (
-                    <Card.Section key={index} inheritPadding withBorder py="sm">
+                  .map((_, index) => (
+                    <Card.Section key={index} inheritPadding withBorder>
                       <Skeleton h={100} />
                     </Card.Section>
                   ))
               : filteredItems.length > 0 &&
                 filteredItems.map((item) => (
-                  <Card.Section key={item.id} inheritPadding withBorder py="sm">
+                  <Card.Section
+                    className="list-item"
+                    key={item.id}
+                    inheritPadding
+                    withBorder
+                  >
                     {children(item, form.values.query, form.values.qrCode)}
                   </Card.Section>
                 ))}
+            {!showPagination && data.length > itemsPerPage && (
+              <Card.Section inheritPadding withBorder>
+                <Stack
+                  w="100%"
+                  align="center"
+                  py="sm"
+                  onClick={() =>
+                    setItemsPerPage((itemsPerPage) =>
+                      Math.min(totalCount, itemsPerPage + 10)
+                    )
+                  }
+                  style={{ cursor: "pointer" }}
+                >
+                  <Text c="dimmed" size="sm">
+                    {data.length - itemsPerPage} more entries...
+                  </Text>
+                  <Text c="dimmed" size="sm">
+                    Tap to view more entries
+                  </Text>
+                </Stack>
+              </Card.Section>
+            )}
           </Card>
-        </ScrollArea>
+        </ScrollArea.Autosize>
       )}
-      <Stack w="100%" gap={0}>
-        <Collapse in={totalCount > itemsPerPage}>
-          <Divider />
+      {showPagination && (
+        <Collapse w="100%" in={totalCount > itemsPerPage}>
+          <Divider mt="sm" />
           <Pagination.Root
             w="100%"
             py="sm"
@@ -195,7 +224,7 @@ export default function ListView<T extends { id: number }>({
             </Group>
           </Pagination.Root>
         </Collapse>
-      </Stack>
+      )}
     </Flex>
   );
 }

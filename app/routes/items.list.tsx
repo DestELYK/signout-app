@@ -6,6 +6,8 @@ import ItemList from "~/components/items/ItemList";
 import ItemTable from "~/components/tables/ItemTable";
 import { getItems } from "~/lib/items.server";
 import { prisma } from "~/lib/prisma.server";
+import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
+import { parseNumber } from "~/utils/utils";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const searchParams = new URL(request.url).searchParams;
@@ -27,6 +29,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     })) ?? [];
 
+  const pageSize = parseNumber(
+    limit,
+    INITIAL_PAGE_SIZE,
+    undefined,
+    MAX_PAGE_SIZE
+  );
+
   return typedjson({
     ...(await getItems(
       {
@@ -35,8 +44,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         status: status ?? undefined,
         types: type ?? undefined,
       },
-      limit ? Number(limit) : undefined,
-      page && limit ? Number(page) * Number(limit) : undefined
+      pageSize,
+      parseNumber(page, 0) * pageSize
     )),
     statuses: [
       "Outstanding",

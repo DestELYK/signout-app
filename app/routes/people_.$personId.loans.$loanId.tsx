@@ -16,11 +16,11 @@ import {
   useTypedRouteLoaderData,
 } from "remix-typedjson";
 import invariant from "tiny-invariant";
-import { OUT_COLOR } from "~/components/OutstandingBadge";
 import { QRCodeWithComponent } from "~/components/qrCode/QRCodeWithComponent";
 import TagGroup from "~/components/tags/TagGroup";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
+import { OUT_COLOR } from "~/utils/consts";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { loader as personLoader } from "./people_.$personId";
 

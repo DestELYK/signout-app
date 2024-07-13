@@ -29,6 +29,8 @@ export const getLoans = async (
       | "returned"
       | undefined;
 
+    if (limit && limit <= 0) limit = undefined;
+
     const filter: Prisma.LoanWhereInput =
       filters.query && filters.query.length > 0
         ? {

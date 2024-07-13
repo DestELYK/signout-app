@@ -1,8 +1,8 @@
 import { Flex, Highlight, Text, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { IconArrowRight } from "@tabler/icons-react";
+import { OUT_COLOR } from "~/utils/consts";
 import { formatFullName } from "~/utils/utils";
-import { OUT_COLOR } from "../OutstandingBadge";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonListViewProps {

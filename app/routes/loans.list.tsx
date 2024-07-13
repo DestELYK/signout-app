@@ -5,6 +5,8 @@ import { LoanList } from "~/components/loans/LoanList";
 import LoanTable from "~/components/tables/LoanTable";
 import { useDesktopOnly } from "~/lib/hooks";
 import { getLoans } from "~/lib/loans.server";
+import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
+import { parseNumber } from "~/utils/utils";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const searchParams = new URL(request.url).searchParams;
@@ -17,6 +19,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const person = searchParams.get("person");
   const items = searchParams.get("items");
 
+  const pageSize = parseNumber(
+    limit,
+    INITIAL_PAGE_SIZE,
+    undefined,
+    MAX_PAGE_SIZE
+  );
+
   return typedjson(
     await getLoans(
       {
@@ -25,8 +34,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         person: person ?? undefined,
         items: items ?? undefined,
       },
-      limit ? Number(limit) : undefined,
-      page && limit ? Number(page) * Number(limit) : undefined
+      pageSize,
+      parseNumber(page, 0) * pageSize
     )
   );
 };

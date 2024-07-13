@@ -27,6 +27,8 @@ export const getPeople = async (
   filters.qrCode = filters.qrCode?.trim().toLocaleLowerCase();
   filters.roles = filters.roles?.map((r) => r.trim().toLocaleLowerCase());
 
+  if (limit && limit <= 0) limit = undefined;
+
   try {
     const filter: Prisma.PersonWhereInput =
       filters.query && filters.query.length > 0

@@ -6,6 +6,8 @@ import PeopleList from "~/components/people/PeopleList";
 import PersonTable from "~/components/tables/PersonTable";
 import { getPeople } from "~/lib/people.server";
 import { prisma } from "~/lib/prisma.server";
+import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
+import { parseNumber } from "~/utils/utils";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const searchParams = new URL(request.url).searchParams;
@@ -23,6 +25,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const outstanding = searchParams.get("outstanding");
 
+  const pageSize = parseNumber(
+    limit,
+    INITIAL_PAGE_SIZE,
+    undefined,
+    MAX_PAGE_SIZE
+  );
+
   return typedjson({
     ...(await getPeople(
       {
@@ -36,8 +45,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
             ? undefined
             : outstanding.toLocaleLowerCase() === "true",
       },
-      limit ? Number(limit) : undefined,
-      page && limit ? Number(page) * Number(limit) : undefined
+      pageSize,
+      parseNumber(page, 0) * pageSize
     )),
     roles: await prisma.tag.findMany({
       where: {

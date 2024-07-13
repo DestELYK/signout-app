@@ -10,7 +10,8 @@ import {
   useMantineReactTable,
 } from "mantine-react-table";
 import { useEffect, useMemo, useState } from "react";
-import { ITEMS_PER_PAGE } from "~/utils/consts.server";
+import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
+import { parseNumber } from "~/utils/utils";
 
 export interface TableViewProps<T extends MRT_RowData> {
   data: T[] | undefined;
@@ -44,32 +45,40 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
   const navigation = useNavigation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [pagination, setPagination] = useState<MRT_PaginationState>({
-    pageSize: searchParams.get("limit")
-      ? Number(searchParams.get("limit"))
-      : ITEMS_PER_PAGE,
-    pageIndex: searchParams.get("page") ? Number(searchParams.get("page")) : 0,
-  });
   const [globalFilter, setGlobalFilter] = useState<string | undefined>(
     undefined
   );
 
   const [enableColumnFilters, setEnableColumnFilters] = useState<boolean>(true);
 
-  const pageSize = searchParams.get("limit");
-  const pageIndex = searchParams.get("page");
+  const searchLimit = searchParams.get("limit");
+  const searchPage = searchParams.get("page");
+
+  const pageSize = parseNumber(
+    searchLimit,
+    INITIAL_PAGE_SIZE,
+    undefined,
+    MAX_PAGE_SIZE
+  );
+  const pageIndex = parseNumber(searchPage, 0);
+
+  const [pagination, setPagination] = useState<MRT_PaginationState>({
+    pageSize: pageSize,
+    pageIndex: pageIndex,
+  });
 
   useEffect(() => {
     if (
-      (pageSize && pagination.pageSize != Number(pageSize)) ||
-      (pageIndex && pagination.pageIndex != Number(pageIndex))
+      (pageSize && pagination.pageSize != pageSize) ||
+      (pageIndex && pagination.pageIndex != pageIndex)
     ) {
+      console.log("Setting pagination", pageSize, pageIndex);
       setPagination((prev) => {
-        if (pageSize && prev.pageSize != Number(pageSize)) {
-          prev.pageSize = Number(pageSize);
+        if (pageSize && prev.pageSize != pageSize) {
+          prev.pageSize = pageSize;
         }
-        if (pageIndex && prev.pageIndex != Number(pageIndex)) {
-          prev.pageIndex = Number(pageIndex);
+        if (pageIndex && prev.pageIndex != pageIndex) {
+          prev.pageIndex = pageIndex;
         }
         return prev;
       });
@@ -176,14 +185,18 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
     onPaginationChange: (value) => {
       const newValue = value instanceof Function ? value(pagination) : value;
 
-      if (
-        newValue.pageSize !== (pageSize ?? ITEMS_PER_PAGE) ||
-        newValue.pageIndex !== (pageIndex ?? 0)
-      ) {
+      if (newValue.pageSize !== pageSize || newValue.pageIndex !== pageIndex) {
+        const newPageSize = parseNumber(
+          newValue.pageSize,
+          INITIAL_PAGE_SIZE,
+          undefined,
+          MAX_PAGE_SIZE
+        );
+        const newPageIndex = parseNumber(newValue.pageIndex, 0);
         setSearchParams(
           (prev) => {
-            prev.set("limit", newValue.pageSize.toString());
-            prev.set("page", newValue.pageIndex.toString());
+            prev.set("limit", newPageSize.toString());
+            prev.set("page", newPageIndex.toString());
             return prev;
           },
           { replace: true }

@@ -1,8 +1,12 @@
 import { Flex, Highlight, Space, Text, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { IconArrowRight } from "@tabler/icons-react";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
-import { createOutstandingTag } from "../OutstandingBadge";
+import {
+  createOutstandingTag,
+  dateDiff,
+  formatDate,
+  formatFullName,
+} from "~/utils/utils";
 import TagGroup from "../tags/TagGroup";
 
 export interface LoanListViewProps {

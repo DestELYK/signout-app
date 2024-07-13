@@ -3,7 +3,6 @@ import {
   Button,
   Group,
   SegmentedControl,
-  Space,
   Tabs,
   Title,
 } from "@mantine/core";
@@ -47,13 +46,20 @@ export default function DataPage({
     if (!value || value === tabs[0]) {
       navigate(`/${path}`, { replace: true, relative: "route" });
     } else if (currentLocation !== value) {
-      navigate(`/${path}/${value}?limit=10&page=0`, { replace: true });
+      navigate(`/${path}/${value}`, { replace: true });
     }
   };
 
   return (
-    <Box w="100%" h="calc(100dvh - 11rem)" p="md">
-      <Group align="center" justify="space-between" pb="md" visibleFrom="md">
+    <Box p="md">
+      <Group
+        pos="relative"
+        top={0}
+        align="center"
+        justify="space-between"
+        pb="md"
+        visibleFrom="md"
+      >
         <Title order={1}>{title}</Title>
         <Button onClick={onCreateClick} rightSection={<IconPlus />}>
           {createLabel}
@@ -61,6 +67,8 @@ export default function DataPage({
       </Group>
 
       <Tabs
+        pos="relative"
+        top={0}
         w="100%"
         mb="sm"
         visibleFrom="md"
@@ -76,6 +84,8 @@ export default function DataPage({
         </Tabs.List>
       </Tabs>
       <SegmentedControl
+        pos="relative"
+        top={0}
         w="100%"
         mb="sm"
         hiddenFrom="md"
@@ -90,6 +100,8 @@ export default function DataPage({
       />
 
       <Button
+        pos="relative"
+        top={0}
         w="100%"
         onClick={onCreateClick}
         rightSection={<IconPlus />}
@@ -99,7 +111,6 @@ export default function DataPage({
         {createLabel}
       </Button>
       <Outlet />
-      <Space h="sm" />
     </Box>
   );
 }

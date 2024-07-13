@@ -7,6 +7,7 @@ import isToday from "dayjs/plugin/isToday.js";
 import isYesterday from "dayjs/plugin/isYesterday.js";
 import localeData from "dayjs/plugin/localeData.js";
 import relativeTime from "dayjs/plugin/relativeTime.js";
+import { IN_COLOR, OUT_COLOR } from "./consts";
 
 dayjs.extend(duration);
 dayjs.extend(isToday);
@@ -63,10 +64,9 @@ export const dateDiff = ({
 
 export const formatDuration = (duration: number) => {
   return dayjs.duration({ milliseconds: duration }).humanize();
-}
+};
 
 //#endregion
-
 
 //#region String Utils
 
@@ -88,17 +88,19 @@ export const capitalizeFirstLetter = (string: string) => {
 
 //#endregion
 
-
 //#region Tag Utils
 
 export const filterTags = (
   tags: Tag[],
   categories: string | string[] = [],
-  blacklist: boolean = false
+  blacklist: boolean = false,
+  showHidden: boolean = false
 ) => {
   return tags
     .filter((tag) => {
       let result = false;
+
+      if (!showHidden && tag.hidden) return false;
 
       if (Array.isArray(categories)) {
         if (
@@ -119,3 +121,68 @@ export const filterTags = (
 //#endregion
 
 export const isNumeric = (value: string) => /^\d+$/.test(value);
+
+export function updateByMonth<T extends { month: string }>(
+  monthList: T[],
+  date: Date,
+  initialize: (month: string, days: number) => T,
+  handleExisting: (month: T, day: number, count: number) => void
+) {
+  const month = dayjs(date).format("MM-YYYY");
+  const day = Number(dayjs(date).format("DD")) - 1;
+
+  const existingMonth = monthList.find((m) => m.month === month);
+
+  if (existingMonth) {
+    handleExisting(existingMonth, day, 1);
+  } else {
+    const data = initialize(month, dayjs(month, "MM-YYYY").daysInMonth());
+
+    handleExisting(data, day, 1);
+
+    monthList.push(data);
+  }
+}
+
+export function createOutstandingTag({
+  out,
+  category = "Item Status",
+  outLabel = "Outstanding",
+  inLabel = "Returned",
+}: {
+  out: boolean;
+  category?: string;
+  outLabel?: string;
+  inLabel?: string;
+}) {
+  return {
+    id: -1,
+    name: out ? outLabel : inLabel,
+    color: out ? OUT_COLOR : IN_COLOR,
+    category: category,
+    priority: -100,
+    hidden: false,
+  } satisfies Tag;
+}
+
+export function parseNumber(
+  value: any,
+  defaultValue: number = 0,
+  minValue: number = defaultValue,
+  maxValue?: number
+) {
+  let newValue =
+    value === null || value === undefined || Number.isNaN(Number(value))
+      ? defaultValue
+      : Number(value);
+
+  if (newValue < 0) {
+    newValue = minValue;
+  }
+
+  if (maxValue && newValue > maxValue) {
+    newValue = maxValue;
+  }
+
+  return newValue;
+}

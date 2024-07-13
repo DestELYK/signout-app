@@ -1,29 +1,5 @@
 import { Badge, BadgeProps } from "@mantine/core";
-import { Tag } from "@prisma/client";
-
-export const OUT_COLOR = "#F21616";
-export const IN_COLOR = "#32a852";
-
-export function createOutstandingTag({
-  out,
-  category = "Item Status",
-  outLabel = "Outstanding",
-  inLabel = "Returned",
-}: {
-  out: boolean;
-  category?: string;
-  outLabel?: string;
-  inLabel?: string;
-}) {
-  return {
-    id: -1,
-    name: out ? outLabel : inLabel,
-    color: out ? OUT_COLOR : IN_COLOR,
-    category: category,
-    priority: -100,
-    hidden: false,
-  } satisfies Tag;
-}
+import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 
 export default function OutstandingBadge({
   out,
