@@ -17,7 +17,7 @@ export interface ItemListViewProps {
   name: string;
   description?: string;
   createdDate?: Date;
-  tags: Tag[];
+  tags?: Tag[];
   qrCode?: string;
   query?: string;
   lastLoan?: {
@@ -34,7 +34,7 @@ export default function ItemListView({
   name,
   description,
   createdDate,
-  tags,
+  tags = [],
   qrCode,
   query,
   lastLoan,

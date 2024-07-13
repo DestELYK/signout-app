@@ -25,6 +25,7 @@ import SearchView from "../SearchView";
 // TODO - virtual list
 
 export interface ListViewProps<T extends { id: number }> {
+  orientation?: "horizontal" | "vertical";
   emptyText?: string;
   data: T[] | undefined;
   totalCount?: number;
@@ -36,6 +37,7 @@ export interface ListViewProps<T extends { id: number }> {
 }
 
 export default function ListView<T extends { id: number }>({
+  orientation = "vertical",
   emptyText = "No entries for section",
   data = [],
   totalCount = data?.length ?? 0,
@@ -142,52 +144,73 @@ export default function ListView<T extends { id: number }>({
           w="100%"
           h="100%"
           type="always"
-          scrollbars="y"
+          scrollbars={orientation === "horizontal" ? "x" : "y"}
           viewportRef={scrollRef}
         >
-          <Card withBorder>
-            {data === undefined || loading
-              ? Array(initialItemsPerPage)
-                  .fill(0)
-                  .map((_, index) => (
-                    <Card.Section key={index} inheritPadding withBorder>
-                      <Skeleton h={100} />
+          {orientation === "horizontal" ? (
+            <Flex w="100%" direction="row" align="center" wrap="nowrap">
+              {data === undefined || loading
+                ? Array(initialItemsPerPage)
+                    .fill(0)
+                    .map((_, index) => (
+                      <Group key={index}>
+                        <Skeleton h={100} />
+                        <Divider orientation="vertical" />
+                      </Group>
+                    ))
+                : filteredItems.length > 0 &&
+                  filteredItems.map((item) => (
+                    <Group key={item.id}>
+                      {children(item, form.values.query, form.values.qrCode)}
+                      <Divider orientation="vertical" />
+                    </Group>
+                  ))}
+            </Flex>
+          ) : (
+            <Card withBorder>
+              {data === undefined || loading
+                ? Array(initialItemsPerPage)
+                    .fill(0)
+                    .map((_, index) => (
+                      <Card.Section key={index} inheritPadding withBorder>
+                        <Skeleton h={100} />
+                      </Card.Section>
+                    ))
+                : filteredItems.length > 0 &&
+                  filteredItems.map((item) => (
+                    <Card.Section
+                      className="list-item"
+                      key={item.id}
+                      inheritPadding
+                      withBorder
+                    >
+                      {children(item, form.values.query, form.values.qrCode)}
                     </Card.Section>
-                  ))
-              : filteredItems.length > 0 &&
-                filteredItems.map((item) => (
-                  <Card.Section
-                    className="list-item"
-                    key={item.id}
-                    inheritPadding
-                    withBorder
+                  ))}
+              {!showPagination && data.length > itemsPerPage && (
+                <Card.Section inheritPadding withBorder>
+                  <Stack
+                    w="100%"
+                    align="center"
+                    py="sm"
+                    onClick={() =>
+                      setItemsPerPage((itemsPerPage) =>
+                        Math.min(totalCount, itemsPerPage + 10)
+                      )
+                    }
+                    style={{ cursor: "pointer" }}
                   >
-                    {children(item, form.values.query, form.values.qrCode)}
-                  </Card.Section>
-                ))}
-            {!showPagination && data.length > itemsPerPage && (
-              <Card.Section inheritPadding withBorder>
-                <Stack
-                  w="100%"
-                  align="center"
-                  py="sm"
-                  onClick={() =>
-                    setItemsPerPage((itemsPerPage) =>
-                      Math.min(totalCount, itemsPerPage + 10)
-                    )
-                  }
-                  style={{ cursor: "pointer" }}
-                >
-                  <Text c="dimmed" size="sm">
-                    {data.length - itemsPerPage} more entries...
-                  </Text>
-                  <Text c="dimmed" size="sm">
-                    Tap to view more entries
-                  </Text>
-                </Stack>
-              </Card.Section>
-            )}
-          </Card>
+                    <Text c="dimmed" size="sm">
+                      {data.length - itemsPerPage} more entries...
+                    </Text>
+                    <Text c="dimmed" size="sm">
+                      Tap to view more entries
+                    </Text>
+                  </Stack>
+                </Card.Section>
+              )}
+            </Card>
+          )}
         </ScrollArea.Autosize>
       )}
       {showPagination && (

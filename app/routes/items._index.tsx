@@ -1,24 +1,22 @@
 import { BarChart } from "@mantine/charts";
 import {
-  ActionIcon,
-  Badge,
   Box,
   Center,
   Flex,
   Group,
   Loader,
+  ScrollArea,
   Stack,
   Text,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { Link, useNavigate, useNavigation } from "@remix-run/react";
-import { IconChevronCompactRight } from "@tabler/icons-react";
-import dayjs from "dayjs";
+import { useNavigate, useNavigation } from "@remix-run/react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import StatCard from "~/components/StatCard";
 import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
-import ItemListView from "~/components/items/ItemListView";
+import ItemList from "~/components/items/ItemList";
 import { useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
 import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
@@ -273,25 +271,21 @@ export default function Page() {
             }}
           >
             <Box h="100%" w="100%" mih={300}>
-              <ListView
-                data={data.invalidItems}
+              <ItemList
+                data={data.invalidItems.map((item) => ({
+                  id: item.id,
+                  name: item.name,
+                  tags: [item.status],
+                  lastLoan: {
+                    ...item.lastLoan,
+                    loanedDate: item.lastLoan.date,
+                  },
+                }))}
                 totalCount={data.invalidItems.length}
-                loading={navigation.state === "loading"}
                 withSearch={false}
                 initialItemsPerPage={20}
                 showPagination={false}
-              >
-                {(item) => (
-                  <ItemListView
-                    {...item}
-                    lastLoan={{
-                      ...item.lastLoan,
-                      loanedDate: item.lastLoan.date,
-                    }}
-                    tags={[item.status]}
-                  />
-                )}
-              </ListView>
+              />
             </Box>
           </InfoView>
           {
@@ -311,97 +305,67 @@ export default function Page() {
           gap="sm"
           hiddenFrom="md"
         >
-          <Group w="100%" h={100} grow style={{ flexWrap: "nowrap" }}>
-            <StatCard
-              label="Total Items"
-              value={data.totalItems}
-              cardProps={{ h: "100%" }}
-            />
-            <StatCard
-              label="Total Outstanding Items"
-              value={data.outstandingItems}
-              color={OUT_COLOR}
-              cardProps={{ w: 150, h: "100%" }}
-            />
-            {data.itemStatuses &&
-              Object.keys(data.itemStatuses).length > 0 &&
-              Object.entries(data.itemStatuses).map(
-                ([status, { count, color }]) => (
-                  <StatCard
-                    key={status}
-                    label={status}
-                    value={count}
-                    color={color}
-                    cardProps={{ h: "100%" }}
-                  />
-                )
-              )}
-          </Group>
+          <ScrollArea
+            w="100%"
+            type="scroll"
+            scrollbars="x"
+            offsetScrollbars="x"
+          >
+            <Flex h={100} direction="row" wrap="nowrap" gap="md">
+              <StatCard
+                label="Total Items"
+                value={data.totalItems}
+                cardProps={{ h: "100%" }}
+              />
+              <StatCard
+                label="Total Outstanding Items"
+                value={data.outstandingItems}
+                color={OUT_COLOR}
+                cardProps={{ w: 150, h: "100%" }}
+              />
+              {data.itemStatuses &&
+                Object.keys(data.itemStatuses).length > 0 &&
+                Object.entries(data.itemStatuses).map(
+                  ([status, { count, color }]) => (
+                    <StatCard
+                      key={status}
+                      label={status}
+                      value={count}
+                      color={color}
+                      cardProps={{ h: "100%" }}
+                    />
+                  )
+                )}
+            </Flex>
+          </ScrollArea>
+
           <InfoView
             title="Current Inventory"
             headerProps={{ withBorder: true }}
           >
-            <Box h={400} w="100%">
-              <ListView
-                data={
-                  data.itemsByType?.map((i) => ({ id: i.typeId, ...i })) ?? []
-                }
-                withSearch={false}
-                showPagination={false}
-              >
-                {({ type, available, outstanding }) => (
-                  <Group justify="space-between">
-                    <Text>{type}</Text>
+            <ListView
+              data={
+                data.itemsByType?.map((i) => ({ id: i.typeId, ...i })) ?? []
+              }
+              withSearch={false}
+              showPagination={false}
+            >
+              {({ type, available, outstanding }) => (
+                <Group
+                  justify="space-between"
+                  onClick={() => navigate(`/items/list?type=${type}`)}
+                >
+                  <Text>{type}</Text>
+                  <Group>
                     <Stack gap={0}>
                       <Text c={IN_COLOR}>{available} available</Text>
                       <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
                     </Stack>
+                    <IconChevronRight />
                   </Group>
-                )}
-              </ListView>
-            </Box>
-          </InfoView>
-
-          <InfoView title={`Invalid Items`} headerProps={{ withBorder: true }}>
-            <Box h={400} w="100%">
-              <ListView
-                data={data.invalidItems}
-                totalCount={data.invalidItems.length}
-                loading={navigation.state === "loading"}
-                withSearch={false}
-                showPagination={false}
-                initialItemsPerPage={20}
-              >
-                {(item) => (
-                  <Group>
-                    <Stack w="100%">
-                      <Group w="100%">
-                        <Text>{item.name}</Text>
-                        <Badge color={item.status.color}>
-                          {item.status.name}
-                        </Badge>
-                      </Group>
-                      <Text>
-                        Last loaned by{" "}
-                        <Link
-                          to={`/people/${item.lastLoan.personId}`}
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {item.lastLoan.fullName}
-                        </Link>{" "}
-                        on {dayjs(item.lastLoan.date).format("DD MMM YYYY")}
-                      </Text>
-                    </Stack>
-                    <ActionIcon
-                      size="md"
-                      onClick={() => navigate(`/items/${item.id}`)}
-                    >
-                      <IconChevronCompactRight />
-                    </ActionIcon>
-                  </Group>
-                )}
-              </ListView>
-            </Box>
+                </Group>
+              )}
+            </ListView>
           </InfoView>
         </Flex>
         //#endregion

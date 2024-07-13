@@ -76,6 +76,6 @@ export default function Page() {
       types={data.types}
     />
   ) : (
-    <ItemList items={data?.items} totalCount={data?.totalCount} />
+    <ItemList data={data?.items} totalCount={data?.totalCount} />
   );
 }
