@@ -58,10 +58,13 @@ export default function DataPage({
         align="center"
         justify="space-between"
         pb="md"
-        visibleFrom="md"
       >
         <Title order={1}>{title}</Title>
-        <Button onClick={onCreateClick} rightSection={<IconPlus />}>
+        <Button
+          onClick={onCreateClick}
+          rightSection={<IconPlus />}
+          visibleFrom="md"
+        >
           {createLabel}
         </Button>
       </Group>
