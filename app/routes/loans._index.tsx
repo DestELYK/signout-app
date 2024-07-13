@@ -1,13 +1,11 @@
-import { AreaChart, BarChart, Sparkline } from "@mantine/charts";
+import { AreaChart, Sparkline } from "@mantine/charts";
 import {
   Box,
   Button,
   Center,
-  Divider,
   Flex,
   Group,
   Loader,
-  ScrollArea,
   Stack,
   Switch,
   Text,
@@ -109,50 +107,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   //#endregion
 
-  //#region Loans by Role
-  const roleLoans = await prisma.tag.findMany({
-    where: { category: "Person Role" },
-    select: {
-      name: true,
-      people: { select: { id: true } },
-    },
-  });
-
-  let roleCount: {
-    role: string;
-    loanCount: number;
-    returnCount: number;
-  }[] = [];
-
-  for (let i = 0; i < roleLoans.length; i++) {
-    const role = roleLoans[i];
-
-    const loans = await prisma.loan.findMany({
-      where: { personId: { in: role.people.map((person) => person.id) } },
-      include: { items: true },
-    });
-
-    const existingRole = roleCount.find((r) => r.role === role.name);
-
-    if (existingRole) {
-      existingRole.loanCount = loans.length;
-      existingRole.returnCount = loans.filter((loan) =>
-        loan.items.some((item) => item.dateReturned)
-      ).length;
-    } else {
-      roleCount.push({
-        role: role.name,
-        loanCount: loans.length,
-        returnCount: loans.filter((loan) =>
-          loan.items.some((item) => item.dateReturned)
-        ).length,
-      });
-    }
-  }
-
-  roleCount = roleCount.sort((a, b) => a.role.localeCompare(b.role));
-  //#endregion
-
   //#region Recent Loans
 
   const recentLoans = await prisma.loan.findMany({
@@ -174,7 +128,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   return typedjson({
     loansByMonth: loansByMonth,
-    roleLoans: roleCount,
     recentLoans: recentLoans,
     totalLoans: await prisma.loan.count(),
     totalOutstandingLoans: await prisma.loan.count({
@@ -357,43 +310,6 @@ export default function Page() {
                 <Center h={300}>No data for this month</Center>
               )}
             </InfoView>
-            <InfoView title="Loans by Role" headerProps={{ withBorder: true }}>
-              {data.roleLoans && data.roleLoans.length > 0 ? (
-                //#region Bar Chart
-                <BarChart
-                  w="100%"
-                  h="100%"
-                  miw={250}
-                  mih={200}
-                  p="sm"
-                  orientation="vertical"
-                  data={data.roleLoans.map(
-                    ({ role, loanCount, returnCount }) => {
-                      return {
-                        role: role,
-                        loaned: loanCount,
-                        returned: returnCount,
-                      };
-                    }
-                  )}
-                  dataKey="role"
-                  barChartProps={{
-                    barCategoryGap: 3,
-                    barGap: 1,
-                  }}
-                  gridAxis="y"
-                  xAxisProps={{ allowDecimals: false, tickCount: 10 }}
-                  yAxisProps={{ width: 80, interval: 0, axisLine: true }}
-                  series={[
-                    { name: "loaned", label: "Loans", color: OUT_COLOR },
-                    { name: "returned", label: "Returns", color: IN_COLOR },
-                  ]}
-                />
-              ) : (
-                //#endregion
-                <Center h={300}>No data</Center>
-              )}
-            </InfoView>
           </Stack>
           {
             //#region Recent Loans
@@ -543,39 +459,6 @@ export default function Page() {
               </Flex>
             ) : (
               <Center h={300}>No data for this month</Center>
-            )}
-          </InfoView>
-          <InfoView
-            title="Loans by Role"
-            headerProps={{ withBorder: true }}
-            cardProps={{ mih: 300 }}
-          >
-            {data.roleLoans && data.roleLoans.length > 0 ? (
-              <ScrollArea
-                type="auto"
-                w="100%"
-                h="100%"
-                scrollbars="y"
-                offsetScrollbars="y"
-                pr="sm"
-              >
-                {data.roleLoans.map(
-                  ({ role, loanCount, returnCount }, index) => (
-                    <>
-                      <Group key={role} justify="space-between" py={2}>
-                        <Text>{role}</Text>
-                        <Stack gap={0}>
-                          <Text c={OUT_COLOR}>{loanCount} loans</Text>
-                          <Text c={IN_COLOR}>{returnCount} returns</Text>
-                        </Stack>
-                      </Group>
-                      {index !== data.roleLoans.length - 1 && <Divider />}
-                    </>
-                  )
-                )}
-              </ScrollArea>
-            ) : (
-              <Center h={300}>No data</Center>
             )}
           </InfoView>
 
