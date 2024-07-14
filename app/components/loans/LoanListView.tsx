@@ -1,4 +1,11 @@
-import { Flex, Highlight, Space, Text, Title } from "@mantine/core";
+import {
+  Flex,
+  Highlight,
+  Space,
+  Text,
+  Title,
+  UnstyledButton,
+} from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
@@ -41,52 +48,54 @@ export default function LoanListView({
   qrCode,
 }: LoanListViewProps) {
   return (
-    <Flex direction="row" align="center" justify="space-between" gap="xs">
-      <Flex w="100%" direction="column">
-        <Flex
-          direction="row"
-          align="center"
-          wrap="nowrap"
-          justify="space-between"
-        >
-          <Title order={4}>{`#${id}`}</Title>
-          <TagGroup
-            tags={[
-              ...tags,
-              createOutstandingTag({ out: outstandingLoans > 0 }),
-            ]}
-          />
-        </Flex>
-        <Highlight highlight={query ? query.split(" ") : ""}>{`${formatFullName(
-          person
-        )}`}</Highlight>
-        {items.slice(0, 2).map((i) => (
-          <Highlight
-            key={i.id}
-            size="xs"
-            highlight={
-              qrCode && i.qrCode === qrCode
-                ? i.name
-                : query
-                ? query.split(" ")
-                : ""
-            }
+    <UnstyledButton className="list-item" miw={200} w="100%" h="100%" p="xs">
+      <Flex direction="row" align="center" justify="space-between" gap="xs">
+        <Flex w="100%" direction="column">
+          <Flex
+            direction="row"
+            align="center"
+            wrap="nowrap"
+            justify="space-between"
           >
-            {i.name}
-          </Highlight>
-        ))}
-        {items.length > 2 && (
-          <Text fs="italic" size="xs">
-            ...and {items.length - 2} other items
+            <Title order={4}>{`#${id}`}</Title>
+            <TagGroup
+              tags={[
+                ...tags,
+                createOutstandingTag({ out: outstandingLoans > 0 }),
+              ]}
+            />
+          </Flex>
+          <Highlight
+            highlight={query ? query.split(" ") : ""}
+          >{`${formatFullName(person)}`}</Highlight>
+          {items.slice(0, 2).map((i) => (
+            <Highlight
+              key={i.id}
+              size="xs"
+              highlight={
+                qrCode && i.qrCode === qrCode
+                  ? i.name
+                  : query
+                  ? query.split(" ")
+                  : ""
+              }
+            >
+              {i.name}
+            </Highlight>
+          ))}
+          {items.length > 2 && (
+            <Text fs="italic" size="xs">
+              ...and {items.length - 2} other items
+            </Text>
+          )}
+          {items.length > 0 && <Space h="sm" />}
+          <Text size="xs">
+            Created: {formatDate(createdDate)}{" "}
+            <b>({dateDiff({ date: createdDate })})</b>
           </Text>
-        )}
-        {items.length > 0 && <Space h="sm" />}
-        <Text size="xs">
-          Created: {formatDate(createdDate)}{" "}
-          <b>({dateDiff({ date: createdDate })})</b>
-        </Text>
+        </Flex>
+        <IconArrowRight />
       </Flex>
-      <IconArrowRight />
-    </Flex>
+    </UnstyledButton>
   );
 }

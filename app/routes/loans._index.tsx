@@ -359,7 +359,7 @@ export default function Page() {
                 totalCount={data.recentLoans.length}
                 withDetails={false}
                 withSearch={false}
-                initialItemsPerPage={5}
+                initialItemsPerPage={MAX_RECENT_ITEMS}
               />
             </Box>
           </InfoView>
