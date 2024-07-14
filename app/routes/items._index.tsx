@@ -8,6 +8,8 @@ import {
   ScrollArea,
   Stack,
   Text,
+  Title,
+  UnstyledButton,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { useNavigate, useNavigation } from "@remix-run/react";
@@ -311,7 +313,13 @@ export default function Page() {
             scrollbars="x"
             offsetScrollbars="x"
           >
-            <Flex h={100} direction="row" wrap="nowrap" gap="md">
+            <Flex
+              h={100}
+              direction="row"
+              wrap="nowrap"
+              gap="md"
+              justify="center"
+            >
               <StatCard
                 label="Total Items"
                 value={data.totalItems}
@@ -351,19 +359,26 @@ export default function Page() {
               showPagination={false}
             >
               {({ type, available, outstanding }) => (
-                <Group
-                  justify="space-between"
+                <UnstyledButton
+                  w="100%"
                   onClick={() => navigate(`/items/list?type=${type}`)}
                 >
-                  <Text>{type}</Text>
-                  <Group>
-                    <Stack gap={0}>
-                      <Text c={IN_COLOR}>{available} available</Text>
-                      <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
-                    </Stack>
-                    <IconChevronRight />
+                  <Group
+                    w="100%"
+                    justify="space-between"
+                    onClick={() => navigate(`/items/list?type=${type}`)}
+                    p="xs"
+                  >
+                    <Title order={5}>{type}</Title>
+                    <Group>
+                      <Stack gap={0}>
+                        <Text c={IN_COLOR}>{available} available</Text>
+                        <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
+                      </Stack>
+                      <IconChevronRight />
+                    </Group>
                   </Group>
-                </Group>
+                </UnstyledButton>
               )}
             </ListView>
           </InfoView>

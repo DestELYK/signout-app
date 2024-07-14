@@ -7,7 +7,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { Link } from "@remix-run/react";
+import { Link, useNavigate } from "@remix-run/react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { dateDiff, formatDate } from "~/utils/utils";
 import TagGroup from "../tags/TagGroup";
@@ -39,33 +39,31 @@ export default function ItemListView({
   query,
   lastLoan,
 }: ItemListViewProps) {
+  const navigate = useNavigate();
+
   return (
-    <UnstyledButton w="100%" component={Link} to={`/items/${id}`}>
+    <UnstyledButton
+      className="list-item"
+      w="100%"
+      h="100%"
+      onClick={() => navigate(`/items/${id}`)}
+      p="xs"
+    >
       <Flex direction="row" align="center" justify="space-between">
         <Flex w="100%" direction="column" mr="lg">
-          <Flex
-            direction="row"
-            align="center"
-            wrap="nowrap"
-            justify="space-between"
+          <Highlight
+            component={Title}
+            order={4}
+            highlight={qrCode ? name : query ? query.split(" ") : ""}
           >
-            <Highlight
-              component={Title}
-              order={4}
-              highlight={qrCode ? name : query ? query.split(" ") : ""}
-            >
-              {name}
-            </Highlight>
-            <TagGroup tags={tags} categories={["Item Status"]} limit={1} />
-          </Flex>
-          <Flex
-            direction="row"
-            align="center"
-            wrap="nowrap"
-            justify="space-between"
-          >
-            <TagGroup tags={tags} categories={["Location"]} />
-          </Flex>
+            {name}
+          </Highlight>
+          <TagGroup
+            tags={tags}
+            categories={["Item Status", "Location"]}
+            limit={1}
+            groupProps={{ justify: "start" }}
+          />
           <Space h="xs" />
           {description && (
             <Text size="xs" fs="italic" lineClamp={1} mt="xs">

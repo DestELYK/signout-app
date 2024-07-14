@@ -1,5 +1,4 @@
 import {
-  Card,
   Center,
   Collapse,
   Divider,
@@ -11,6 +10,7 @@ import {
   Skeleton,
   Stack,
   Text,
+  UnstyledButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useNavigation, useSearchParams } from "@remix-run/react";
@@ -134,21 +134,22 @@ export default function ListView<T extends { id: number }>({
         </Stack>
       )}
       {filteredItems.length === 0 && (data !== undefined || !loading) ? (
-        <Paper withBorder w="100%" h="100%" mt="sm">
+        <Paper withBorder w="100%" h="100%">
           <Center h="100%">
             <Text>{emptyText}</Text>
           </Center>
         </Paper>
-      ) : (
-        <ScrollArea.Autosize
-          w="100%"
-          h="100%"
-          type="always"
-          scrollbars={orientation === "horizontal" ? "x" : "y"}
-          viewportRef={scrollRef}
-        >
-          {orientation === "horizontal" ? (
-            <Flex w="100%" direction="row" align="center" wrap="nowrap">
+      ) : orientation === "horizontal" ? (
+        <Paper w="100%" h="100%" withBorder>
+          <ScrollArea
+            w="100%"
+            h="100%"
+            type="hover"
+            scrollbarSize={20}
+            scrollbars="x"
+            viewportRef={scrollRef}
+          >
+            <Flex direction="row" align="center" wrap="nowrap" gap="md">
               {data === undefined || loading
                 ? Array(initialItemsPerPage)
                     .fill(0)
@@ -160,58 +161,90 @@ export default function ListView<T extends { id: number }>({
                     ))
                 : filteredItems.length > 0 &&
                   filteredItems.map((item) => (
-                    <Group key={item.id}>
+                    <Flex
+                      direction="row"
+                      key={item.id}
+                      justify="center"
+                      align="center"
+                      gap="xs"
+                    >
                       {children(item, form.values.query, form.values.qrCode)}
-                      <Divider orientation="vertical" />
-                    </Group>
+                      <Divider h="100%" orientation="vertical" />
+                    </Flex>
                   ))}
+              {!showPagination && data.length > itemsPerPage && (
+                <UnstyledButton
+                  w="100%"
+                  onClick={() =>
+                    setItemsPerPage((itemsPerPage) =>
+                      Math.min(totalCount, itemsPerPage + 10)
+                    )
+                  }
+                  pr="sm"
+                >
+                  <Text c="dimmed" size="sm" ta="center">
+                    Tap to view more entries
+                  </Text>
+                </UnstyledButton>
+              )}
             </Flex>
-          ) : (
-            <Card withBorder>
+          </ScrollArea>
+        </Paper>
+      ) : (
+        <Paper w="100%" h="100%" withBorder>
+          <ScrollArea
+            w="100%"
+            h="100%"
+            type="hover"
+            scrollbars="y"
+            viewportRef={scrollRef}
+          >
+            <Flex
+              w="100%"
+              direction="column"
+              align="center"
+              wrap="nowrap"
+              gap="md"
+            >
               {data === undefined || loading
                 ? Array(initialItemsPerPage)
                     .fill(0)
-                    .map((_, index) => (
-                      <Card.Section key={index} inheritPadding withBorder>
-                        <Skeleton h={100} />
-                      </Card.Section>
-                    ))
+                    .map((_, index) => <Skeleton h={100} />)
                 : filteredItems.length > 0 &&
                   filteredItems.map((item) => (
-                    <Card.Section
-                      className="list-item"
+                    <Flex
+                      w="100%"
+                      direction="column"
                       key={item.id}
-                      inheritPadding
-                      withBorder
+                      justify="center"
+                      align="center"
+                      gap={10}
                     >
                       {children(item, form.values.query, form.values.qrCode)}
-                    </Card.Section>
+                      <Divider w="100%" />
+                    </Flex>
                   ))}
               {!showPagination && data.length > itemsPerPage && (
-                <Card.Section inheritPadding withBorder>
-                  <Stack
-                    w="100%"
-                    align="center"
-                    py="sm"
-                    onClick={() =>
-                      setItemsPerPage((itemsPerPage) =>
-                        Math.min(totalCount, itemsPerPage + 10)
-                      )
-                    }
-                    style={{ cursor: "pointer" }}
-                  >
-                    <Text c="dimmed" size="sm">
-                      {data.length - itemsPerPage} more entries...
-                    </Text>
-                    <Text c="dimmed" size="sm">
-                      Tap to view more entries
-                    </Text>
-                  </Stack>
-                </Card.Section>
+                <UnstyledButton
+                  w="100%"
+                  onClick={() =>
+                    setItemsPerPage((itemsPerPage) =>
+                      Math.min(totalCount, itemsPerPage + 10)
+                    )
+                  }
+                  mb="sm"
+                >
+                  <Text c="dimmed" size="sm" ta="center">
+                    {data.length - itemsPerPage} more entries...
+                  </Text>
+                  <Text c="dimmed" size="sm" ta="center">
+                    Tap to view more entries
+                  </Text>
+                </UnstyledButton>
               )}
-            </Card>
-          )}
-        </ScrollArea.Autosize>
+            </Flex>
+          </ScrollArea>
+        </Paper>
       )}
       {showPagination && (
         <Collapse w="100%" in={totalCount > itemsPerPage}>

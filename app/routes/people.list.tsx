@@ -71,6 +71,6 @@ export default function Page() {
       roles={data.roles}
     />
   ) : (
-    <PeopleList people={data?.people} totalCount={data?.totalCount} />
+    <PeopleList data={data?.people} totalCount={data?.totalCount} />
   );
 }
