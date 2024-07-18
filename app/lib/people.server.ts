@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { ROLE_ORDER } from "~/utils/consts";
 import { PersonWithTags, personWithTags } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
 import { prisma } from "./prisma.server";
@@ -179,6 +180,116 @@ export const getPersonById = async (
     return { person: person };
   } catch (e) {
     console.error(`Failed to get person by id`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getPeopleRoleCounts = async (): Promise<{
+  roleCounts?: {
+    role: string;
+    loanCount: number;
+    returnCount: number;
+  }[];
+  error?: string;
+}> => {
+  try {
+    const roleLoans = await prisma.tag.findMany({
+      where: { category: "Person Role" },
+      select: {
+        name: true,
+        people: { select: { id: true } },
+      },
+    });
+
+    let roleCounts: {
+      role: string;
+      loanCount: number;
+      returnCount: number;
+    }[] = [];
+
+    for (let i = 0; i < roleLoans.length; i++) {
+      const role = roleLoans[i];
+
+      const loans = await prisma.loan.findMany({
+        where: { personId: { in: role.people.map((person) => person.id) } },
+        include: { items: true },
+      });
+
+      const existingRole = roleCounts.find((r) => r.role === role.name);
+
+      if (existingRole) {
+        existingRole.loanCount = loans.length;
+        existingRole.returnCount = loans.filter((loan) =>
+          loan.items.some((item) => item.dateReturned)
+        ).length;
+      } else {
+        roleCounts.push({
+          role: role.name,
+          loanCount: loans.length,
+          returnCount: loans.filter((loan) =>
+            loan.items.some((item) => item.dateReturned)
+          ).length,
+        });
+      }
+    }
+
+    roleCounts = roleCounts.sort(
+      (a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
+    );
+
+    return {
+      roleCounts: roleCounts,
+    };
+  } catch (e) {
+    console.error(`Failed to get people role counts`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getPeopleWithInvalidItems = async (): Promise<{
+  peopleWithInvalidItems?: PersonWithTags[];
+  error?: string;
+}> => {
+  try {
+    const people = await prisma.person.findMany({
+      where: {
+        loans: {
+          some: {
+            items: {
+              some: {
+                AND: [
+                  {
+                    dateReturned: null,
+                  },
+                  {
+                    item: {
+                      tags: {
+                        some: {
+                          category: "Item Status",
+                        },
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+      include: personWithTags.include,
+    });
+
+    return { peopleWithInvalidItems: people };
+  } catch (e) {
+    console.error(`Failed to get people with invalid items`, e);
 
     let message = "Unknown Error";
     if (e instanceof Error) message = e.message;

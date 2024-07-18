@@ -1,181 +1,30 @@
 import { BarChart } from "@mantine/charts";
 import { Box, Center, Flex, Group, Loader, Stack } from "@mantine/core";
-import { Tag } from "@prisma/client";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import InfoView from "~/components/base/InfoView";
 import PeopleList from "~/components/people/PeopleList";
 import StatCard from "~/components/StatCard";
 import { useDesktopOnly } from "~/lib/hooks";
+import {
+  getPeople,
+  getPeopleWithInvalidItems,
+  getPeopleRoleCounts as getRoleCount,
+} from "~/lib/people.server";
 import { prisma } from "~/lib/prisma.server";
-import { IN_COLOR, OUT_COLOR, ROLE_ORDER } from "~/utils/consts";
+import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 
 export const loader = async () => {
-  const allPeople = await prisma.person.findMany({
-    include: {
-      loans: {
-        select: {
-          id: true,
-          createdDate: true,
-          items: {
-            select: {
-              dateLoaned: true,
-              dateReturned: true,
-              item: {
-                select: {
-                  id: true,
-                  name: true,
-                  tags: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      tags: true,
-    },
-  });
+  const roleCount = await getRoleCount();
 
-  //#region Loans by Role
-
-  const roleLoans = await prisma.tag.findMany({
-    where: { category: "Person Role" },
-    select: {
-      name: true,
-      people: { select: { id: true } },
-    },
-  });
-
-  let roleCount: {
-    role: string;
-    loanCount: number;
-    returnCount: number;
-  }[] = [];
-
-  for (let i = 0; i < roleLoans.length; i++) {
-    const role = roleLoans[i];
-
-    const loans = await prisma.loan.findMany({
-      where: { personId: { in: role.people.map((person) => person.id) } },
-      include: { items: true },
-    });
-
-    const existingRole = roleCount.find((r) => r.role === role.name);
-
-    if (existingRole) {
-      existingRole.loanCount = loans.length;
-      existingRole.returnCount = loans.filter((loan) =>
-        loan.items.some((item) => item.dateReturned)
-      ).length;
-    } else {
-      roleCount.push({
-        role: role.name,
-        loanCount: loans.length,
-        returnCount: loans.filter((loan) =>
-          loan.items.some((item) => item.dateReturned)
-        ).length,
-      });
-    }
-  }
-
-  roleCount = roleCount.sort(
-    (a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
-  );
-
-  //#endregion
-
-  //#region People with Outstanding Loans
-  const peopleWithOutstandingLoans: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    nickname: string | null;
-    tags: Tag[];
-    outstandingLoans: number;
-  }[] = [];
-  //#endregion
-
-  //#region Invalid Items
-
-  const peopleWithInvalidItems: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    nickname: string | null;
-    tags: Tag[];
-    invalidItems: {
-      id: number;
-      name: string;
-      dateLoaned: Date;
-      status: Tag;
-    }[];
-  }[] = [];
-
-  for (let i = 0; i < allPeople.length; i++) {
-    const person = allPeople[i];
-    const outstandingLoans = person.loans.filter((loan) =>
-      loan.items.some((item) => !item.dateReturned)
-    );
-
-    if (outstandingLoans.length <= 0) {
-      continue;
-    }
-
-    peopleWithOutstandingLoans.push({
-      id: person.id,
-      firstName: person.firstName,
-      lastName: person.lastName,
-      nickname: person.nickname,
-      tags: person.tags,
-      outstandingLoans: outstandingLoans.length,
-    });
-
-    const invalidItems: {
-      id: number;
-      name: string;
-      dateLoaned: Date;
-      status: Tag;
-    }[] = [];
-    outstandingLoans
-      .filter((loan) =>
-        loan.items.some((item) =>
-          item.item.tags.find((tag) => tag.category === "Item Status")
-        )
-      )
-      .forEach((loan) => {
-        loan.items.forEach((item) => {
-          const statusTag = item.item.tags.find(
-            (tag) => tag.category === "Item Status"
-          );
-
-          if (statusTag) {
-            invalidItems.push({
-              id: item.item.id,
-              name: item.item.name,
-              dateLoaned: item.dateLoaned,
-              status: statusTag,
-            });
-          }
-        });
-      });
-
-    if (invalidItems.length > 0) {
-      peopleWithInvalidItems.push({
-        id: person.id,
-        firstName: person.firstName,
-        lastName: person.lastName,
-        nickname: person.nickname,
-        tags: person.tags,
-        invalidItems: invalidItems,
-      });
-    }
-  }
+  const peopleWithInvalidItems = await getPeopleWithInvalidItems();
 
   return typedjson({
-    roleLoans: roleCount,
-    peopleWithInvalidItems: peopleWithInvalidItems,
-    peopleWithOutstandingLoans: peopleWithOutstandingLoans,
-    totalPeople: allPeople.length,
+    roleLoans: roleCount.roleCounts ?? [],
+    peopleWithInvalidItems: peopleWithInvalidItems.peopleWithInvalidItems ?? [],
+    peopleWithOutstandingLoans:
+      (await getPeople({ outstanding: true })).people ?? [],
+    totalPeople: await prisma.person.count(),
   });
 };
 
@@ -295,12 +144,7 @@ export default function Page() {
           >
             <Box h="100%" mih={300}>
               <PeopleList
-                data={data.peopleWithOutstandingLoans.map((person) => ({
-                  ...person,
-                  _count: {
-                    loans: person.outstandingLoans,
-                  },
-                }))}
+                data={data.peopleWithOutstandingLoans}
                 totalCount={data.peopleWithOutstandingLoans.length}
                 initialItemsPerPage={20}
                 emptyText="No people found"
@@ -349,12 +193,7 @@ export default function Page() {
             cardProps={{ mih: 300 }}
           >
             <PeopleList
-              data={data.peopleWithOutstandingLoans.map((person) => ({
-                ...person,
-                _count: {
-                  loans: person.outstandingLoans,
-                },
-              }))}
+              data={data.peopleWithOutstandingLoans}
               totalCount={data.peopleWithOutstandingLoans.length}
               initialItemsPerPage={20}
               emptyText="No people found"
