@@ -1,47 +1,47 @@
-import { UnstyledButton } from "@mantine/core";
-import { NavLink, useNavigation } from "@remix-run/react";
+import { useNavigation } from "@remix-run/react";
 import { LoanWithTagsAndItems } from "~/utils/types.server";
-import ListView from "../base/ListView";
+import ListView, { ListViewProps } from "../base/ListView";
 import LoanListView from "./LoanListView";
 
-export interface LoanListProps {
-  loans?: LoanWithTagsAndItems[];
-  totalCount?: number;
-  withDetails?: boolean;
-  withSearch?: boolean;
-  initialItemsPerPage?: number;
-}
-
 export function LoanList({
-  loans,
+  data,
   totalCount,
-  withDetails = true,
-  withSearch = true,
+  orientation,
   initialItemsPerPage,
-}: LoanListProps) {
+  emptyText,
+  showPagination,
+  withSearch,
+  withDetails,
+}: Omit<
+  ListViewProps<LoanWithTagsAndItems> & {
+    withDetails?: boolean;
+  },
+  "children" | "loading"
+>) {
   const navigation = useNavigation();
 
   return (
     <ListView
-      data={loans}
+      data={data}
       totalCount={totalCount}
-      loading={navigation.state === "loading"}
+      emptyText={emptyText}
+      orientation={orientation}
       withSearch={withSearch}
       initialItemsPerPage={initialItemsPerPage}
+      showPagination={showPagination}
+      loading={navigation.state === "loading"}
     >
       {(item, query, qrCode) => (
-        <UnstyledButton w="100%" component={NavLink} to={`/loans/${item.id}`}>
-          <LoanListView
-            id={item.id}
-            person={item.person}
-            items={withDetails ? item.items.map((i) => i.item) : []}
-            tags={item.tags}
-            createdDate={item.createdDate}
-            outstandingLoans={item._count.items}
-            query={withDetails ? query : undefined}
-            qrCode={withDetails ? qrCode : undefined}
-          />
-        </UnstyledButton>
+        <LoanListView
+          id={item.id}
+          person={item.person}
+          items={withDetails ? item.items?.map((i) => i.item) : []}
+          tags={item.tags}
+          createdDate={item.createdDate}
+          outstandingLoans={item._count.items}
+          query={withDetails ? query : undefined}
+          qrCode={withDetails ? qrCode : undefined}
+        />
       )}
     </ListView>
   );

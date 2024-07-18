@@ -7,6 +7,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { useNavigate } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
 import {
   createOutstandingTag,
@@ -47,8 +48,17 @@ export default function LoanListView({
   query,
   qrCode,
 }: LoanListViewProps) {
+  const navigate = useNavigate();
+
   return (
-    <UnstyledButton className="list-item" miw={200} w="100%" h="100%" p="xs">
+    <UnstyledButton
+      className="list-item"
+      miw={200}
+      w="100%"
+      h="100%"
+      p="xs"
+      onClick={() => navigate(`/loans/${id}`)}
+    >
       <Flex direction="row" align="center" justify="space-between" gap="xs">
         <Flex w="100%" direction="column">
           <Flex

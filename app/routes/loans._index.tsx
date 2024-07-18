@@ -280,7 +280,7 @@ export default function Page() {
           >
             <Box h="100%" w="100%" mih={300}>
               <LoanList
-                loans={data.recentLoans}
+                data={data.recentLoans}
                 totalCount={data.recentLoans.length}
                 withDetails={false}
                 withSearch={false}

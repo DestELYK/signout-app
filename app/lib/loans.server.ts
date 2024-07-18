@@ -308,3 +308,74 @@ export const getLoanByMonth = async (
     return { error: message };
   }
 };
+
+export const getLoansByYear = async (): Promise<{
+  loansByYear?: {
+    date: string;
+    totalLoans: number;
+    totalReturns: number;
+  }[];
+  error?: string;
+}> => {
+  try {
+    const loansInYear = await prisma.loan.findMany({
+      include: { person: true, items: true, tags: true },
+      where: {
+        createdDate: {
+          gte: dayjs().subtract(1, "year").toDate(),
+        },
+      },
+    });
+
+    let loansByYear: {
+      date: string;
+      totalLoans: number;
+      totalReturns: number;
+    }[] = [];
+
+    loansInYear.forEach((loan) => {
+      const date = dayjs(loan.createdDate).format("YYYY-MM-DD");
+
+      const existingDate = loansByYear.find((d) => d.date === date);
+
+      if (existingDate) {
+        existingDate.totalLoans += 1;
+      } else {
+        loansByYear.push({
+          date: date,
+          totalLoans: 1,
+          totalReturns: 0,
+        });
+      }
+    });
+
+    loansInYear
+      .filter(
+        (loan) => loan.items.filter((item) => !item.dateReturned).length === 0
+      )
+      .forEach((loan) => {
+        const date = dayjs(loan.createdDate).format("YYYY-MM-DD");
+
+        const existingDate = loansByYear.find((d) => d.date === date);
+
+        if (existingDate) {
+          existingDate.totalReturns += 1;
+        } else {
+          loansByYear.push({
+            date: date,
+            totalLoans: 0,
+            totalReturns: 1,
+          });
+        }
+      });
+
+    return { loansByYear: loansByYear };
+  } catch (e) {
+    console.error(`Failed to get loans by year`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};

@@ -51,6 +51,6 @@ export default function Page() {
   ) : desktopOnly ? (
     <LoanTable data={data?.loans} totalCount={data?.totalCount} />
   ) : (
-    <LoanList loans={data?.loans} totalCount={data?.totalCount} />
+    <LoanList data={data?.loans} totalCount={data?.totalCount} />
   );
 }
