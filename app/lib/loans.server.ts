@@ -296,7 +296,9 @@ export const getLoanByMonth = async (
         }
       });
 
-    loansByMonth = loansByMonth.sort((a, b) => a.month.localeCompare(b.month));
+    loansByMonth = loansByMonth.sort((a, b) =>
+      dayjs(a.month, "MM-YYYY").isAfter(dayjs(b.month, "MM-YYYY")) ? 1 : -1
+    );
 
     return { loansByMonth: loansByMonth };
   } catch (e) {
