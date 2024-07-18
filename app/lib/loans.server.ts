@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import dayjs from "dayjs";
 import {
   LoanWithTagsAndItems,
   loanWithTagsAndItems,
@@ -198,6 +199,108 @@ export const getLoanById = async (
     return { loan: loan };
   } catch (e) {
     console.error(`Failed to get loan by id`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getLoanByMonth = async (
+  month?: string | null
+): Promise<{
+  loansByMonth?: {
+    month: string;
+    totalLoans: number;
+    totalReturns: number;
+    days: { loanCount: number; returnCount: number }[];
+  }[];
+  error?: string;
+}> => {
+  try {
+    if (month && !isNumeric(month)) throw new Error("Invalid Month");
+
+    const allLoans = await prisma.loan.findMany({
+      include: { person: true, items: true, tags: true },
+    });
+
+    let loansByMonth: {
+      month: string;
+      totalLoans: number;
+      totalReturns: number;
+      days: { loanCount: number; returnCount: number }[];
+    }[] = [];
+
+    allLoans.forEach((loan) => {
+      const month = dayjs(loan.createdDate).format("MM-YYYY");
+      const day = Number(dayjs(loan.createdDate).format("DD")) - 1;
+
+      const existingMonth = loansByMonth.find((m) => m.month === month);
+
+      if (existingMonth) {
+        existingMonth.days[day].loanCount += 1;
+        existingMonth.totalLoans += 1;
+      } else {
+        const days: {
+          loanCount: number;
+          returnCount: number;
+        }[] = [];
+
+        for (let i = 0; i < dayjs(month, "MM-YYYY").daysInMonth(); i++) {
+          days[i] = { loanCount: 0, returnCount: 0 };
+        }
+
+        days[day].loanCount = 1;
+
+        loansByMonth.push({
+          month: month,
+          totalLoans: 1,
+          totalReturns: 0,
+          days: days,
+        });
+      }
+    });
+
+    allLoans
+      .filter(
+        (loan) => loan.items.filter((item) => !item.dateReturned).length === 0
+      )
+      .forEach((loan) => {
+        const month = dayjs(loan.createdDate).format("MM-YYYY");
+        const day = Number(dayjs(loan.createdDate).format("DD")) - 1;
+
+        const existingMonth = loansByMonth.find((m) => m.month === month);
+
+        if (existingMonth) {
+          existingMonth.days[day].returnCount += 1;
+          existingMonth.totalReturns += 1;
+        } else {
+          const days: {
+            loanCount: number;
+            returnCount: number;
+          }[] = [];
+
+          for (let i = 0; i < dayjs(month, "MM-YYYY").daysInMonth(); i++) {
+            days[i] = { loanCount: 0, returnCount: 0 };
+          }
+
+          days[day].returnCount = 1;
+
+          loansByMonth.push({
+            month: month,
+            totalLoans: 0,
+            totalReturns: 1,
+            days: days,
+          });
+        }
+      });
+
+    loansByMonth = loansByMonth.sort((a, b) => a.month.localeCompare(b.month));
+
+    return { loansByMonth: loansByMonth };
+  } catch (e) {
+    console.error(`Failed to get loans by month`, e);
 
     let message = "Unknown Error";
     if (e instanceof Error) message = e.message;

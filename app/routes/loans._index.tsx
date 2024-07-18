@@ -20,6 +20,7 @@ import StatCard from "~/components/StatCard";
 import InfoView from "~/components/base/InfoView";
 import { LoanList } from "~/components/loans/LoanList";
 import { useDesktopOnly } from "~/lib/hooks";
+import { getLoanByMonth } from "~/lib/loans.server";
 import { prisma } from "~/lib/prisma.server";
 import { IN_COLOR, MAX_RECENT_ITEMS, OUT_COLOR } from "~/utils/consts";
 import { loanWithTagsAndItems } from "~/utils/types.server";
@@ -28,83 +29,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const searchParams = new URL(request.url).searchParams;
 
   //#region Loans by Month
-  const allLoans = await prisma.loan.findMany({
-    include: { person: true, items: true, tags: true },
-  });
-
-  let loansByMonth: {
-    month: string;
-    totalLoans: number;
-    totalReturns: number;
-    days: { loanCount: number; returnCount: number }[];
-  }[] = [];
-
-  allLoans.forEach((loan) => {
-    const month = dayjs(loan.createdDate).format("MM-YYYY");
-    const day = Number(dayjs(loan.createdDate).format("DD")) - 1;
-
-    const existingMonth = loansByMonth.find((m) => m.month === month);
-
-    if (existingMonth) {
-      existingMonth.days[day].loanCount += 1;
-      existingMonth.totalLoans += 1;
-    } else {
-      const days: {
-        loanCount: number;
-        returnCount: number;
-      }[] = [];
-
-      for (let i = 0; i < dayjs(month, "MM-YYYY").daysInMonth(); i++) {
-        days[i] = { loanCount: 0, returnCount: 0 };
-      }
-
-      days[day].loanCount = 1;
-
-      loansByMonth.push({
-        month: month,
-        totalLoans: 1,
-        totalReturns: 0,
-        days: days,
-      });
-    }
-  });
-
-  allLoans
-    .filter(
-      (loan) => loan.items.filter((item) => !item.dateReturned).length === 0
-    )
-    .forEach((loan) => {
-      const month = dayjs(loan.createdDate).format("MM-YYYY");
-      const day = Number(dayjs(loan.createdDate).format("DD")) - 1;
-
-      const existingMonth = loansByMonth.find((m) => m.month === month);
-
-      if (existingMonth) {
-        existingMonth.days[day].returnCount += 1;
-        existingMonth.totalReturns += 1;
-      } else {
-        const days: {
-          loanCount: number;
-          returnCount: number;
-        }[] = [];
-
-        for (let i = 0; i < dayjs(month, "MM-YYYY").daysInMonth(); i++) {
-          days[i] = { loanCount: 0, returnCount: 0 };
-        }
-
-        days[day].returnCount = 1;
-
-        loansByMonth.push({
-          month: month,
-          totalLoans: 0,
-          totalReturns: 1,
-          days: days,
-        });
-      }
-    });
-
-  loansByMonth = loansByMonth.sort((a, b) => a.month.localeCompare(b.month));
-
+  const loansByMonth = (await getLoanByMonth()).loansByMonth;
   //#endregion
 
   //#region Recent Loans
@@ -162,11 +87,11 @@ export default function Page() {
     ? searchParams.get("month")
     : dayjs().format("MM-YYYY");
 
-  const loansInCurrentMonth = data.loansByMonth.find(
+  const loansInCurrentMonth = data.loansByMonth?.find(
     (month) => month.month === selectedMonth
   );
 
-  const months = data.loansByMonth.map((month) => month.month);
+  const months = data.loansByMonth?.map((month) => month.month);
 
   return (
     <>
