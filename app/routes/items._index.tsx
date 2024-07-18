@@ -11,7 +11,6 @@ import {
   Title,
   UnstyledButton,
 } from "@mantine/core";
-import { Tag } from "@prisma/client";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
@@ -20,136 +19,25 @@ import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
 import ItemList from "~/components/items/ItemList";
 import { useDesktopOnly } from "~/lib/hooks";
+import { getInvalidItems, getItemTypes } from "~/lib/items.server";
 import { prisma } from "~/lib/prisma.server";
 import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
-import { formatFullName } from "~/utils/utils";
 
 export const loader = async () => {
-  const allItems = await prisma.item.findMany({
-    include: {
-      loans: {
-        select: {
-          loanId: true,
-          dateLoaned: true,
-          dateReturned: true,
-          loan: {
-            select: {
-              person: {
-                include: {
-                  tags: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      tags: true,
-    },
-  });
+  const itemTypes = await getItemTypes();
+  const invalidItems = await getInvalidItems();
 
-  //#region Items by Type
-
-  let itemsByType: {
-    typeId: number;
-    type: string;
-    available: number;
-    outstanding: number;
-    total: number;
-    color: string;
-  }[] = [];
-
-  const types = await prisma.tag.findMany({
-    where: { category: "Item Type", hidden: false },
-    orderBy: [{ priority: "asc" }, { name: "asc" }],
-  });
-
-  const statuses = await prisma.tag.findMany({
-    where: { category: "Item Status", hidden: false },
-  });
-
-  types.forEach((type) => {
-    const available = allItems.filter(
-      (item) =>
-        item.tags.find((tag) => tag.id === type.id) &&
-        item.loans.filter((loan) => loan.dateReturned === null).length === 0
-    ).length;
-    const outstanding = allItems.filter(
-      (item) =>
-        item.tags.find((tag) => tag.id === type.id) &&
-        item.loans.filter((loan) => loan.dateReturned === null).length > 0
-    ).length;
-
-    itemsByType.push({
-      typeId: type.id,
-      type: type.name,
-      available: available,
-      outstanding: outstanding,
-      total: available + outstanding,
-      color: type.color,
-    });
-  });
-
-  let statusCount: { [key: string]: { count: number; color: string } } = {};
-  let invalidItems: {
-    id: number;
-    name: string;
-    status: Tag;
-    lastLoan: { id: number; personId: number; fullName: string; date: Date };
-  }[] = [];
-
-  statuses.forEach((status) => {
-    statusCount[status.name] = {
-      count: allItems.filter((item) =>
-        item.tags.find((tag) => tag.id === status.id)
-      ).length,
-      color: status.color,
-    };
-
-    const invalid = allItems.filter(
-      (item) =>
-        item.tags.find((tag) => tag.id === status.id) &&
-        item.loans.filter((loan) => loan.dateReturned === null).length > 0
-    );
-
-    for (let i = 0; i < invalid.length; i++) {
-      const invalidItem = invalid[i];
-
-      const lastLoan = invalidItem.loans.reduce((prev, current) =>
-        prev.dateLoaned > current.dateLoaned ? prev : current
-      );
-
-      // Check if item already exists in the list
-      const existingItem = invalidItems.find(
-        (item) => item.id === invalidItem.id
-      );
-
-      if (existingItem) {
-        continue;
-      }
-
-      invalidItems.push({
-        id: invalidItem.id,
-        name: invalidItem.name,
-        status: status,
-        lastLoan: {
-          id: lastLoan.loanId,
-          personId: lastLoan.loan.person.id,
-          fullName: formatFullName(lastLoan.loan.person),
-          date: lastLoan.dateLoaned,
-        },
-      });
-    }
-  });
+  console.log(itemTypes, invalidItems);
 
   return typedjson({
-    itemsByType: itemsByType,
-    itemTypes: types,
-    itemStatuses: statusCount,
+    itemsByType: itemTypes.itemsByType,
+    itemTypes: itemTypes.itemTypes,
+    itemStatuses: invalidItems.statusCount,
     totalItems: await prisma.item.count(),
     outstandingItems: await prisma.item.count({
       where: { loans: { some: { dateReturned: null } } },
     }),
-    invalidItems: invalidItems,
+    invalidItems: invalidItems.invalidItems,
   });
 };
 
@@ -274,7 +162,7 @@ export default function Page() {
           >
             <Box h="100%" w="100%" mih={300}>
               <ItemList
-                data={data.invalidItems.map((item) => ({
+                data={data.invalidItems?.map((item) => ({
                   id: item.id,
                   name: item.name,
                   tags: [item.status],
@@ -283,7 +171,7 @@ export default function Page() {
                     loanedDate: item.lastLoan.date,
                   },
                 }))}
-                totalCount={data.invalidItems.length}
+                totalCount={data.invalidItems?.length}
                 withSearch={false}
                 initialItemsPerPage={20}
                 showPagination={false}

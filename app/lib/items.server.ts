@@ -1,7 +1,7 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, Tag } from "@prisma/client";
 import { prisma } from "~/lib/prisma.server";
 import { ItemWithTags, itemWithTags } from "~/utils/types.server";
-import { isNumeric } from "~/utils/utils";
+import { formatFullName, isNumeric } from "~/utils/utils";
 
 export const getItems = async (
   filters: {
@@ -170,6 +170,202 @@ export const getItemById = async (
     return { item: item };
   } catch (e) {
     console.error(`Failed to get item by id`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getItemTypes = async (): Promise<{
+  itemsByType?: {
+    typeId: number;
+    type: string;
+    available: number;
+    outstanding: number;
+    total: number;
+    color: string;
+  }[];
+  itemTypes?: Tag[];
+  error?: string;
+}> => {
+  try {
+    let itemsByType: {
+      typeId: number;
+      type: string;
+      available: number;
+      outstanding: number;
+      total: number;
+      color: string;
+    }[] = [];
+
+    const allItems = await prisma.item.findMany({
+      include: {
+        loans: {
+          select: {
+            dateLoaned: true,
+            dateReturned: true,
+          },
+        },
+        tags: true,
+      },
+    });
+
+    const types = await prisma.tag.findMany({
+      where: { category: "Item Type", hidden: false },
+      orderBy: [{ priority: "asc" }, { name: "asc" }],
+    });
+
+    types.forEach((type) => {
+      const available = allItems.filter(
+        (item) =>
+          item.tags.find((tag) => tag.id === type.id) &&
+          item.loans.filter((loan) => loan.dateReturned === null).length === 0
+      ).length;
+      const outstanding = allItems.filter(
+        (item) =>
+          item.tags.find((tag) => tag.id === type.id) &&
+          item.loans.filter((loan) => loan.dateReturned === null).length > 0
+      ).length;
+
+      itemsByType.push({
+        typeId: type.id,
+        type: type.name,
+        available: available,
+        outstanding: outstanding,
+        total: available + outstanding,
+        color: type.color,
+      });
+    });
+
+    return {
+      itemsByType: itemsByType,
+      itemTypes: types,
+    };
+  } catch (e) {
+    console.error(`Failed to get item types`, e);
+
+    let message = "Unknown Error";
+    if (e instanceof Error) message = e.message;
+
+    return { error: message };
+  }
+};
+
+export const getInvalidItems = async (): Promise<{
+  statusCount?: { [key: string]: { count: number; color: string } };
+  invalidItems?: {
+    id: number;
+    name: string;
+    status: Tag;
+    lastLoan: { id: number; personId: number; fullName: string; date: Date };
+  }[];
+  error?: string;
+}> => {
+  try {
+    let statusCount: { [key: string]: { count: number; color: string } } = {};
+    let invalidItems: {
+      id: number;
+      name: string;
+      status: Tag;
+      lastLoan: { id: number; personId: number; fullName: string; date: Date };
+    }[] = [];
+
+    const allItems = await prisma.item.findMany({
+      include: {
+        loans: {
+          select: {
+            loanId: true,
+            dateLoaned: true,
+            dateReturned: true,
+            loan: {
+              select: {
+                person: {
+                  include: {
+                    tags: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        tags: true,
+      },
+      where: {
+        AND: [
+          {
+            tags: {
+              some: {
+                category: "Item Status",
+              },
+            },
+          },
+          {
+            loans: {
+              some: {
+                dateReturned: null,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    const statuses = await prisma.tag.findMany({
+      where: {
+        category: "Item Status",
+      },
+    });
+
+    statuses.forEach((status) => {
+      statusCount[status.name] = {
+        count: allItems.filter((item) =>
+          item.tags.find((tag) => tag.id === status.id)
+        ).length,
+        color: status.color,
+      };
+
+      const invalid = allItems.filter((item) =>
+        item.tags.find((tag) => tag.id === status.id)
+      );
+
+      for (let i = 0; i < invalid.length; i++) {
+        const invalidItem = invalid[i];
+
+        const lastLoan = invalidItem.loans.reduce((prev, current) =>
+          prev.dateLoaned > current.dateLoaned ? prev : current
+        );
+
+        // Check if item already exists in the list
+        const existingItem = invalidItems.find(
+          (item) => item.id === invalidItem.id
+        );
+
+        if (existingItem) {
+          continue;
+        }
+
+        invalidItems.push({
+          id: invalidItem.id,
+          name: invalidItem.name,
+          status: status,
+          lastLoan: {
+            id: lastLoan.loanId,
+            personId: lastLoan.loan.person.id,
+            fullName: formatFullName(lastLoan.loan.person),
+            date: lastLoan.dateLoaned,
+          },
+        });
+      }
+    });
+
+    return {
+      statusCount: statusCount,
+      invalidItems: invalidItems,
+    };
+  } catch (e) {
+    console.error(`Failed to get invalid items`, e);
 
     let message = "Unknown Error";
     if (e instanceof Error) message = e.message;
