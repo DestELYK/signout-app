@@ -1,5 +1,5 @@
 import { BarChart } from "@mantine/charts";
-import { Box, Center, Flex, Group, Loader, Stack } from "@mantine/core";
+import { Box, Card, Center, Flex, Group, Loader, Stack } from "@mantine/core";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import InfoView from "~/components/base/InfoView";
@@ -52,7 +52,7 @@ export default function Page() {
           gap="sm"
           visibleFrom="md"
         >
-          <Stack w="100%" h="100%">
+          <Stack w={{ md: "60%", lg: "65%" }} h="100%">
             <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
               <StatCard
                 label="People"
@@ -115,7 +115,7 @@ export default function Page() {
                 <Center h={300}>No data</Center>
               )}
             </InfoView>
-            <Box w="100%" h={250}>
+            <Card w="100%" h={250} withBorder>
               <PeopleList
                 data={data.peopleWithInvalidItems.map((person) => ({
                   ...person,
@@ -128,17 +128,16 @@ export default function Page() {
                 showPagination={false}
                 withSearch={false}
               />
-            </Box>
+            </Card>
           </Stack>
           <InfoView
             title={`People with Outstanding Loans`}
             headerProps={{ withBorder: true }}
             cardProps={{
-              w: "auto",
-              miw: { md: 300, lg: 350, xl: 400 },
+              w: { md: "40%", lg: "35%" },
             }}
           >
-            <Box h="100%" mih={300}>
+            <Box w="100%" h="100%" mih={300}>
               <PeopleList
                 data={data.peopleWithOutstandingLoans}
                 totalCount={data.peopleWithOutstandingLoans.length}

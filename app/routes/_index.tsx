@@ -1,5 +1,5 @@
 import { AreaChart, Sparkline } from "@mantine/charts";
-import { Box, Center, Flex, Group, Loader, Stack, Text } from "@mantine/core";
+import { Card, Center, Flex, Group, Loader, Stack, Text } from "@mantine/core";
 import type { MetaFunction } from "@remix-run/node";
 import { useNavigate } from "@remix-run/react";
 import dayjs from "dayjs";
@@ -102,14 +102,14 @@ export default function Index() {
                 value={data.totalOutstanding}
                 cardProps={{ mih: "25%" }}
               />
-              <Box h="75%">
+              <Card h="75%" withBorder>
                 <LoanList
                   data={data.recentLoans}
                   initialItemsPerPage={MAX_RECENT_ITEMS}
                   totalCount={data.recentLoans?.length}
                   withSearch={false}
                 />
-              </Box>
+              </Card>
             </Stack>
             <Stack h="100%" gap={0}>
               <StatCard
@@ -118,14 +118,14 @@ export default function Index() {
                 value={data.totalInvalidItems ?? 0}
                 cardProps={{ mih: "25%" }}
               />
-              <Box h="75%">
+              <Card h="75%" withBorder>
                 <PeopleList
                   data={data.peopleWithInvalidItems}
                   initialItemsPerPage={MAX_RECENT_ITEMS}
                   totalCount={data.recentLoans?.length}
                   withSearch={false}
                 />
-              </Box>
+              </Card>
             </Stack>
             <Stack h="100%" gap={0}>
               <StatCard
@@ -134,7 +134,7 @@ export default function Index() {
                 value={totalAvailableItems}
                 cardProps={{ mih: "25%" }}
               />
-              <Box h="75%">
+              <Card h="75%" withBorder>
                 <ListView
                   data={data.inventory?.map((i) => ({
                     ...i,
@@ -167,7 +167,7 @@ export default function Index() {
                     </Group>
                   )}
                 </ListView>
-              </Box>
+              </Card>
             </Stack>
           </Group>
           <Flex direction="row" wrap="nowrap" w="100%" h={180} gap="sm">
