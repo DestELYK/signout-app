@@ -297,7 +297,6 @@ export default function Page() {
               <PeopleList
                 data={data.peopleWithOutstandingLoans.map((person) => ({
                   ...person,
-                  tags: undefined,
                   _count: {
                     loans: person.outstandingLoans,
                   },
@@ -324,32 +323,25 @@ export default function Page() {
           gap="sm"
           hiddenFrom="md"
         >
-          {/* <Group w="100%" h={100} grow style={{ flexWrap: "nowrap" }}>
+          <Group w="100%" h={100} grow style={{ flexWrap: "nowrap" }}>
             <StatCard
-              label="Total Items"
-              value={data.totalItems}
+              label="People"
+              value={data.totalPeople}
               cardProps={{ h: "100%" }}
             />
             <StatCard
-              label="Total Outstanding Items"
-              value={data.outstandingItems}
+              label="People with Outstanding Loans"
+              value={data.peopleWithOutstandingLoans.length}
               color={OUT_COLOR}
               cardProps={{ w: 150, h: "100%" }}
             />
-            {data.itemStatuses &&
-              Object.keys(data.itemStatuses).length > 0 &&
-              Object.entries(data.itemStatuses).map(
-                ([status, { count, color }]) => (
-                  <StatCard
-                    key={status}
-                    label={status}
-                    value={count}
-                    color={color}
-                    cardProps={{ h: "100%" }}
-                  />
-                )
-              )}
-          </Group> */}
+            <StatCard
+              label="People with Invalid Items"
+              value={data.peopleWithInvalidItems.length}
+              color="red"
+              cardProps={{ w: 150, h: "100%" }}
+            />
+          </Group>
 
           <InfoView
             title={`People with Outstanding Loans`}
@@ -359,7 +351,6 @@ export default function Page() {
             <PeopleList
               data={data.peopleWithOutstandingLoans.map((person) => ({
                 ...person,
-                tags: undefined,
                 _count: {
                   loans: person.outstandingLoans,
                 },
