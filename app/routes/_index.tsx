@@ -247,6 +247,7 @@ export default function Index() {
               label="Total Outstanding"
               caption="Loans that are currently outstanding"
               value={data.totalOutstanding}
+              cardProps={{ mih: 120 }}
               onClick={() => {
                 navigate("/loans/list?status=outstanding");
               }}
@@ -256,6 +257,7 @@ export default function Index() {
             label="People with Invalid Items"
             caption="People who have invalid items (broken, lost, etc.)"
             value={data.totalInvalidItems ?? 0}
+            cardProps={{ mih: 120 }}
             onClick={() => {
               navigate("/people");
             }}
@@ -264,6 +266,7 @@ export default function Index() {
             label="Total Available Items"
             caption="Number of Available Items"
             value={totalAvailableItems}
+            cardProps={{ mih: 120 }}
             onClick={() => {
               navigate("/items/list?status=available");
             }}
@@ -272,7 +275,7 @@ export default function Index() {
           <InfoView
             title="Loans in the Past Year"
             headerProps={{ withBorder: true }}
-            cardProps={{ w: "100%", h: 130 }}
+            cardProps={{ w: "100%", mih: 130 }}
             rightSection={
               <Text c="gray" ta="right">
                 {today.format("MMMM DD, YYYY")}
@@ -292,15 +295,17 @@ export default function Index() {
               />
             )}
           </InfoView>
-          <Group grow>
+          <Group mih={120} pb="md" grow>
             <StatCard
               label="Loans Today"
               value={dataToday.totalLoans}
+              cardProps={{ h: "100%" }}
               onClick={() => navigate("/loans")}
             />
             <StatCard
               label="Returns Today"
               value={dataToday.totalReturns}
+              cardProps={{ h: "100%" }}
               onClick={() => navigate("/loans")}
             />
           </Group>

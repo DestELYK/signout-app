@@ -44,11 +44,7 @@ export default function Page() {
       ) : desktopOnly ? (
         //#region Desktop
         <Flex
-          w={{
-            md: "calc(100% - 20rem)",
-            lg: "calc(100% - 24rem)",
-            xl: "calc(100% - 26rem)",
-          }}
+          w="100%"
           mih={600}
           h="calc(100dvh - 13rem)"
           direction="row"
@@ -190,7 +186,6 @@ export default function Page() {
           <InfoView
             title={`People with Outstanding Loans`}
             headerProps={{ withBorder: true }}
-            cardProps={{ mih: 300 }}
           >
             <PeopleList
               data={data.peopleWithOutstandingLoans}

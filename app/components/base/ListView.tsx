@@ -135,7 +135,7 @@ export default function ListView<T extends { id: number }>({
       )}
       {filteredItems.length === 0 && (data !== undefined || !loading) ? (
         <Paper withBorder w="100%" h="100%">
-          <Center w="100%" h="100%">
+          <Center w="100%" h="100%" p="xl">
             <Text>{emptyText}</Text>
           </Center>
         </Paper>
