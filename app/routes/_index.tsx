@@ -181,35 +181,41 @@ export default function Index() {
                 </Text>
               }
             >
-              <AreaChart
-                w="100%"
-                h="100%"
-                mih={100}
-                data={
-                  data.loansByYear?.map((l) => ({
-                    date: l.date,
-                    loaned: l.totalLoans,
-                    returned: l.totalReturns,
-                  })) ?? []
-                }
-                dotProps={{
-                  r: 1,
-                }}
-                withXAxis={false}
-                withYAxis={false}
-                gridAxis="none"
-                dataKey="date"
-                series={[
-                  { name: "loaned", label: "Loans", color: OUT_COLOR },
-                  {
-                    name: "returned",
-                    label: "Returns",
-                    color: IN_COLOR,
-                  },
-                ]}
-                withLegend
-                curveType="linear"
-              />
+              {data.loansByYear?.length === 0 ? (
+                <Center h="100%">
+                  <Text ta="center">No loans in the past year</Text>
+                </Center>
+              ) : (
+                <AreaChart
+                  w="100%"
+                  h="100%"
+                  mih={100}
+                  data={
+                    data.loansByYear?.map((l) => ({
+                      date: l.date,
+                      loaned: l.totalLoans,
+                      returned: l.totalReturns,
+                    })) ?? []
+                  }
+                  dotProps={{
+                    r: 1,
+                  }}
+                  withXAxis={false}
+                  withYAxis={false}
+                  gridAxis="none"
+                  dataKey="date"
+                  series={[
+                    { name: "loaned", label: "Loans", color: OUT_COLOR },
+                    {
+                      name: "returned",
+                      label: "Returns",
+                      color: IN_COLOR,
+                    },
+                  ]}
+                  withLegend
+                  curveType="linear"
+                />
+              )}
             </InfoView>
             <Stack h="100%">
               <StatCard label="Loans Today" value={dataToday.totalLoans} />
@@ -273,12 +279,18 @@ export default function Index() {
               </Text>
             }
           >
-            <Sparkline
-              w="100%"
-              h={50}
-              data={data.loansByYear?.map((l) => l.totalLoans) ?? []}
-              color={OUT_COLOR}
-            />
+            {data.loansByYear?.length === 0 ? (
+              <Center h="100%">
+                <Text ta="center">No loans in the past year</Text>
+              </Center>
+            ) : (
+              <Sparkline
+                w="100%"
+                h={50}
+                data={data.loansByYear?.map((l) => l.totalLoans) ?? []}
+                color={OUT_COLOR}
+              />
+            )}
           </InfoView>
           <Group grow>
             <StatCard
