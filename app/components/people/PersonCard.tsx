@@ -1,11 +1,19 @@
-import { MantineSpacing, StyleProp, Text, Textarea } from "@mantine/core";
+import {
+  MantineSpacing,
+  MantineStyleProps,
+  StyleProp,
+  Text,
+} from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { filterTags, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
+import EditableNotes from "../EditableNotes";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import TagGroup from "../tags/TagGroup";
 
 export interface PersonCardProps {
+  w?: MantineStyleProps["w"];
+  h?: MantineStyleProps["h"];
   id?: number;
   qrCode?: string | null;
   qrScale?: number;
@@ -22,6 +30,8 @@ export interface PersonCardProps {
 }
 
 export default function PersonCard({
+  w,
+  h,
   id,
   qrCode,
   qrScale,
@@ -62,6 +72,8 @@ export default function PersonCard({
         )
       }
       cardProps={{
+        w: w,
+        h: h,
         ...(p !== undefined && { p: p }),
         withBorder: withBorder,
         style: { overflow: "visible" },
@@ -77,14 +89,7 @@ export default function PersonCard({
       )}
       {withDetails && (
         <QRCodeWithComponent qrCode={qrCode} scale={qrScale || 2.5}>
-          <Textarea
-            w="100%"
-            minRows={3}
-            maxRows={3}
-            autosize
-            {...(!notes && { placeholder: "No notes" })}
-            value={notes || ""}
-          />
+          <EditableNotes value={notes} />
         </QRCodeWithComponent>
       )}
     </InfoView>

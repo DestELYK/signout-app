@@ -13,7 +13,7 @@ export default function Page() {
           <Center w="100%" h="100%">
             <Text ta="center">{data.error}</Text>
           </Center>
-        ) : data.loan !== undefined && data.outstandingItems !== undefined ? (
+        ) : (
           <LoanInfoView
             id={data.loan.id}
             person={data.loan.person}
@@ -24,8 +24,6 @@ export default function Page() {
             outstandingItems={data.outstandingItems}
             items={data.loan._count.items}
           />
-        ) : (
-          <>?</>
         )
       ) : (
         <>

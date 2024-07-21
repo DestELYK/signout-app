@@ -1,8 +1,10 @@
-import { Group, Title } from "@mantine/core";
+import { Card, Divider, Group, Skeleton, Stack, Title } from "@mantine/core";
 import { PersonWithTags } from "~/utils/types.server";
 import { dateDiff, formatDate } from "~/utils/utils";
 
 import { Tag } from "@prisma/client";
+import { useDesktopOnly } from "~/lib/hooks";
+import { OUT_COLOR } from "~/utils/consts";
 import { createOutstandingTag } from "~/utils/utils";
 import EditableNotes from "../EditableNotes";
 import StatView from "../StatView";
@@ -34,7 +36,40 @@ export default function LoanInfoView({
   notes,
   outstandingItems,
 }: LoanInfoViewProps) {
-  return (
+  const desktopOnly = useDesktopOnly();
+
+  return desktopOnly === undefined ? (
+    <Card withBorder>
+      <Stack gap="xs">
+        <Skeleton h={160} />
+        <Skeleton h={130} />
+      </Stack>
+    </Card>
+  ) : desktopOnly ? (
+    <Stack h="100%">
+      <StatView
+        value={outstandingItems}
+        color={outstandingItems > 0 ? OUT_COLOR : undefined}
+        label={"Outstanding Items"}
+        caption={outstandingItems === 0 ? "All items returned" : undefined}
+      />
+      <Divider w="100%" />
+      <StatView value={items} label="Total Items" />
+      <Divider w="100%" />
+      <StatView
+        value={dateDiff({ date: createdDate, withoutSuffix: true })}
+        label="Since Creation"
+        caption={formatDate(createdDate)}
+      />
+      <Divider w="100%" />
+      <StatView
+        value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+        label="Since Updated"
+        caption={formatDate(updatedDate)}
+      />
+      <Divider w="100%" />
+    </Stack>
+  ) : (
     <>
       {/* Loan Card */}
       <InfoView
@@ -59,26 +94,34 @@ export default function LoanInfoView({
 
       <Group w="100%" mt="sm" align="stretch" grow>
         {/* Outstanding Items */}
-        <StatView value={outstandingItems} label="Outstanding Items" />
+        <Card withBorder>
+          <StatView value={outstandingItems} label="Outstanding Items" />
+        </Card>
 
         {/* Total Items */}
-        <StatView value={items} label="Total Items" />
+        <Card withBorder>
+          <StatView value={items} label="Total Items" />
+        </Card>
       </Group>
 
       <Group w="100%" mt="sm" align="stretch" grow>
         {/* Created Date */}
-        <StatView
-          value={dateDiff({ date: createdDate, withoutSuffix: true })}
-          label="Since Creation"
-          caption={formatDate(createdDate)}
-        />
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: createdDate, withoutSuffix: true })}
+            label="Since Creation"
+            caption={formatDate(createdDate)}
+          />
+        </Card>
 
         {/* Updated Date */}
-        <StatView
-          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
-          label="Since Updated"
-          caption={formatDate(updatedDate)}
-        />
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+            label="Since Updated"
+            caption={formatDate(updatedDate)}
+          />
+        </Card>
       </Group>
     </>
   );

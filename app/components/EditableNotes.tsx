@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 
 export interface EditableNotesProps {
-  action: string;
+  action?: string;
   value?: string | null;
   editable?: boolean;
 }
@@ -22,6 +22,10 @@ export default function EditableNotes({
     clearInputErrorOnChange: true,
     initialValues: { notes: value },
   });
+
+  if (action === undefined) {
+    editable = false;
+  }
 
   useEffect(() => {
     form.setInitialValues({ notes: value });
@@ -48,8 +52,8 @@ export default function EditableNotes({
       <Box w="100%" pos="relative">
         <Textarea
           w="100%"
-          minRows={3}
-          maxRows={5}
+          minRows={5}
+          maxRows={10}
           autosize
           readOnly={!editable}
           {...(!form.values.notes && { placeholder: "No notes" })}

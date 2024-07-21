@@ -99,7 +99,6 @@ export default function Page() {
   ) : (
     data.item !== undefined && (
       <DetailsPage
-        title={data.item.name}
         data={{
           overview: {
             icon: <IconInfoCircle size={24} />,

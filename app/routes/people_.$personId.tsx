@@ -120,7 +120,6 @@ export default function Page() {
   ) : (
     data.person !== undefined && (
       <DetailsPage
-        title={formatFullName(data.person)}
         data={{
           overview: {
             icon: <IconInfoCircle size={24} />,
