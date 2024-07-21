@@ -1,10 +1,10 @@
 import { BarChart } from "@mantine/charts";
-import { Box, Card, Center, Flex, Group, Loader, Stack } from "@mantine/core";
+import { Card, Center, Flex, Group, Loader, Stack } from "@mantine/core";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import InfoView from "~/components/base/InfoView";
 import PeopleList from "~/components/people/PeopleList";
-import StatCard from "~/components/StatCard";
+import StatView from "~/components/StatView";
 import { useDesktopOnly } from "~/lib/hooks";
 import {
   getPeople,
@@ -53,24 +53,24 @@ export default function Page() {
           visibleFrom="md"
         >
           <Stack w={{ md: "60%", lg: "65%" }} h="100%">
-            <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
-              <StatCard
-                label="People"
-                value={data.totalPeople}
-                cardProps={{ h: "100%" }}
-              />
-              <StatCard
-                label="People with Outstanding Loans"
-                value={data.peopleWithOutstandingLoans.length}
-                color={OUT_COLOR}
-                cardProps={{ w: 150, h: "100%" }}
-              />
-              <StatCard
-                label="People with Invalid Items"
-                value={data.peopleWithInvalidItems.length}
-                color="red"
-                cardProps={{ w: 150, h: "100%" }}
-              />
+            <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
+              <Card withBorder>
+                <StatView label="People" value={data.totalPeople} />
+              </Card>
+              <Card w={150} withBorder>
+                <StatView
+                  label="People with Outstanding Loans"
+                  value={data.peopleWithOutstandingLoans.length}
+                  color={OUT_COLOR}
+                />
+              </Card>
+              <Card w={150} withBorder>
+                <StatView
+                  label="People with Invalid Items"
+                  value={data.peopleWithInvalidItems.length}
+                  color="red"
+                />
+              </Card>
             </Group>
             <InfoView title="Loans by Role" headerProps={{ withBorder: true }}>
               {data.roleLoans && data.roleLoans.length > 0 ? (
@@ -137,7 +137,7 @@ export default function Page() {
               w: { md: "40%", lg: "35%" },
             }}
           >
-            <Box w="100%" h="100%" mih={300}>
+            <Card.Section h="calc(100% - 20px)">
               <PeopleList
                 data={data.peopleWithOutstandingLoans}
                 totalCount={data.peopleWithOutstandingLoans.length}
@@ -146,7 +146,7 @@ export default function Page() {
                 showPagination={false}
                 withSearch={false}
               />
-            </Box>
+            </Card.Section>
           </InfoView>
         </Flex>
       ) : (
@@ -162,38 +162,47 @@ export default function Page() {
           gap="sm"
           hiddenFrom="md"
         >
-          <Group w="100%" h={100} grow style={{ flexWrap: "nowrap" }}>
-            <StatCard
-              label="People"
-              value={data.totalPeople}
-              cardProps={{ h: "100%" }}
-            />
-            <StatCard
-              label="People with Outstanding Loans"
-              value={data.peopleWithOutstandingLoans.length}
-              color={OUT_COLOR}
-              cardProps={{ w: 150, h: "100%" }}
-            />
-            <StatCard
-              label="People with Invalid Items"
-              value={data.peopleWithInvalidItems.length}
-              color="red"
-              cardProps={{ w: 150, h: "100%" }}
-            />
+          <Group
+            w="100%"
+            h={100}
+            align="stretch"
+            grow
+            style={{ flexWrap: "nowrap" }}
+          >
+            <Card withBorder>
+              <StatView label="People" value={data.totalPeople} />
+            </Card>
+            <Card w={150} withBorder>
+              <StatView
+                label="People with Outstanding Loans"
+                value={data.peopleWithOutstandingLoans.length}
+                color={OUT_COLOR}
+              />
+            </Card>
+            <Card w={150} withBorder>
+              <StatView
+                label="People with Invalid Items"
+                value={data.peopleWithInvalidItems.length}
+                color="red"
+              />
+            </Card>
           </Group>
 
           <InfoView
             title={`People with Outstanding Loans`}
             headerProps={{ withBorder: true }}
           >
-            <PeopleList
-              data={data.peopleWithOutstandingLoans}
-              totalCount={data.peopleWithOutstandingLoans.length}
-              initialItemsPerPage={20}
-              emptyText="No people found"
-              showPagination={false}
-              withSearch={false}
-            />
+            <Card.Section h="calc(100% - 20px)">
+              <PeopleList
+                data={data.peopleWithOutstandingLoans}
+                totalCount={data.peopleWithOutstandingLoans.length}
+                initialItemsPerPage={20}
+                emptyText="No people found"
+                showPagination={false}
+                withSearch={false}
+                withOffset={false}
+              />
+            </Card.Section>
           </InfoView>
         </Flex>
         //#endregion

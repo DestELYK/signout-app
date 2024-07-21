@@ -1,7 +1,7 @@
 import { AreaChart, Sparkline } from "@mantine/charts";
 import {
-  Box,
   Button,
+  Card,
   Center,
   Flex,
   Group,
@@ -16,7 +16,7 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import MonthCombobox from "~/components/MonthCombobox";
-import StatCard from "~/components/StatCard";
+import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
 import { LoanList } from "~/components/loans/LoanList";
 import { useDesktopOnly } from "~/lib/hooks";
@@ -111,18 +111,17 @@ export default function Page() {
           visibleFrom="md"
         >
           <Stack miw={200} w="100%" h="100%">
-            <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
-              <StatCard
-                label="Total Loans"
-                value={data.totalLoans}
-                cardProps={{ h: "100%" }}
-              />
-              <StatCard
-                label="Total Outstanding Loans"
-                value={data.totalOutstandingItems}
-                color={OUT_COLOR}
-                cardProps={{ w: 120, h: "100%" }}
-              />
+            <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
+              <Card withBorder>
+                <StatView label="Total Loans" value={data.totalLoans} />
+              </Card>
+              <Card w={120} withBorder>
+                <StatView
+                  label="Total Outstanding Loans"
+                  value={data.totalOutstandingItems}
+                  color={OUT_COLOR}
+                />
+              </Card>
             </Group>
             <InfoView
               title={`Loans in ${dayjs(selectedMonth, "MM-YYYY").format(
@@ -157,35 +156,27 @@ export default function Page() {
                     align="center"
                   >
                     <Stack visibleFrom="lg">
-                      <StatCard
+                      <StatView
                         orientation="horizontal"
                         label="Loans"
                         value={loansInCurrentMonth.totalLoans}
-                        withBorder={false}
-                        cardProps={{ p: 0 }}
                       />
-                      <StatCard
+                      <StatView
                         orientation="horizontal"
                         label="Returned"
                         value={loansInCurrentMonth.totalReturns}
-                        withBorder={false}
-                        cardProps={{ p: 0 }}
                       />
                     </Stack>
                     <Stack hiddenFrom="lg">
-                      <StatCard
+                      <StatView
                         orientation="vertical"
                         label="Loans"
                         value={loansInCurrentMonth.totalLoans}
-                        withBorder={false}
-                        cardProps={{ p: 0 }}
                       />
-                      <StatCard
+                      <StatView
                         orientation="vertical"
                         label="Returned"
                         value={loansInCurrentMonth.totalReturns}
-                        withBorder={false}
-                        cardProps={{ p: 0 }}
                       />
                     </Stack>
                     {
@@ -278,7 +269,7 @@ export default function Page() {
               />
             }
           >
-            <Box h="100%" w="100%" mih={300}>
+            <Card.Section h="calc(100% - 20px)">
               <LoanList
                 data={data.recentLoans}
                 totalCount={data.recentLoans.length}
@@ -286,7 +277,7 @@ export default function Page() {
                 withSearch={false}
                 initialItemsPerPage={MAX_RECENT_ITEMS}
               />
-            </Box>
+            </Card.Section>
           </InfoView>
           {
             //#endregion
@@ -305,18 +296,23 @@ export default function Page() {
           gap="sm"
           hiddenFrom="md"
         >
-          <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
-            <StatCard
-              label="Total Loans"
-              value={data.totalLoans}
-              cardProps={{ h: "100%" }}
-            />
-            <StatCard
-              label="Total Outstanding Loans"
-              value={data.totalOutstandingItems}
-              color={OUT_COLOR}
-              cardProps={{ w: 120, h: "100%" }}
-            />
+          <Group
+            w="100%"
+            h={100}
+            align="stretch"
+            grow
+            style={{ flexWrap: "nowrap" }}
+          >
+            <Card withBorder>
+              <StatView label="Total Loans" value={data.totalLoans} />
+            </Card>
+            <Card w={120} withBorder>
+              <StatView
+                label="Total Outstanding Loans"
+                value={data.totalOutstandingItems}
+                color={OUT_COLOR}
+              />
+            </Card>
           </Group>
           <InfoView
             title={`Loans in ${dayjs(selectedMonth, "MM-YYYY").format(
@@ -356,12 +352,10 @@ export default function Page() {
                     color={OUT_COLOR}
                     data={loansInCurrentMonth.days.map((day) => day.loanCount)}
                   />
-                  <StatCard
+                  <StatView
                     orientation="vertical"
                     label="Loans"
                     value={loansInCurrentMonth.totalLoans}
-                    withBorder={false}
-                    cardProps={{ p: 0 }}
                   />
                 </Stack>
                 <Stack>
@@ -373,12 +367,10 @@ export default function Page() {
                       (day) => day.returnCount
                     )}
                   />
-                  <StatCard
+                  <StatView
                     orientation="vertical"
                     label="Returned"
                     value={loansInCurrentMonth.totalReturns}
-                    withBorder={false}
-                    cardProps={{ p: 0 }}
                   />
                 </Stack>
               </Flex>

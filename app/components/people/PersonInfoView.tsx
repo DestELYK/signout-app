@@ -2,7 +2,7 @@ import { Group } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { OUT_COLOR } from "~/utils/consts";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
-import StatCard from "../StatCard";
+import StatView from "../StatView";
 import PersonCard from "./PersonCard";
 
 export interface PersonInfoViewProps {
@@ -48,22 +48,22 @@ export default function PersonInfoView({
       {/* Outstanding Items */}
       <Group align="stretch" grow>
         {outstandingItems && (
-          <StatCard
+          <StatView
             color={OUT_COLOR}
             value={outstandingItems}
             label="Outstanding Items"
           />
         )}
-        <StatCard value={loans} label="Total Item Sign-Outs" />
+        <StatView value={loans} label="Total Item Sign-Outs" />
       </Group>
 
       {/* Average Return Time */}
       <Group w="100%" mt="sm" align="stretch" grow>
         {lostItems && lostItems > 0 && (
-          <StatCard color="red" value={lostItems} label="Lost Items" />
+          <StatView color="red" value={lostItems} label="Lost Items" />
         )}
         {averageReturnTime && Math.round(averageReturnTime) > 0 && (
-          <StatCard
+          <StatView
             value={formatDuration(averageReturnTime)}
             label="Average Return Time"
           />
@@ -72,14 +72,14 @@ export default function PersonInfoView({
 
       {/* Created Date */}
       <Group w="100%" mt="sm" align="stretch" grow>
-        <StatCard
+        <StatView
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
           caption={formatDate(createdDate)}
         />
 
         {/* Updated Date */}
-        <StatCard
+        <StatView
           value={dateDiff({ date: updatedDate, withoutSuffix: true })}
           label="Since Updated"
           caption={formatDate(updatedDate)}

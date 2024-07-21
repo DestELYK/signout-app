@@ -4,7 +4,7 @@ import { useSearchParams } from "@remix-run/react";
 import dayjs from "dayjs";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import MonthCombobox from "~/components/MonthCombobox";
-import StatCard from "~/components/StatCard";
+import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
 import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 import { updateByMonth } from "~/utils/utils";
@@ -149,14 +149,14 @@ export default function Page() {
             align="center"
           >
             <Stack visibleFrom="lg">
-              <StatCard
+              <StatView
                 orientation="horizontal"
                 label="Items Loaned"
                 value={loansInCurrentMonth.totalLoans}
                 withBorder={false}
                 cardProps={{ p: 0 }}
               />
-              <StatCard
+              <StatView
                 orientation="horizontal"
                 label="Items Returned"
                 value={loansInCurrentMonth.totalReturns}
@@ -165,14 +165,14 @@ export default function Page() {
               />
             </Stack>
             <Stack hiddenFrom="lg">
-              <StatCard
+              <StatView
                 orientation="vertical"
                 label="Items Loaned"
                 value={loansInCurrentMonth.totalLoans}
                 withBorder={false}
                 cardProps={{ p: 0 }}
               />
-              <StatCard
+              <StatView
                 orientation="vertical"
                 label="Items Returned"
                 value={loansInCurrentMonth.totalReturns}

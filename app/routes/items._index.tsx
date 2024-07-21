@@ -1,6 +1,6 @@
 import { BarChart } from "@mantine/charts";
 import {
-  Box,
+  Card,
   Center,
   Flex,
   Group,
@@ -14,7 +14,7 @@ import {
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
-import StatCard from "~/components/StatCard";
+import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
 import ItemList from "~/components/items/ItemList";
@@ -26,8 +26,6 @@ import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 export const loader = async () => {
   const itemTypes = await getItemTypes();
   const invalidItems = await getInvalidItems();
-
-  console.log(itemTypes, invalidItems);
 
   return typedjson({
     itemsByType: itemTypes.itemsByType,
@@ -66,35 +64,34 @@ export default function Page() {
           visibleFrom="md"
         >
           <Stack w="100%" h="100%">
-            <Group w="100%" grow style={{ flexWrap: "nowrap" }}>
-              <StatCard
-                label="Total Items"
-                value={data.totalItems}
-                cardProps={{ h: "100%" }}
-              />
-              <StatCard
-                label="Total Outstanding Items"
-                value={data.outstandingItems}
-                color={OUT_COLOR}
-                cardProps={{ w: 150, h: "100%" }}
-                onClick={() => navigate("/items/list?status=outstanding")}
-              />
+            <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
+              <Card withBorder>
+                <StatView label="Total Items" value={data.totalItems} />
+              </Card>
+              <Card withBorder>
+                <StatView
+                  label="Total Outstanding Items"
+                  value={data.outstandingItems}
+                  color={OUT_COLOR}
+                  onClick={() => navigate("/items/list?status=outstanding")}
+                />
+              </Card>
               {data.itemStatuses &&
                 Object.keys(data.itemStatuses).length > 0 &&
                 Object.entries(data.itemStatuses).map(
                   ([status, { count, color }]) => (
-                    <StatCard
-                      key={status}
-                      label={status}
-                      value={count}
-                      color={color}
-                      cardProps={{ h: "100%" }}
-                      onClick={() =>
-                        navigate(
-                          `/items/list?status=${status.toLocaleLowerCase()}`
-                        )
-                      }
-                    />
+                    <Card key={status} withBorder>
+                      <StatView
+                        label={status}
+                        value={count}
+                        color={color}
+                        onClick={() =>
+                          navigate(
+                            `/items/list?status=${status.toLocaleLowerCase()}`
+                          )
+                        }
+                      />
+                    </Card>
                   )
                 )}
             </Group>
@@ -160,7 +157,7 @@ export default function Page() {
               miw: { md: 300, lg: 350, xl: 400 },
             }}
           >
-            <Box h="100%" w="100%" mih={300}>
+            <Card.Section h="calc(100% - 20px)">
               <ItemList
                 data={data.invalidItems?.map((item) => ({
                   id: item.id,
@@ -176,7 +173,7 @@ export default function Page() {
                 initialItemsPerPage={20}
                 showPagination={false}
               />
-            </Box>
+            </Card.Section>
           </InfoView>
           {
             //#endregion
@@ -207,29 +204,25 @@ export default function Page() {
               wrap="nowrap"
               gap="md"
               justify="center"
+              align="stretch"
             >
-              <StatCard
-                label="Total Items"
-                value={data.totalItems}
-                cardProps={{ h: "100%" }}
-              />
-              <StatCard
-                label="Total Outstanding Items"
-                value={data.outstandingItems}
-                color={OUT_COLOR}
-                cardProps={{ w: 150, h: "100%" }}
-              />
+              <Card withBorder>
+                <StatView label="Total Items" value={data.totalItems} />
+              </Card>
+              <Card w={150} withBorder>
+                <StatView
+                  label="Total Outstanding Items"
+                  value={data.outstandingItems}
+                  color={OUT_COLOR}
+                />
+              </Card>
               {data.itemStatuses &&
                 Object.keys(data.itemStatuses).length > 0 &&
                 Object.entries(data.itemStatuses).map(
                   ([status, { count, color }]) => (
-                    <StatCard
-                      key={status}
-                      label={status}
-                      value={count}
-                      color={color}
-                      cardProps={{ h: "100%" }}
-                    />
+                    <Card key={status} withBorder>
+                      <StatView label={status} value={count} color={color} />
+                    </Card>
                   )
                 )}
             </Flex>
@@ -239,36 +232,38 @@ export default function Page() {
             title="Current Inventory"
             headerProps={{ withBorder: true }}
           >
-            <ListView
-              data={
-                data.itemsByType?.map((i) => ({ id: i.typeId, ...i })) ?? []
-              }
-              withSearch={false}
-              showPagination={false}
-            >
-              {({ type, available, outstanding }) => (
-                <UnstyledButton
-                  w="100%"
-                  onClick={() => navigate(`/items/list?type=${type}`)}
-                >
-                  <Group
+            <Card.Section h="calc(100% - 20px)">
+              <ListView
+                data={
+                  data.itemsByType?.map((i) => ({ id: i.typeId, ...i })) ?? []
+                }
+                withSearch={false}
+                showPagination={false}
+                withOffset={false}
+              >
+                {({ type, available, outstanding }) => (
+                  <UnstyledButton
                     w="100%"
-                    justify="space-between"
+                    className="list-item"
                     onClick={() => navigate(`/items/list?type=${type}`)}
-                    p="xs"
+                    style={{ cursor: "pointer" }}
                   >
-                    <Title order={5}>{type}</Title>
-                    <Group>
-                      <Stack gap={0}>
-                        <Text c={IN_COLOR}>{available} available</Text>
-                        <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
-                      </Stack>
-                      <IconChevronRight />
+                    <Group w="100%" justify="space-between" p="xs">
+                      <Title maw={120} order={5}>
+                        {type}
+                      </Title>
+                      <Group>
+                        <Stack gap={0}>
+                          <Text c={IN_COLOR}>{available} available</Text>
+                          <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
+                        </Stack>
+                        <IconChevronRight />
+                      </Group>
                     </Group>
-                  </Group>
-                </UnstyledButton>
-              )}
-            </ListView>
+                  </UnstyledButton>
+                )}
+              </ListView>
+            </Card.Section>
           </InfoView>
         </Flex>
         //#endregion

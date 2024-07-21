@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Box,
   Button,
   Group,
@@ -63,10 +64,13 @@ export default function DataPage({
         <Button
           onClick={onCreateClick}
           rightSection={<IconPlus />}
-          visibleFrom="md"
+          visibleFrom="sm"
         >
           {createLabel}
         </Button>
+        <ActionIcon size="lg" onClick={onCreateClick} hiddenFrom="sm">
+          <IconPlus />
+        </ActionIcon>
       </Group>
 
       <Tabs
@@ -101,18 +105,6 @@ export default function DataPage({
           };
         })}
       />
-
-      <Button
-        pos="relative"
-        top={0}
-        w="100%"
-        onClick={onCreateClick}
-        rightSection={<IconPlus />}
-        mb="md"
-        hiddenFrom="md"
-      >
-        {createLabel}
-      </Button>
       <Outlet />
     </Box>
   );

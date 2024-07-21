@@ -4,6 +4,8 @@ import ListView, { ListViewProps } from "../base/ListView";
 import LoanListView from "./LoanListView";
 
 export function LoanList({
+  w,
+  h,
   data,
   totalCount,
   orientation,
@@ -12,6 +14,7 @@ export function LoanList({
   showPagination,
   withSearch,
   withDetails,
+  withOffset,
 }: Omit<
   ListViewProps<LoanWithTagsAndItems> & {
     withDetails?: boolean;
@@ -22,6 +25,8 @@ export function LoanList({
 
   return (
     <ListView
+      w={w}
+      h={h}
       data={data}
       totalCount={totalCount}
       emptyText={emptyText}
@@ -29,6 +34,7 @@ export function LoanList({
       withSearch={withSearch}
       initialItemsPerPage={initialItemsPerPage}
       showPagination={showPagination}
+      withOffset={withOffset}
       loading={navigation.state === "loading"}
     >
       {(item, query, qrCode) => (

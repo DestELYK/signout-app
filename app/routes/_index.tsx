@@ -4,7 +4,7 @@ import type { MetaFunction } from "@remix-run/node";
 import { useNavigate } from "@remix-run/react";
 import dayjs from "dayjs";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
-import StatCard from "~/components/StatCard";
+import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
 import { LoanList } from "~/components/loans/LoanList";
@@ -95,46 +95,53 @@ export default function Index() {
             the sidebar to navigate to different pages.
           </Text>
           <Group w="100%" h="70%" grow>
-            <Stack h="100%" gap={0}>
-              <StatCard
-                label="Total Outstanding"
-                caption="Loans that are currently outstanding"
-                value={data.totalOutstanding}
-                cardProps={{ mih: "25%" }}
-              />
-              <Card h="75%" withBorder>
+            <Card h="100%" withBorder>
+              <Card.Section inheritPadding withBorder>
+                <StatView
+                  h={100}
+                  label="Total Outstanding"
+                  caption="Loans that are currently outstanding"
+                  value={data.totalOutstanding}
+                />
+              </Card.Section>
+              <Card.Section h="calc(100% - 70px)">
                 <LoanList
                   data={data.recentLoans}
                   initialItemsPerPage={MAX_RECENT_ITEMS}
                   totalCount={data.recentLoans?.length}
                   withSearch={false}
+                  showPagination={false}
                 />
-              </Card>
-            </Stack>
-            <Stack h="100%" gap={0}>
-              <StatCard
-                label="People with Invalid Items"
-                caption="People who have invalid items (broken, lost, etc.)"
-                value={data.totalInvalidItems ?? 0}
-                cardProps={{ mih: "25%" }}
-              />
-              <Card h="75%" withBorder>
+              </Card.Section>
+            </Card>
+            <Card h="100%" withBorder>
+              <Card.Section inheritPadding withBorder>
+                <StatView
+                  h={100}
+                  label="People with Invalid Items"
+                  caption="People who have invalid items (broken, lost, etc.)"
+                  value={data.totalInvalidItems ?? 0}
+                />
+              </Card.Section>
+              <Card.Section h="calc(100% - 70px)">
                 <PeopleList
                   data={data.peopleWithInvalidItems}
                   initialItemsPerPage={MAX_RECENT_ITEMS}
                   totalCount={data.recentLoans?.length}
                   withSearch={false}
                 />
-              </Card>
-            </Stack>
-            <Stack h="100%" gap={0}>
-              <StatCard
-                label="Total Available Items"
-                caption="Number of Available Items"
-                value={totalAvailableItems}
-                cardProps={{ mih: "25%" }}
-              />
-              <Card h="75%" withBorder>
+              </Card.Section>
+            </Card>
+            <Card h="100%" withBorder>
+              <Card.Section inheritPadding withBorder>
+                <StatView
+                  h={100}
+                  label="Total Available Items"
+                  caption="Number of Available Items"
+                  value={totalAvailableItems}
+                />
+              </Card.Section>
+              <Card.Section h="calc(100% - 70px)">
                 <ListView
                   data={data.inventory?.map((i) => ({
                     ...i,
@@ -167,8 +174,8 @@ export default function Index() {
                     </Group>
                   )}
                 </ListView>
-              </Card>
-            </Stack>
+              </Card.Section>
+            </Card>
           </Group>
           <Flex direction="row" wrap="nowrap" w="100%" h={180} gap="sm">
             <InfoView
@@ -218,8 +225,15 @@ export default function Index() {
               )}
             </InfoView>
             <Stack h="100%">
-              <StatCard label="Loans Today" value={dataToday.totalLoans} />
-              <StatCard label="Returns Today" value={dataToday.totalReturns} />
+              <Card withBorder>
+                <StatView label="Loans Today" value={dataToday.totalLoans} />
+              </Card>
+              <Card withBorder>
+                <StatView
+                  label="Returns Today"
+                  value={dataToday.totalReturns}
+                />
+              </Card>
             </Stack>
           </Flex>
         </Flex>
@@ -228,9 +242,6 @@ export default function Index() {
         //#region Mobile
         <Flex
           w="100%"
-          mih={400}
-          h="100%"
-          pos="relative"
           direction="column"
           wrap="nowrap"
           gap="sm"
@@ -242,35 +253,38 @@ export default function Index() {
             inventory for item sign-outs. You can use the top left icon to
             navigate to different pages.
           </Text>
-          <Stack gap={0}>
-            <StatCard
-              label="Total Outstanding"
-              caption="Loans that are currently outstanding"
-              value={data.totalOutstanding}
-              cardProps={{ mih: 120 }}
-              onClick={() => {
-                navigate("/loans/list?status=outstanding");
-              }}
-            />
-          </Stack>
-          <StatCard
-            label="People with Invalid Items"
-            caption="People who have invalid items (broken, lost, etc.)"
-            value={data.totalInvalidItems ?? 0}
-            cardProps={{ mih: 120 }}
-            onClick={() => {
-              navigate("/people");
-            }}
-          />
-          <StatCard
-            label="Total Available Items"
-            caption="Number of Available Items"
-            value={totalAvailableItems}
-            cardProps={{ mih: 120 }}
-            onClick={() => {
-              navigate("/items/list?status=available");
-            }}
-          />
+          <Card withBorder>
+            <Card.Section inheritPadding withBorder p="sm">
+              <StatView
+                label="Total Outstanding"
+                caption="Loans that are currently outstanding"
+                value={data.totalOutstanding}
+                onClick={() => {
+                  navigate("/loans/list?status=outstanding");
+                }}
+              />
+            </Card.Section>
+            <Card.Section inheritPadding withBorder p="sm">
+              <StatView
+                label="People with Invalid Items"
+                caption="People who have invalid items (broken, lost, etc.)"
+                value={data.totalInvalidItems ?? 0}
+                onClick={() => {
+                  navigate("/people");
+                }}
+              />
+            </Card.Section>
+            <Card.Section inheritPadding withBorder p="sm">
+              <StatView
+                label="Total Available Items"
+                caption="Number of Available Items"
+                value={totalAvailableItems}
+                onClick={() => {
+                  navigate("/items/list?status=available");
+                }}
+              />
+            </Card.Section>
+          </Card>
 
           <InfoView
             title="Loans in the Past Year"
@@ -295,19 +309,21 @@ export default function Index() {
               />
             )}
           </InfoView>
-          <Group mih={120} pb="md" grow>
-            <StatCard
-              label="Loans Today"
-              value={dataToday.totalLoans}
-              cardProps={{ h: "100%" }}
-              onClick={() => navigate("/loans")}
-            />
-            <StatCard
-              label="Returns Today"
-              value={dataToday.totalReturns}
-              cardProps={{ h: "100%" }}
-              onClick={() => navigate("/loans")}
-            />
+          <Group grow gap="xs">
+            <Card withBorder>
+              <StatView
+                label="Loans Today"
+                value={dataToday.totalLoans}
+                onClick={() => navigate("/loans")}
+              />
+            </Card>
+            <Card withBorder>
+              <StatView
+                label="Returns Today"
+                value={dataToday.totalReturns}
+                onClick={() => navigate("/loans")}
+              />
+            </Card>
           </Group>
         </Flex>
         //#endregion

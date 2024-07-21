@@ -1,7 +1,7 @@
 import { Group, Stack, Text, Textarea, Title } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
-import StatCard from "../StatCard";
+import StatView from "../StatView";
 import InfoView from "../base/InfoView";
 import LastLoanView, { LastLoanViewProps } from "../loans/LastLoanView";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
@@ -99,9 +99,9 @@ export default function ItemInfoView({
 
       {/* Outstanding Items */}
       <Group w="100%" mt="sm" align="stretch" grow>
-        <StatCard value={loans} label="Total Signouts" />
+        <StatView value={loans} label="Total Signouts" />
         {averageLoanTime && (
-          <StatCard
+          <StatView
             value={formatDuration(averageLoanTime)}
             label="Average Return Duration"
           />
@@ -110,14 +110,14 @@ export default function ItemInfoView({
 
       {/* Created Date */}
       <Group w="100%" mt="sm" align="stretch" grow>
-        <StatCard
+        <StatView
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
           caption={formatDate(createdDate)}
         />
 
         {/* Updated Date */}
-        <StatCard
+        <StatView
           value={dateDiff({ date: updatedDate, withoutSuffix: true })}
           label="Since Updated"
           caption={formatDate(updatedDate)}

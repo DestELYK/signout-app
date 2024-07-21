@@ -39,7 +39,7 @@ export default function InfoView({
     <Card w="100%" h="100%" withBorder {...cardProps}>
       {/* Header */}
       {title && (
-        <Card.Section inheritPadding mb="sm" {...headerProps}>
+        <Card.Section inheritPadding {...headerProps}>
           <Flex
             direction="row"
             align="center"

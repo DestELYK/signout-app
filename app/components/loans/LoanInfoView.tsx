@@ -5,7 +5,7 @@ import { dateDiff, formatDate } from "~/utils/utils";
 import { Tag } from "@prisma/client";
 import { createOutstandingTag } from "~/utils/utils";
 import EditableNotes from "../EditableNotes";
-import StatCard from "../StatCard";
+import StatView from "../StatView";
 import InfoView from "../base/InfoView";
 import PersonCard from "../people/PersonCard";
 import TagGroup from "../tags/TagGroup";
@@ -59,22 +59,22 @@ export default function LoanInfoView({
 
       <Group w="100%" mt="sm" align="stretch" grow>
         {/* Outstanding Items */}
-        <StatCard value={outstandingItems} label="Outstanding Items" />
+        <StatView value={outstandingItems} label="Outstanding Items" />
 
         {/* Total Items */}
-        <StatCard value={items} label="Total Items" />
+        <StatView value={items} label="Total Items" />
       </Group>
 
       <Group w="100%" mt="sm" align="stretch" grow>
         {/* Created Date */}
-        <StatCard
+        <StatView
           value={dateDiff({ date: createdDate, withoutSuffix: true })}
           label="Since Creation"
           caption={formatDate(createdDate)}
         />
 
         {/* Updated Date */}
-        <StatCard
+        <StatView
           value={dateDiff({ date: updatedDate, withoutSuffix: true })}
           label="Since Updated"
           caption={formatDate(updatedDate)}

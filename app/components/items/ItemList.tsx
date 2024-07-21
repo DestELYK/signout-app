@@ -5,6 +5,8 @@ import ListView, { ListViewProps } from "../base/ListView";
 import ItemListView from "./ItemListView";
 
 export default function ItemList({
+  w,
+  h,
   data,
   totalCount,
   orientation,
@@ -12,6 +14,7 @@ export default function ItemList({
   emptyText,
   showPagination,
   withSearch,
+  withOffset,
 }: Omit<
   ListViewProps<
     Partial<ItemWithTags> & {
@@ -32,6 +35,8 @@ export default function ItemList({
 
   return (
     <ListView
+      w={w}
+      h={h}
       data={data}
       totalCount={totalCount}
       emptyText={emptyText}
@@ -39,6 +44,7 @@ export default function ItemList({
       withSearch={withSearch}
       initialItemsPerPage={initialItemsPerPage}
       showPagination={showPagination}
+      withOffset={withOffset}
       loading={navigation.state === "loading"}
     >
       {(item, query, qrCode) => {
@@ -46,11 +52,15 @@ export default function ItemList({
           <ItemListView
             {...item}
             tags={[
-              ...item.tags ?? [],
-              ...item._count ? [createOutstandingTag({
-                out: item._count.loans > 0,
-                inLabel: "Available",
-              })] : [],
+              ...(item.tags ?? []),
+              ...(item._count
+                ? [
+                    createOutstandingTag({
+                      out: item._count.loans > 0,
+                      inLabel: "Available",
+                    }),
+                  ]
+                : []),
             ]}
             query={query}
             qrCode={qrCode}

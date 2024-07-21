@@ -5,6 +5,8 @@ import ListView, { ListViewProps } from "../base/ListView";
 import PersonListView from "./PersonListView";
 
 export default function PeopleList({
+  w,
+  h,
   data,
   totalCount,
   orientation,
@@ -12,6 +14,7 @@ export default function PeopleList({
   emptyText,
   showPagination,
   withSearch,
+  withOffset,
 }: Omit<
   ListViewProps<
     Partial<PersonWithTags> & {
@@ -41,6 +44,8 @@ export default function PeopleList({
 
   return (
     <ListView
+      w={w}
+      h={h}
       data={data}
       totalCount={totalCount}
       emptyText={emptyText}
@@ -48,6 +53,7 @@ export default function PeopleList({
       withSearch={withSearch}
       initialItemsPerPage={initialItemsPerPage}
       showPagination={showPagination}
+      withOffset={withOffset}
       loading={navigation.state === "loading"}
     >
       {(item, query, qrCode) => (
