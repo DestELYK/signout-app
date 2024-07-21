@@ -279,8 +279,8 @@ export default function Page() {
             />
           </InfoView>
         </Stack>
-        <Card miw={500} withBorder>
-          <Card.Section>{detailsPage}</Card.Section>
+        <Card miw={500} p={0} withBorder>
+          {detailsPage}
         </Card>
       </Group>
     </Flex>
