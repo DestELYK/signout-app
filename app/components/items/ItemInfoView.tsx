@@ -1,4 +1,5 @@
 import {
+  Card,
   Center,
   Divider,
   Group,
@@ -25,7 +26,7 @@ export interface ItemInfoViewProps {
   description?: string | null;
   notes?: string | null;
   tags: Tag[];
-  lastLoan?: LastLoanViewProps;
+  lastLoan?: LastLoanViewProps["data"];
   createdDate: Date;
   updatedDate: Date;
   loading?: boolean;
@@ -107,7 +108,7 @@ export default function ItemInfoView({
             groupProps={{ justify: "end" }}
           />
         }
-        cardProps={{ p: "sm" }}
+        cardProps={{ h: undefined, p: "sm" }}
       >
         <QRCodeWithComponent qrCode={qrCode} scale={2.5}>
           <Stack gap={0}>
@@ -128,7 +129,7 @@ export default function ItemInfoView({
           <Title order={4} mt="sm">
             Last Loan
           </Title>
-          <LastLoanView {...lastLoan} />
+          <LastLoanView data={lastLoan} />
         </>
       )}
       {/* Notes */}
@@ -145,30 +146,38 @@ export default function ItemInfoView({
       />
 
       {/* Outstanding Items */}
-      <Group w="100%" mt="sm" align="stretch" grow>
-        <StatView value={loans} label="Total Signouts" />
+      <Group w="100%" align="stretch" grow>
+        <Card withBorder>
+          <StatView value={loans} label="Total Signouts" />
+        </Card>
         {averageLoanTime && (
-          <StatView
-            value={formatDuration(averageLoanTime)}
-            label="Average Return Duration"
-          />
+          <Card withBorder>
+            <StatView
+              value={formatDuration(averageLoanTime)}
+              label="Average Return Duration"
+            />
+          </Card>
         )}
       </Group>
 
       {/* Created Date */}
-      <Group w="100%" mt="sm" align="stretch" grow>
-        <StatView
-          value={dateDiff({ date: createdDate, withoutSuffix: true })}
-          label="Since Creation"
-          caption={formatDate(createdDate)}
-        />
+      <Group w="100%" align="stretch" grow>
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: createdDate, withoutSuffix: true })}
+            label="Since Creation"
+            caption={formatDate(createdDate)}
+          />
+        </Card>
 
         {/* Updated Date */}
-        <StatView
-          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
-          label="Since Updated"
-          caption={formatDate(updatedDate)}
-        />
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+            label="Since Updated"
+            caption={formatDate(updatedDate)}
+          />
+        </Card>
       </Group>
     </>
   );
