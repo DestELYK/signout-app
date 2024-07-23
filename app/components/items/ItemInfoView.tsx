@@ -1,5 +1,15 @@
-import { Group, Stack, Text, Textarea, Title } from "@mantine/core";
+import {
+  Center,
+  Divider,
+  Group,
+  Loader,
+  Stack,
+  Text,
+  Textarea,
+  Title,
+} from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { useDesktopOnly } from "~/lib/hooks";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import StatView from "../StatView";
 import InfoView from "../base/InfoView";
@@ -37,10 +47,47 @@ export default function ItemInfoView({
   loading,
   averageLoanTime,
 }: ItemInfoViewProps) {
+  const desktopOnly = useDesktopOnly();
+
   const itemOutstanding =
     lastLoan && lastLoan.dateReturned === null ? true : false;
 
-  return (
+  return desktopOnly === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : desktopOnly ? (
+    <Stack>
+      {/* Outstanding Items */}
+      <StatView value={loans} label="Total Signouts" />
+      <Divider w="100%" />
+      {averageLoanTime && (
+        <>
+          <StatView
+            value={formatDuration(averageLoanTime)}
+            label="Average Return Duration"
+          />
+          <Divider w="100%" />
+        </>
+      )}
+
+      {/* Created Date */}
+      <Group w="100%" align="stretch" grow>
+        <StatView
+          value={dateDiff({ date: createdDate, withoutSuffix: true })}
+          label="Since Creation"
+          caption={formatDate(createdDate)}
+        />
+
+        {/* Updated Date */}
+        <StatView
+          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+          label="Since Updated"
+          caption={formatDate(updatedDate)}
+        />
+      </Group>
+    </Stack>
+  ) : (
     <>
       {/* Item Card */}
       <InfoView

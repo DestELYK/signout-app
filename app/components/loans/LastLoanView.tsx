@@ -1,80 +1,98 @@
-import { Stack, Text } from "@mantine/core";
+import { Button, Card, MantineStyleProps, Stack, Text } from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { useNavigate } from "@remix-run/react";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import TagGroup from "../tags/TagGroup";
 
 export interface LastLoanViewProps {
-  id: number;
-  person: {
+  w?: MantineStyleProps["w"];
+  h?: MantineStyleProps["h"];
+  data?: {
     id: number;
-    qrCode?: string | null;
-    firstName: string;
-    lastName: string;
-    nickname?: string | null;
+    person: {
+      id: number;
+      qrCode?: string | null;
+      firstName: string;
+      lastName: string;
+      nickname?: string | null;
+      tags: Tag[];
+    };
+    returnedBy?: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      nickname?: string | null;
+    } | null;
+    dateLoaned: Date;
+    dateReturned?: Date | null;
     tags: Tag[];
   };
-  returnedBy?: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    nickname?: string | null;
-  } | null;
-  dateLoaned: Date;
-  dateReturned?: Date | null;
-  tags: Tag[];
 }
 
-export default function LastLoanView({
-  id,
-  person,
-  returnedBy,
-  dateLoaned,
-  dateReturned,
-  tags,
-}: LastLoanViewProps) {
-  return (
+export default function LastLoanView({ w, h, data }: LastLoanViewProps) {
+  const navigate = useNavigate();
+
+  return data === undefined ? (
+    <Card withBorder>
+      <Stack w="100%" h="100%" align="center" justify="center">
+        <Text c="dimmed">No Previous Loan</Text>
+        <Button
+          onClick={() => {
+            navigate("/loans?create=");
+          }}
+        >
+          Create New Loan
+        </Button>
+      </Stack>
+    </Card>
+  ) : (
     <InfoView
-      title={`#${id} - ${formatFullName(person)}`}
-      href={`/loans/${id}`}
+      title={`#${data.id} - ${formatFullName(data.person)}`}
+      href={`/loans/${data.id}`}
       rightSection={
-        <TagGroup tags={person.tags} categories={["Person Role"]} />
+        <TagGroup tags={data.person.tags} categories={["Person Role"]} />
       }
-      bottomSection={<TagGroup tags={tags} groupProps={{ justify: "end" }} />}
+      bottomSection={
+        <TagGroup tags={data.tags} groupProps={{ justify: "end" }} />
+      }
+      cardProps={{ w, h }}
     >
-      <QRCodeWithComponent qrCode={person.qrCode} scale={2.5}>
+      <QRCodeWithComponent qrCode={data.person.qrCode} scale={2.5}>
         <Stack gap={0}>
           <Text>
-            <b>{dateDiff({ date: dateLoaned, withoutSuffix: true })}</b> since
-            last loan
+            <b>{dateDiff({ date: data.dateLoaned, withoutSuffix: true })}</b>{" "}
+            since last loan
           </Text>
           <Text size="xs" c="dimmed" fs="italic">
-            {formatDate(dateLoaned)}
+            {formatDate(data.dateLoaned)}
           </Text>
-          {dateReturned && (
+          {data.dateReturned && (
             <>
               <Text mt="sm">
-                <b>{dateDiff({ date: dateReturned, withoutSuffix: true })}</b>{" "}
+                <b>
+                  {dateDiff({ date: data.dateReturned, withoutSuffix: true })}
+                </b>{" "}
                 since returned
               </Text>
-              {returnedBy && (
+              {data.returnedBy && (
                 <Text size="xs">
                   Returned by:{" "}
                   <Text
                     span
                     inherit
                     fw="bold"
-                    {...(returnedBy.id !== person.id && {
+                    {...(data.returnedBy.id !== data.person.id && {
                       c: "error",
                     })}
                   >
-                    {formatFullName(returnedBy)}
+                    {formatFullName(data.returnedBy)}
                   </Text>
                 </Text>
               )}
               <Text size="xs" c="dimmed" fs="italic">
-                {formatDate(dateReturned)}
+                {formatDate(data.dateReturned)}
               </Text>
             </>
           )}

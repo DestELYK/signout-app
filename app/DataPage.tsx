@@ -8,14 +8,8 @@ import {
   Title,
 } from "@mantine/core";
 import { upperFirst } from "@mantine/hooks";
-import {
-  Outlet,
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from "@remix-run/react";
+import { Outlet, useLocation, useNavigate } from "@remix-run/react";
 import { IconPlus } from "@tabler/icons-react";
-import { useDesktopOnly } from "./lib/hooks";
 
 export interface DataPageProps {
   path: string;
@@ -32,10 +26,8 @@ export default function DataPage({
   createLabel = "New",
   onCreateClick,
 }: DataPageProps) {
-  const desktopOnly = useDesktopOnly();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
 
   let currentLocation = location.pathname.split("/").pop();
 

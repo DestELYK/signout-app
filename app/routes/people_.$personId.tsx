@@ -1,4 +1,4 @@
-import { Center, Text } from "@mantine/core";
+import { Center, Stack, Text } from "@mantine/core";
 import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import {
   IconClipboard,
@@ -113,28 +113,41 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
 
+  const personView = data.error ? (
+    <Center w="100%" h="100%">
+      <Text c="error">{data.error}</Text>
+    </Center>
+  ) : data.person === undefined ? (
+    <Center w="100%" h="100%">
+      <Text>No person found</Text>
+    </Center>
+  ) : (
+    <Stack w="100%"></Stack>
+  );
+
   return data.error != undefined ? (
     <Center h="100%">
       <Text c="error">{data.error}</Text>
     </Center>
   ) : (
-    data.person !== undefined && (
-      <DetailsPage
-        data={{
-          overview: {
-            icon: <IconInfoCircle size={24} />,
-            label: "Overview",
-          },
-          loans: {
-            icon: <IconClipboard size={24} />,
-            label: "Loans",
-          },
-          timeline: {
-            icon: <IconTimeline size={24} />,
-            label: "Timeline",
-          },
-        }}
-      />
-    )
+    <DetailsPage
+      data={{
+        overview: {
+          icon: <IconInfoCircle size={24} />,
+          label: "Overview",
+        },
+        loans: {
+          icon: <IconClipboard size={24} />,
+          label: "Loans",
+        },
+        timeline: {
+          icon: <IconTimeline size={24} />,
+          label: "Timeline",
+        },
+      }}
+      tags={data.person.tags}
+      desktopComponent={personView}
+      title={formatFullName(data.person)}
+    />
   );
 }

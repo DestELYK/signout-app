@@ -1,4 +1,4 @@
-import { Center, Text } from "@mantine/core";
+import { Center, Loader, Stack, Text } from "@mantine/core";
 import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import {
   IconClipboard,
@@ -8,7 +8,11 @@ import {
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import DetailsPage from "~/DetailsPage";
+import EditableNotes from "~/components/EditableNotes";
+import InfoView from "~/components/base/InfoView";
+import LastLoanView from "~/components/loans/LastLoanView";
 import { handleError } from "~/lib/db.server";
+import { useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
 import { itemWithTags } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
@@ -92,28 +96,60 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
 
-  return data.error != undefined ? (
-    <Center h="100%">
+  const desktopOnly = useDesktopOnly();
+
+  const itemInfo = data.error ? (
+    <Center w="100%" h="100%">
       <Text c="error">{data.error}</Text>
     </Center>
+  ) : data.item === undefined ? (
+    <Loader />
   ) : (
-    data.item !== undefined && (
-      <DetailsPage
-        data={{
-          overview: {
-            icon: <IconInfoCircle size={24} />,
-            label: "Overview",
-          },
-          loans: {
-            icon: <IconClipboard size={24} />,
-            label: "Loans",
-          },
-          timeline: {
-            icon: <IconTimeline size={24} />,
-            label: "Timeline",
-          },
-        }}
+    <Stack w="100%" h="100%">
+      <LastLoanView
+        data={
+          data.lastLoan
+            ? {
+                id: data.lastLoan.loanId,
+                person: data.lastLoan.loan.person,
+                dateLoaned: data.lastLoan.dateLoaned,
+                dateReturned: data.lastLoan.dateReturned,
+                returnedBy: data.lastLoan.returnedBy,
+                tags: data.lastLoan.loan.tags,
+              }
+            : undefined
+        }
       />
-    )
+
+      <InfoView title="Notes" cardProps={{ h: undefined }}>
+        <EditableNotes
+          //action={`/items/${data.item.id}`}
+          value={data.item.notes}
+          editable
+        />
+      </InfoView>
+    </Stack>
+  );
+
+  return (
+    <DetailsPage
+      data={{
+        overview: {
+          icon: <IconInfoCircle size={24} />,
+          label: "Overview",
+        },
+        loans: {
+          icon: <IconClipboard size={24} />,
+          label: "Loans",
+        },
+        timeline: {
+          icon: <IconTimeline size={24} />,
+          label: "Timeline",
+        },
+      }}
+      tags={data.item?.tags ?? []}
+      title={data.item?.name}
+      desktopComponent={itemInfo}
+    />
   );
 }

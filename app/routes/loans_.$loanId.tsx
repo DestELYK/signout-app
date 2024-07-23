@@ -1,14 +1,4 @@
-import {
-  Button,
-  Card,
-  Center,
-  Divider,
-  Flex,
-  Group,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Card, Center, Loader, Stack, Text } from "@mantine/core";
 import {
   ActionFunctionArgs,
   LoaderFunctionArgs,
@@ -17,7 +7,6 @@ import {
 import { useRouteError } from "@remix-run/react";
 import {
   IconDeviceImac,
-  IconEdit,
   IconInfoCircle,
   IconListCheck,
 } from "@tabler/icons-react";
@@ -27,10 +16,8 @@ import InfoView from "~/components/base/InfoView";
 import EditableNotes from "~/components/EditableNotes";
 import ErrorPage from "~/components/ErrorPage";
 import PersonCard from "~/components/people/PersonCard";
-import TagGroup from "~/components/tags/TagGroup";
 import DetailsPage from "~/DetailsPage";
 import { handleError } from "~/lib/db.server";
-import { useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
 import { PatchLoanFormData } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
@@ -231,9 +218,32 @@ export function ErrorBoundary() {
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
 
-  const desktopOnly = useDesktopOnly();
+  const infoView = data.error ? (
+    <Center w="100%" h="100%">
+      <Text c="error">{data.error}</Text>
+    </Center>
+  ) : data.loan === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : (
+    <Stack w="100%">
+      <PersonCard {...data.loan.person} />
+      <InfoView title="Notes" cardProps={{ h: undefined }}>
+        <EditableNotes
+          action={`/loans/${data.loan.id}`}
+          value={data.loan.notes}
+          editable
+        />
+      </InfoView>
+    </Stack>
+  );
 
-  const detailsPage = (
+  return data.error != undefined ? (
+    <Center h="100%">
+      <Text c="error">{data.error}</Text>
+    </Center>
+  ) : (
     <DetailsPage
       data={{
         overview: {
@@ -249,42 +259,9 @@ export default function Page() {
           label: "Sign-In",
         },
       }}
+      tags={data.loan.tags}
+      title={`Loan #${data.loan.id}`}
+      desktopComponent={infoView}
     />
-  );
-
-  return data.error != undefined || desktopOnly === undefined ? (
-    <Center h="100%">
-      <Text c="error">{data.error}</Text>
-    </Center>
-  ) : desktopOnly ? (
-    <Flex h="calc(100dvh - 60px)" direction="column" gap="md" p="md">
-      <Group justify="space-between">
-        <Stack gap="xs">
-          <TagGroup tags={data.loan.tags} groupProps={{ justify: "start" }} />
-          <Title order={1}>Loan #{data.loan.id}</Title>
-        </Stack>
-        <Button h="100%" rightSection={<IconEdit />} disabled>
-          Edit
-        </Button>
-      </Group>
-      <Divider w="100%" />
-      <Group w="100%" h="100%" align="stretch" grow>
-        <Stack>
-          <PersonCard {...data.loan.person} />
-          <InfoView title="Notes" cardProps={{ h: undefined }}>
-            <EditableNotes
-              action={`/loans/${data.loan.id}`}
-              value={data.loan.notes}
-              editable
-            />
-          </InfoView>
-        </Stack>
-        <Card miw={500} withBorder>
-          <Card.Section>{detailsPage}</Card.Section>
-        </Card>
-      </Group>
-    </Flex>
-  ) : (
-    data.loan !== undefined && detailsPage
   );
 }

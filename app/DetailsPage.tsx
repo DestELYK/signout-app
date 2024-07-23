@@ -1,7 +1,10 @@
 import {
   Box,
+  Button,
+  Card,
   Center,
   Collapse,
+  Divider,
   Flex,
   Loader,
   ScrollArea,
@@ -9,16 +12,20 @@ import {
   Stack,
   Tabs,
   Text,
+  Title,
 } from "@mantine/core";
+import { Tag } from "@prisma/client";
 import {
   Outlet,
   useLocation,
   useNavigate,
   useNavigation,
 } from "@remix-run/react";
+import { IconEdit } from "@tabler/icons-react";
+import TagGroup from "./components/tags/TagGroup";
 import { useDesktopOnly } from "./lib/hooks";
 
-export interface ItemPageProps {
+export interface DetailsPageProps {
   data: {
     [value: string]: {
       label: string;
@@ -26,9 +33,17 @@ export interface ItemPageProps {
       disabled?: boolean;
     };
   };
+  tags: Tag[];
+  title?: string;
+  desktopComponent?: React.ReactNode;
 }
 
-export default function DetailsPage({ data }: ItemPageProps) {
+export default function DetailsPage({
+  data,
+  tags,
+  title = "Unknown",
+  desktopComponent,
+}: DetailsPageProps) {
   const navigate = useNavigate();
   const navigation = useNavigation();
   const location = useLocation();
@@ -37,9 +52,11 @@ export default function DetailsPage({ data }: ItemPageProps) {
 
   const editing = location.pathname.endsWith("/edit");
 
-  let value = "overview";
+  const keys = Object.keys(data);
 
-  Object.keys(data).forEach((key) => {
+  let value = keys[0];
+
+  keys.forEach((key) => {
     if (location.pathname.includes(`/${key}`)) {
       value = key;
     }
@@ -61,77 +78,103 @@ export default function DetailsPage({ data }: ItemPageProps) {
         break;
     }
   }
+
+  const pageComponent = (
+    <Flex w="100%" h="100%" direction="column" align="center" wrap="nowrap">
+      {desktopOnly ? (
+        <>
+          <Tabs
+            w="100%"
+            value={value}
+            onChange={(value) => onChange(value ?? "")}
+          >
+            <Tabs.List h={50}>
+              {Object.keys(data).map((key) => {
+                return (
+                  <Tabs.Tab
+                    key={key}
+                    value={key}
+                    leftSection={data[key].icon}
+                    disabled={data[key].disabled}
+                  >
+                    {data[key].label}
+                  </Tabs.Tab>
+                );
+              })}
+            </Tabs.List>
+          </Tabs>
+          <ScrollArea
+            w="100%"
+            h="calc(100% - 50px)"
+            type="always"
+            scrollbars="y"
+          >
+            <Box p="md" w="100%">
+              <Outlet />
+            </Box>
+          </ScrollArea>
+        </>
+      ) : (
+        <>
+          <Collapse w="100%" in={!editing}>
+            <SegmentedControl
+              w="100%"
+              data={Object.keys(data).map((key) => {
+                return {
+                  value: key,
+                  label: (
+                    <Stack align="center" gap={0}>
+                      {data[key].icon}
+                      <Text size="sm">{data[key].label}</Text>
+                    </Stack>
+                  ),
+                  disabled: data[key].disabled,
+                };
+              })}
+              value={value}
+              onChange={onChange}
+            />
+          </Collapse>
+          <Box p="md" w="100%">
+            <Outlet />
+          </Box>
+        </>
+      )}
+    </Flex>
+  );
+
   return desktopOnly === undefined ? (
-    <Center h="100%">
+    <Center w="100%" h="100%">
       <Loader />
     </Center>
-  ) : (
-    <>
-      <Flex w="100%" h="100%" direction="column" align="center" wrap="nowrap">
-        {desktopOnly ? (
-          <>
-            <Tabs
-              w="100%"
-              value={value}
-              onChange={(value) => onChange(value ?? "")}
-            >
-              <Tabs.List mb="sm">
-                {Object.keys(data).map((key) => {
-                  return (
-                    <Tabs.Tab
-                      key={key}
-                      value={key}
-                      leftSection={data[key].icon}
-                      disabled={data[key].disabled}
-                    >
-                      {data[key].label}
-                    </Tabs.Tab>
-                  );
-                })}
-              </Tabs.List>
-
-              <Outlet />
-            </Tabs>
-          </>
-        ) : (
-          <>
-            <Flex
-              w="100%"
-              direction="column"
-              align="center"
-              wrap="nowrap"
-              gap="sm"
-              p="sm"
-              style={{ boxShadow: "0px 2px 6px 2px #8686862d", zIndex: 10 }}
-            >
-              <Collapse w="100%" in={!editing}>
-                <SegmentedControl
-                  w="100%"
-                  data={Object.keys(data).map((key) => {
-                    return {
-                      value: key,
-                      label: (
-                        <Stack align="center" gap={0}>
-                          {data[key].icon}
-                          <Text size="sm">{data[key].label}</Text>
-                        </Stack>
-                      ),
-                      disabled: data[key].disabled,
-                    };
-                  })}
-                  value={value}
-                  onChange={onChange}
-                />
-              </Collapse>
-            </Flex>
-            <ScrollArea.Autosize h="100%" w="100%" type="always" scrollbars="y">
-              <Box p="md" w="100%">
-                <Outlet />
-              </Box>
-            </ScrollArea.Autosize>
-          </>
-        )}
+  ) : desktopOnly ? (
+    <Flex h="calc(100dvh - 60px)" direction="column" gap="md" p="md">
+      <Flex mih={80} direction="row" justify="space-between" wrap="nowrap">
+        <Stack h="100%" gap="xs">
+          <TagGroup tags={tags} groupProps={{ justify: "start" }} />
+          <Title order={1}>{title}</Title>
+        </Stack>
+        <Button h="100%" rightSection={<IconEdit />} disabled>
+          Edit
+        </Button>
       </Flex>
-    </>
+      <Divider w="100%" />
+      <Flex
+        w="100%"
+        h="calc(100% - 80px)"
+        direction="row"
+        align="stretch"
+        wrap="nowrap"
+        gap="sm"
+        style={{ overflowY: "hidden" }}
+      >
+        {desktopComponent}
+        <Card miw={600} h="100%" p={0} withBorder>
+          {pageComponent}
+        </Card>
+      </Flex>
+    </Flex>
+  ) : (
+    pageComponent
   );
 }

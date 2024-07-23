@@ -18,7 +18,11 @@ export interface DateTimelineProps {
   items: TimelineItemValues[];
 }
 
-export default function DateTimeline({ active, href, items }: DateTimelineProps) {
+export default function DateTimeline({
+  active,
+  href,
+  items,
+}: DateTimelineProps) {
   const timelineItems = items.map((l, index) => {
     return (
       <Timeline.Item
@@ -64,17 +68,11 @@ export default function DateTimeline({ active, href, items }: DateTimelineProps)
   });
 
   return items.length > 0 ? (
-    <Timeline
-      w="100%"
-      ml={30}
-      active={active}
-      bulletSize={rem(40)}
-      lineWidth={6}
-    >
+    <Timeline ml={30} active={active} bulletSize={rem(40)} lineWidth={6}>
       {timelineItems}
     </Timeline>
   ) : (
-    <Center h="100%">
+    <Center w="100%" h="100%">
       <Text>No timeline</Text>
     </Center>
   );
