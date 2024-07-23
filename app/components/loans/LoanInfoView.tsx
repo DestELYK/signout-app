@@ -73,6 +73,7 @@ export default function LoanInfoView({
     <>
       {/* Loan Card */}
       <InfoView
+        cardProps={{ h: undefined }}
         title={`Loan #${id}`}
         rightSection={
           <TagGroup
