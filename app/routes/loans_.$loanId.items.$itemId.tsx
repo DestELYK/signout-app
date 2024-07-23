@@ -68,7 +68,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 export default function Page() {
   const params = useParams();
   const loanData = useTypedRouteLoaderData<typeof loanLoader>(
-    "routes/loans.$loanId"
+    "routes/loans_.$loanId"
   );
   const data = useTypedLoaderData<typeof loader>();
 
