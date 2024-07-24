@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Box,
   Button,
   Card,
   Center,
@@ -195,13 +196,7 @@ export default function Page() {
         wrap="nowrap"
         p="md"
       >
-        <Group
-          pos="relative"
-          top={0}
-          align="center"
-          justify="space-between"
-          pb="md"
-        >
+        <Group h={80} align="center" justify="space-between" pb="md">
           <Title order={1}>Tags</Title>
           <Button
             onClick={() => open(true)}
@@ -214,7 +209,7 @@ export default function Page() {
             <IconPlus />
           </ActionIcon>
         </Group>
-        <Divider w="100%" />
+        <Divider w="100%" mb="sm" />
         {data.error ? (
           <Center w="100%" h="100%">
             <Text c="error">{data.error}</Text>
@@ -223,21 +218,16 @@ export default function Page() {
           <Center w="100%" h="100%">
             <Loader />
           </Center>
-        ) : data.tags.length === 0 ? (
-          <Center w="100%" h="100%">
-            <Text>No tags found</Text>
-          </Center>
         ) : desktopOnly ? (
           <Flex
             w="100%"
             h="calc(100% - 80px)"
             direction="row"
             wrap="nowrap"
-            mt="md"
             gap="md"
             style={{ overflowY: "hidden" }}
           >
-            <Card w="50%" h="100%" withBorder p="sm">
+            <Card w="50%" h="100%" withBorder>
               <Card.Section mb="sm">
                 <Tabs
                   w="100%"
@@ -276,6 +266,7 @@ export default function Page() {
                 showPagination={false}
                 withQRCode={false}
                 searchPlaceholder="Search for tags..."
+                emptyText="No tags found"
               >
                 {(tag, query) => (
                   <NavLink
@@ -298,12 +289,14 @@ export default function Page() {
                 )}
               </ListView>
             </Card>
-            <Card w="50%" h="100%" withBorder p="sm">
+            <Box w="50%" h="100%">
               <Outlet />
-            </Card>
+            </Box>
           </Flex>
         ) : (
-          <Outlet />
+          <Box w="100%" h="calc(100% - 80px)">
+            <Outlet />
+          </Box>
         )}
       </Flex>
     </>

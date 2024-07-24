@@ -1,17 +1,35 @@
-import { Center, Loader, Text } from "@mantine/core";
-import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { useLocation, useNavigation } from "@remix-run/react";
+import { Button, Center, Group, Loader, Text } from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
+import { Tag } from "@prisma/client";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from "@remix-run/node";
+import {
+  Outlet,
+  useLocation,
+  useNavigate,
+  useNavigation,
+  useParams,
+  useSearchParams,
+} from "@remix-run/react";
+import { useEffect } from "react";
 import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
+import InfoView from "~/components/base/InfoView";
 import { handleError } from "~/lib/db.server";
+import { useDesktopOnly, useFetcherWithErrorHandler } from "~/lib/hooks";
 import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [
     {
-      title: data.tag
-        ? `${data.tag.name} Tag`
-        : "No Tag Found" + ` | SJK Sign-Out`,
+      title:
+        (data.tag ? `${data.tag.name} Tag` : "No Tag Found") +
+        " | SJK Sign-Out",
     },
   ];
 };
@@ -49,13 +67,41 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     }
   }
 };
+
+export const action = async ({ params, request }: ActionFunctionArgs) => {
+  return typedjson({
+    tag: undefined,
+    error: "Not implemented",
+  });
+};
+
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
   const navigation = useNavigation();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const desktopOnly = useDesktopOnly();
 
-  return navigation.state === "loading" &&
-    location.pathname !== navigation.location.pathname ? (
+  const params = useParams();
+
+  const form = useForm<Omit<Tag, "id">>({});
+
+  useEffect(() => {
+    if (data.tag) {
+      form.setValues({
+        ...data.tag,
+      });
+    }
+  }, [data.tag]);
+
+  const editing = location.pathname.endsWith("edit");
+
+  const loading =
+    navigation.state === "loading" &&
+    location.pathname !== navigation.location.pathname;
+
+  const content = loading ? (
     <Center w="100%" h="100%">
       <Loader />
     </Center>
@@ -63,13 +109,105 @@ export default function Page() {
     <Center w="100%" h="100%">
       <Text c="error">{data.error}</Text>
     </Center>
-  ) : data.tag ? (
-    <Center w="100%" h="100%">
-      <Text>Displaying {data.tag.name}</Text>
-    </Center>
   ) : (
-    <Center w="100%" h="100%">
-      <Text c="error">Tag not found</Text>
-    </Center>
+    <Outlet />
+  );
+
+  const submitTag = useFetcherWithErrorHandler<typeof action>(
+    (data) => {
+      if (data.tag) {
+        notifications.show({
+          message: <>Deleted tag: {/* <b>{data.tag.name}</b>. */}</>,
+        });
+      }
+    },
+    (error) => {
+      form.setErrors({
+        name: error,
+        color: error,
+      });
+    }
+  );
+
+  function handleDelete() {
+    modals.openConfirmModal({
+      title: "Confirm Deletion",
+      centered: true,
+      children: (
+        <Text>
+          This action is irreversible, are you sure you want to delete the tag
+          named <b>{form.values.name}</b>?
+        </Text>
+      ),
+      labels: {
+        confirm: "Yes",
+        cancel: "No",
+      },
+      confirmProps: {
+        color: "red",
+      },
+      onConfirm: () => {
+        modals.openConfirmModal({
+          title: "Confirm Deletion",
+          centered: true,
+          children: <Text>Confirm if you want to delete the tag</Text>,
+          labels: {
+            confirm: "Yes",
+            cancel: "No",
+          },
+          confirmProps: {
+            color: "red",
+          },
+          onConfirm: () => {
+            modals.closeAll();
+            submitTag.submit(form.values, {
+              method: "DELETE",
+              navigate: false,
+              encType: "application/json",
+            });
+          },
+          onCancel: () => {
+            modals.closeAll();
+          },
+        });
+      },
+      onCancel: () => {
+        modals.closeAll();
+      },
+    });
+  }
+
+  const editButtons = (
+    <Group mt="auto" grow>
+      <Button
+        disabled={loading}
+        onClick={() =>
+          editing
+            ? navigate(-1)
+            : navigate(`edit?${searchParams.toString()}`, {
+                relative: "path",
+              })
+        }
+      >
+        {editing ? "Cancel" : "Edit"}
+      </Button>
+      <Button disabled={loading} onClick={() => handleDelete()} color="red">
+        Delete
+      </Button>
+    </Group>
+  );
+
+  return (
+    <InfoView
+      title={data.tag ? `#${data.tag.id} - ${data.tag.name}` : "Unknown"}
+      headerProps={{ withBorder: desktopOnly }}
+      cardProps={{
+        withBorder: desktopOnly,
+        p: !desktopOnly ? "xs" : undefined,
+      }}
+      bottomSection={editButtons}
+    >
+      {content}
+    </InfoView>
   );
 }

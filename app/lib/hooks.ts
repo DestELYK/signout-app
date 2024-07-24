@@ -16,8 +16,9 @@ export function useFetcherWithErrorHandler<T>(
     if (fetcher.data && typeof fetcher.data === "object") {
       if ("error" in fetcher.data && typeof fetcher.data.error === "string") {
         notifications.show({
-          message: `Error: ${fetcher.data.error}`,
-          color: "error",
+          title: "Error",
+          message: fetcher.data.error,
+          color: "red",
         });
 
         onError?.(fetcher.data.error);

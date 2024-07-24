@@ -1,4 +1,6 @@
 import {
+  Box,
+  Card,
   Center,
   Flex,
   Highlight,
@@ -40,44 +42,51 @@ export default function Page() {
   };
 
   return desktopOnly ? (
-    <Center w="100%" h="100%">
-      <Text c="dimmed">No tag selected</Text>
-    </Center>
+    <Card withBorder>
+      <Center w="100%" h="100%">
+        <Text c="dimmed">No tag selected</Text>
+      </Center>
+    </Card>
   ) : data === undefined ? (
     <Center w="100%" h="100%">
       <Loader />
     </Center>
   ) : (
-    <Stack>
-      <ScrollArea w="100%" type="always" scrollbars="x" offsetScrollbars="x">
-        <SegmentedControl
-          w="100%"
-          fullWidth
-          data={[
-            {
-              value: "all",
-              label: "All",
-            },
-            ...(data.categories
-              ? data.categories.map((category) => {
-                  return {
-                    value: category.category,
-                    label: category.category,
-                  };
-                })
-              : []),
-          ]}
-          value={searchParams.get("category") ?? "all"}
-          onChange={(value) => onChange(value ?? "all")}
-        />
-      </ScrollArea>
+    <Stack w="100%" h="100%">
+      <Box w="100%" h={40}>
+        <ScrollArea w="100%" type="always" scrollbars="x" offsetScrollbars="x">
+          <SegmentedControl
+            w="100%"
+            mih={40}
+            fullWidth
+            data={[
+              {
+                value: "all",
+                label: "All",
+              },
+              ...(data.categories
+                ? data.categories.map((category) => {
+                    return {
+                      value: category.category,
+                      label: category.category,
+                    };
+                  })
+                : []),
+            ]}
+            value={searchParams.get("category") ?? "all"}
+            onChange={(value) => onChange(value ?? "all")}
+          />
+        </ScrollArea>
+      </Box>
       <ListView
         w="100%"
+        h="calc(100% - 40px)"
         initialItemsPerPage={30}
         data={data.tags}
         showPagination={false}
         withQRCode={false}
         searchPlaceholder="Search for tags..."
+        emptyText="No tags found"
       >
         {(tag, query) => (
           <UnstyledButton

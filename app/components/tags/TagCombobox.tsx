@@ -156,6 +156,7 @@ export default function TagCombobox({
             close();
           }}
           category={category}
+          lockCategory
           name={search}
         />
       </Modal>

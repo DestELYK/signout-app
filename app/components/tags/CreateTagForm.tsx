@@ -1,7 +1,6 @@
 import {
   Button,
   ColorInput,
-  Group,
   LoadingOverlay,
   Slider,
   Stack,
@@ -28,29 +27,42 @@ import {
 export type CreateTagFormProps = {
   onSubmit?: (values: PostTagFormData) => void;
   onSubmitted?: (tag: Tag) => void;
+  id?: number;
   name?: string;
+  color?: string;
   category?: string;
+  priority?: number;
+  hidden?: boolean;
+  lockCategory?: boolean;
+  formType?: "create" | "edit";
 };
 
 export default function CreateTagForm({
   onSubmit,
   onSubmitted,
+  id,
   name,
+  color,
+  priority,
+  hidden,
   category,
+  lockCategory,
+  formType = "create",
 }: CreateTagFormProps) {
   const navigate = useNavigate();
   const form = useForm<PostTagFormData>({
     initialValues: {
-      name: "",
-      color: "#ffffff",
-      category: "",
-      priority: 0,
-      hidden: false,
+      name: name ?? "",
+      color: color ?? "#ffffff",
+      category: category ?? "",
+      priority: priority ?? 0,
+      hidden: hidden ?? false,
     },
     validate: {
       name: (value) => blankValueValidator(value) || tagNameValidator(value),
       color: (value) => blankValueValidator(value) || tagColorValidator(value),
-      category: (value) => tagCategoryValidator(value),
+      category: (value) =>
+        blankValueValidator(value) || tagCategoryValidator(value),
       priority: (value) => {
         if (value !== undefined && (value > 1000 || value < -1000))
           return "Priority is outside range (-1000 & 1000)";
@@ -58,13 +70,14 @@ export default function CreateTagForm({
     },
   });
 
-  const submitNewTag = useFetcherWithErrorHandler<typeof action>(
+  const submitTag = useFetcherWithErrorHandler<typeof action>(
     (data) => {
       if (data.tag) {
         notifications.show({
           message: (
             <>
-              Created new tag: <b>{data.tag.name}</b>. .
+              {formType === "create" ? "Created new" : "Updated"} tag:{" "}
+              <b>{data.tag.name}</b>.
             </>
           ),
         });
@@ -75,11 +88,12 @@ export default function CreateTagForm({
       form.setErrors({
         name: error,
         color: error,
+        category: error,
       });
     }
   );
 
-  const loading = submitNewTag.state !== "idle";
+  const loading = submitTag.state !== "idle";
 
   useEffect(() => {
     name && form.setFieldValue("name", name);
@@ -89,15 +103,28 @@ export default function CreateTagForm({
     category && form.setFieldValue("category", category);
   }, [category]);
 
+  useEffect(() => {
+    color && form.setFieldValue("color", color);
+  }, [color]);
+
+  useEffect(() => {
+    priority && form.setFieldValue("priority", priority);
+  }, [priority]);
+
+  useEffect(() => {
+    hidden && form.setFieldValue("hidden", hidden);
+  }, [hidden]);
+
   function handleSubmit() {
     if (!form.validate().hasErrors) {
       modals.openConfirmModal({
-        id: "tag-create-confirm",
         title: "Confirm Creation",
         centered: true,
         children: (
           <Text>
-            Are you sure you want to create a new tag named {form.values.name}?
+            {formType === "create"
+              ? `Are you sure you want to create a new tag named ${form.values.name}?`
+              : `Are you sure you want to update the tag named ${form.values.name}?`}
           </Text>
         ),
         labels: {
@@ -105,9 +132,9 @@ export default function CreateTagForm({
           cancel: "No",
         },
         onConfirm: () => {
-          modals.close("tag-create-confirm");
-          submitNewTag.submit(form.values, {
-            action: "/tags",
+          modals.closeAll();
+          submitTag.submit(form.values, {
+            action: formType === "create" ? "/tags" : `/tags/${id}`,
             method: "POST",
             navigate: false,
             encType: "application/json",
@@ -116,7 +143,7 @@ export default function CreateTagForm({
           onSubmit?.(form.values);
         },
         onCancel: () => {
-          modals.close("tag-create-confirm");
+          modals.closeAll();
         },
       });
     }
@@ -125,7 +152,7 @@ export default function CreateTagForm({
   return (
     <>
       <LoadingOverlay visible={loading} zIndex={1000} />
-      <Stack gap="sm">
+      <Stack w="100%" h="100%" gap="sm">
         <TextInput
           disabled={loading}
           label="Name"
@@ -161,7 +188,7 @@ export default function CreateTagForm({
         </Stack>
         <TextInput
           label="Category"
-          disabled={loading || category != undefined}
+          disabled={loading || lockCategory}
           required
           {...form.getInputProps("category")}
         />
@@ -170,11 +197,17 @@ export default function CreateTagForm({
           description="Hides tag from being displayed, but will still be used for filtering"
           {...form.getInputProps("hidden")}
         />
-        <Group justify="end">
-          <Button disabled={loading} onClick={() => handleSubmit()}>
+        {formType === "edit" ? (
+          form.isDirty() && (
+            <Button mt="auto" disabled={loading} onClick={() => handleSubmit()}>
+              Update
+            </Button>
+          )
+        ) : (
+          <Button mt="auto" disabled={loading} onClick={() => handleSubmit()}>
             Create
           </Button>
-        </Group>
+        )}
       </Stack>
     </>
   );
