@@ -1,12 +1,19 @@
 import { Center, Loader, Text } from "@mantine/core";
 import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { useLocation, useNavigation } from "@remix-run/react";
-import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import { handleError } from "~/lib/db.server";
+import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  return [{ title: `${data.tag.name} Tag | SJK Sign-Out` }];
+  return [
+    {
+      title: data.tag
+        ? `${data.tag.name} Tag`
+        : "No Tag Found" + ` | SJK Sign-Out`,
+    },
+  ];
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
@@ -15,7 +22,9 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
   const tagId = params.tagId;
 
   try {
-    const tag = await prisma.tag.findUnique({
+    if (!isNumeric(tagId)) return redirect("/tags");
+
+    const tag = await prisma.tag.findUniqueOrThrow({
       where: {
         id: Number(tagId),
       },
