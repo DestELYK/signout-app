@@ -1,6 +1,17 @@
+import {
+  Center,
+  Flex,
+  Highlight,
+  NavLink,
+  Paper,
+  Text,
+  Title,
+} from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { typedjson } from "remix-typedjson";
+import { NavLink as NavLinkRemix } from "@remix-run/react";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import ListView from "~/components/base/ListView";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
 
@@ -92,4 +103,59 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
   }
+}
+
+export default function Page() {
+  const data = useTypedLoaderData<typeof loader>();
+
+  return data.error ? (
+    <Center w="100%" h="100%">
+      <Text c="error">{data.error}</Text>
+    </Center>
+  ) : data.tags === undefined || data.tags.length === 0 ? (
+    <Center w="100%" h="100%">
+      <Text>No tags found</Text>
+    </Center>
+  ) : (
+    <Flex
+      w="100%"
+      h="calc(100dvh - 60px)"
+      direction="column"
+      wrap="nowrap"
+      style={{ overflowY: "hidden" }}
+      p="md"
+    >
+      <Title h={80} order={1}>
+        Tags
+      </Title>
+      <Flex
+        w="100%"
+        h="calc(100% - 80px)"
+        direction="row"
+        wrap="nowrap"
+        gap="md"
+      >
+        <Paper w="50%" h="100%" withBorder p="sm">
+          <ListView h="100%" data={data.tags}>
+            {(tag, query) => (
+              <NavLink
+                key={tag.id}
+                to={`/tags/${tag.id}`}
+                component={NavLinkRemix}
+                label={
+                  <Highlight highlight={query ?? ""}>{tag.name}</Highlight>
+                }
+                color={tag.color}
+              />
+            )}
+          </ListView>
+        </Paper>
+        <Paper w="50%" h="100%" withBorder p="sm">
+          <Center w="100%" h="100%">
+            <Text c="dimmed">No tag selected</Text>
+          </Center>
+        </Paper>
+      </Flex>
+    </Flex>
+  );
 }

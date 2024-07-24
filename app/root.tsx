@@ -47,6 +47,7 @@ import {
   IconClipboard,
   IconDeviceImac,
   IconHome,
+  IconTag,
   IconUser,
 } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
@@ -107,6 +108,8 @@ function Root({
     value = "items";
   } else if (location.pathname.startsWith("/people")) {
     value = "people";
+  } else if (location.pathname.startsWith("/tags")) {
+    value = "tags";
   }
 
   // TODO - Move to specific pages
@@ -271,7 +274,15 @@ function Root({
                   onClick={close}
                   active={value === "people"}
                 />
-                <Stack mt="auto">
+                <Stack mt="auto" gap={0}>
+                  <NavLink
+                    to="/tags"
+                    component={NavLinkRemix}
+                    label="Tags"
+                    leftSection={<IconTag size={24} />}
+                    onClick={close}
+                    active={value === "tags"}
+                  />
                   <NavLink
                     to="https://forms.gle/u45D3TcSGS79f2hq9"
                     component={NavLinkRemix}
