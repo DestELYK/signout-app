@@ -1,28 +1,62 @@
 import { Center, Loader, Text } from "@mantine/core";
-import { useParams } from "@remix-run/react";
-import { useTypedRouteLoaderData } from "remix-typedjson";
-import { isNumeric } from "~/utils/utils";
-import { loader as tagsLoader } from "./tags";
+import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
+import { useLocation, useNavigation } from "@remix-run/react";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import invariant from "tiny-invariant";
+import { handleError } from "~/lib/db.server";
 
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  return [{ title: `${data.tag.name} Tag | SJK Sign-Out` }];
+};
+
+export const loader = async ({ params }: LoaderFunctionArgs) => {
+  invariant(params.tagId, "Expected params.tagId");
+
+  const tagId = params.tagId;
+
+  try {
+    const tag = await prisma.tag.findUnique({
+      where: {
+        id: Number(tagId),
+      },
+    });
+
+    return typedjson({
+      tag: tag,
+      error: undefined,
+    });
+  } catch (e) {
+    const error = handleError(e, "no tag was returned");
+
+    if (error) {
+      return typedjson({
+        error: error,
+        tag: undefined,
+      });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
+  }
+};
 export default function Page() {
-  const data = useTypedRouteLoaderData<typeof tagsLoader>("routes/tags");
+  const data = useTypedLoaderData<typeof loader>();
+  const navigation = useNavigation();
+  const location = useLocation();
 
-  const { tagId } = useParams();
-
-  const tag =
-    data &&
-    data.tags &&
-    tagId &&
-    isNumeric(tagId) &&
-    data?.tags?.find((t) => t.id.toString() === tagId);
-
-  return data === undefined ? (
+  return navigation.state === "loading" &&
+    location.pathname !== navigation.location.pathname ? (
     <Center w="100%" h="100%">
       <Loader />
     </Center>
-  ) : tag ? (
+  ) : data.error ? (
     <Center w="100%" h="100%">
-      <Text>Displaying {tag.name}</Text>
+      <Text c="error">{data.error}</Text>
+    </Center>
+  ) : data.tag ? (
+    <Center w="100%" h="100%">
+      <Text>Displaying {data.tag.name}</Text>
     </Center>
   ) : (
     <Center w="100%" h="100%">

@@ -34,7 +34,7 @@ export function usePreventNavigation() {}
 
 export function useCreateModal(): [
   boolean,
-  { open: () => void; close: () => void }
+  { open: (replace?: boolean) => void; close: (replace?: boolean) => void }
 ] {
   const [searchParams, setSearchParams] = useSearchParams();
   const [opened, { open, close }] = useDisclosure(false);
@@ -46,19 +46,25 @@ export function useCreateModal(): [
   return [
     opened,
     {
-      open: () => {
+      open: (replace: boolean = false) => {
         open();
-        setSearchParams((prev) => {
-          prev.set("create", "");
-          return prev;
-        });
+        setSearchParams(
+          (prev) => {
+            prev.set("create", "");
+            return prev;
+          },
+          { replace: replace }
+        );
       },
-      close: () => {
+      close: (replace: boolean = true) => {
         close();
-        setSearchParams((prev) => {
-          prev.delete("create");
-          return prev;
-        });
+        setSearchParams(
+          (prev) => {
+            prev.delete("create");
+            return prev;
+          },
+          { replace: replace }
+        );
       },
     },
   ];

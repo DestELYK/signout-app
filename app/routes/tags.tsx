@@ -1,27 +1,43 @@
 import {
+  ActionIcon,
+  Button,
+  Card,
   Center,
   Divider,
   Flex,
+  Group,
   Highlight,
   Loader,
+  Modal,
   NavLink,
   Paper,
+  Tabs,
   Text,
   Title,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
-import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from "@remix-run/node";
 import {
   NavLink as NavLinkRemix,
   Outlet,
-  useLocation,
+  useParams,
   useSearchParams,
 } from "@remix-run/react";
-import { IconCircleFilled } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import ListView from "~/components/base/ListView";
+import CreateTagForm from "~/components/tags/CreateTagForm";
 import { handleError } from "~/lib/db.server";
+import { useCreateModal, useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
+
+export const meta: MetaFunction = () => {
+  return [{ title: "Tags | SJK Sign-Out" }];
+};
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -41,12 +57,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
     });
 
-    return typedjson({ tags: tags, error: undefined });
+    const categories = await prisma.tag.groupBy({
+      by: ["category"],
+      orderBy: {
+        category: "asc",
+      },
+      _count: {
+        category: true,
+      },
+    });
+
+    return typedjson({
+      tags: tags,
+      totalCount: await prisma.tag.count(),
+      categories: categories,
+      error: undefined,
+    });
   } catch (e) {
     const error = handleError(e, "no tag was returned");
 
     if (error) {
-      return typedjson({ error: error, tags: undefined });
+      return typedjson({
+        error: error,
+        tags: undefined,
+        categories: undefined,
+      });
     } else {
       throw new Response(String(e), {
         status: 500,
@@ -115,78 +150,162 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
+  const desktopOnly = useDesktopOnly();
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const location = useLocation();
+  const params = useParams();
 
-  const nested = !location.pathname.endsWith("/tags");
+  const [opened, { open, close }] = useCreateModal();
 
-  return data.error ? (
-    <Center w="100%" h="100%">
-      <Text c="error">{data.error}</Text>
-    </Center>
-  ) : data.tags === undefined ? (
-    <Center w="100%" h="100%">
-      <Loader />
-    </Center>
-  ) : data.tags.length === 0 ? (
-    <Center w="100%" h="100%">
-      <Text>No tags found</Text>
-    </Center>
-  ) : (
-    <Flex
-      w="100%"
-      h="calc(100dvh - 60px)"
-      direction="column"
-      wrap="nowrap"
-      style={{ overflowY: "hidden" }}
-      p="md"
-    >
-      <Title mih={60} order={1}>
-        Tags
-      </Title>
-      <Divider w="100%" />
+  const onChange = (value: string) => {
+    setSearchParams(
+      (prev) => {
+        if (value === "all") {
+          prev.delete("category");
+        } else {
+          prev.set("category", value);
+        }
+
+        return prev;
+      },
+      { replace: true }
+    );
+  };
+
+  return (
+    <>
+      <Modal
+        opened={opened}
+        onClose={close}
+        centered={true}
+        title={"Create New Tag"}
+      >
+        <CreateTagForm
+          onSubmitted={(data) => {
+            close();
+          }}
+        />
+      </Modal>
+
       <Flex
         w="100%"
-        h="calc(100% - 80px)"
-        direction="row"
+        h="calc(100dvh - 60px)"
+        direction="column"
         wrap="nowrap"
-        mt="md"
-        gap="md"
+        p="md"
       >
-        <Paper w="50%" h="100%" withBorder p="sm">
-          <ListView
-            h="100%"
-            initialItemsPerPage={30}
-            data={data.tags}
-            showPagination={false}
-            withQRCode={false}
-            searchPlaceholder="Search for tags..."
+        <Group
+          pos="relative"
+          top={0}
+          align="center"
+          justify="space-between"
+          pb="md"
+        >
+          <Title order={1}>Tags</Title>
+          <Button
+            onClick={() => open(true)}
+            rightSection={<IconPlus />}
+            visibleFrom="sm"
           >
-            {(tag, query) => (
-              <NavLink
-                key={tag.id}
-                to={`/tags/${tag.id}?${searchParams.toString()}`}
-                component={NavLinkRemix}
-                leftSection={<IconCircleFilled size={24} color={tag.color} />}
-                label={
-                  <Highlight highlight={query ?? ""}>{tag.name}</Highlight>
-                }
-              />
-            )}
-          </ListView>
-        </Paper>
-        <Paper w="50%" h="100%" withBorder p="sm">
-          {nested ? (
-            <Outlet />
-          ) : (
-            <Center w="100%" h="100%">
-              <Text c="dimmed">No tag selected</Text>
-            </Center>
-          )}
-        </Paper>
+            Create New Tag
+          </Button>
+          <ActionIcon size="lg" onClick={() => open(true)} hiddenFrom="sm">
+            <IconPlus />
+          </ActionIcon>
+        </Group>
+        <Divider w="100%" />
+        {data.error ? (
+          <Center w="100%" h="100%">
+            <Text c="error">{data.error}</Text>
+          </Center>
+        ) : data.tags === undefined ? (
+          <Center w="100%" h="100%">
+            <Loader />
+          </Center>
+        ) : data.tags.length === 0 ? (
+          <Center w="100%" h="100%">
+            <Text>No tags found</Text>
+          </Center>
+        ) : desktopOnly ? (
+          <Flex
+            w="100%"
+            h="calc(100% - 80px)"
+            direction="row"
+            wrap="nowrap"
+            mt="md"
+            gap="md"
+            style={{ overflowY: "hidden" }}
+          >
+            <Card w="50%" h="100%" withBorder p="sm">
+              <Card.Section mb="sm">
+                <Tabs
+                  w="100%"
+                  value={searchParams.get("category") ?? "all"}
+                  onChange={(value) => onChange(value ?? "all")}
+                >
+                  <Tabs.List>
+                    <Tabs.Tab value="all">
+                      <Group gap="xs">
+                        All
+                        <Text c="dimmed" size="xs">
+                          ({data.totalCount})
+                        </Text>
+                      </Group>
+                    </Tabs.Tab>
+                    {data.categories.map((category) => (
+                      <Tabs.Tab
+                        key={category.category}
+                        value={category.category}
+                      >
+                        <Group gap="xs">
+                          {category.category}
+                          <Text c="dimmed" size="xs">
+                            ({category._count.category})
+                          </Text>
+                        </Group>
+                      </Tabs.Tab>
+                    ))}
+                  </Tabs.List>
+                </Tabs>
+              </Card.Section>
+              <ListView
+                h="calc(100% - 60px)"
+                initialItemsPerPage={30}
+                data={data.tags}
+                showPagination={false}
+                withQRCode={false}
+                searchPlaceholder="Search for tags..."
+              >
+                {(tag, query) => (
+                  <NavLink
+                    key={tag.id}
+                    to={`/tags/${tag.id}?${searchParams.toString()}`}
+                    component={NavLinkRemix}
+                    leftSection={
+                      <Paper
+                        withBorder
+                        radius={24}
+                        w={24}
+                        h={24}
+                        style={{ backgroundColor: tag.color }}
+                      />
+                    }
+                    label={
+                      <Highlight highlight={query ?? ""}>{tag.name}</Highlight>
+                    }
+                  />
+                )}
+              </ListView>
+            </Card>
+            <Card w="50%" h="100%" withBorder p="sm">
+              <Outlet />
+            </Card>
+          </Flex>
+        ) : (
+          <Outlet />
+        )}
       </Flex>
-    </Flex>
+    </>
   );
 }
