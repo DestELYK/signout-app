@@ -1,7 +1,9 @@
 import {
   Center,
+  Divider,
   Flex,
   Highlight,
+  Loader,
   NavLink,
   Paper,
   Text,
@@ -9,7 +11,13 @@ import {
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { NavLink as NavLinkRemix } from "@remix-run/react";
+import {
+  NavLink as NavLinkRemix,
+  Outlet,
+  useLocation,
+  useSearchParams,
+} from "@remix-run/react";
+import { IconCircleFilled } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import ListView from "~/components/base/ListView";
 import { handleError } from "~/lib/db.server";
@@ -108,11 +116,21 @@ export async function action({ request }: ActionFunctionArgs) {
 export default function Page() {
   const data = useTypedLoaderData<typeof loader>();
 
+  const [searchParams] = useSearchParams();
+
+  const location = useLocation();
+
+  const nested = !location.pathname.endsWith("/tags");
+
   return data.error ? (
     <Center w="100%" h="100%">
       <Text c="error">{data.error}</Text>
     </Center>
-  ) : data.tags === undefined || data.tags.length === 0 ? (
+  ) : data.tags === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : data.tags.length === 0 ? (
     <Center w="100%" h="100%">
       <Text>No tags found</Text>
     </Center>
@@ -125,35 +143,48 @@ export default function Page() {
       style={{ overflowY: "hidden" }}
       p="md"
     >
-      <Title h={80} order={1}>
+      <Title mih={60} order={1}>
         Tags
       </Title>
+      <Divider w="100%" />
       <Flex
         w="100%"
         h="calc(100% - 80px)"
         direction="row"
         wrap="nowrap"
+        mt="md"
         gap="md"
       >
         <Paper w="50%" h="100%" withBorder p="sm">
-          <ListView h="100%" data={data.tags}>
+          <ListView
+            h="100%"
+            initialItemsPerPage={30}
+            data={data.tags}
+            showPagination={false}
+            withQRCode={false}
+            searchPlaceholder="Search for tags..."
+          >
             {(tag, query) => (
               <NavLink
                 key={tag.id}
-                to={`/tags/${tag.id}`}
+                to={`/tags/${tag.id}?${searchParams.toString()}`}
                 component={NavLinkRemix}
+                leftSection={<IconCircleFilled size={24} color={tag.color} />}
                 label={
                   <Highlight highlight={query ?? ""}>{tag.name}</Highlight>
                 }
-                color={tag.color}
               />
             )}
           </ListView>
         </Paper>
         <Paper w="50%" h="100%" withBorder p="sm">
-          <Center w="100%" h="100%">
-            <Text c="dimmed">No tag selected</Text>
-          </Center>
+          {nested ? (
+            <Outlet />
+          ) : (
+            <Center w="100%" h="100%">
+              <Text c="dimmed">No tag selected</Text>
+            </Center>
+          )}
         </Paper>
       </Flex>
     </Flex>

@@ -13,12 +13,14 @@ import QrButton from "./qrCode/QrButton";
 export interface SearchViewProps {
   placeholder?: string;
   loading?: boolean;
+  withQRCode?: boolean;
   onChanged: (query: string, qrCode: string) => void;
 }
 
 export default function SearchView({
   placeholder,
   loading,
+  withQRCode = true,
   onChanged,
 }: SearchViewProps) {
   const [query, setQuery] = useState("");
@@ -61,11 +63,13 @@ export default function SearchView({
             updateSearch({ query: event.currentTarget.value, qrCode: "" })
           }
         />
-        <QrButton
-          onResult={(result) =>
-            updateSearch({ query: "", qrCode: result.data })
-          }
-        />
+        {withQRCode && (
+          <QrButton
+            onResult={(result) =>
+              updateSearch({ query: "", qrCode: result.data })
+            }
+          />
+        )}
       </Flex>
       {qrCode.length !== 0 && (
         <Flex w="100%" direction="row" align="center" justify="center">

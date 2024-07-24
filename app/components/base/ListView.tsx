@@ -36,6 +36,8 @@ export interface ListViewProps<T extends { id: number }> {
   initialItemsPerPage?: number;
   showPagination?: boolean;
   withOffset?: boolean;
+  withQRCode?: boolean;
+  searchPlaceholder?: string;
   children: (item: T, query?: string, qrCode?: string) => React.ReactNode;
 }
 
@@ -51,6 +53,8 @@ export default function ListView<T extends { id: number }>({
   initialItemsPerPage = INITIAL_PAGE_SIZE,
   showPagination = true,
   withOffset = true,
+  withQRCode = true,
+  searchPlaceholder = "Search...",
   children,
 }: ListViewProps<T>) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -107,6 +111,8 @@ export default function ListView<T extends { id: number }>({
       {withSearch && (
         <Stack w="100%" gap={0}>
           <SearchView
+            withQRCode={withQRCode}
+            placeholder={searchPlaceholder}
             loading={
               navigation.location &&
               new URLSearchParams(navigation.location.search).has("q")
