@@ -8,9 +8,12 @@ import {
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import DetailsPage from "~/DetailsPage";
+import EditableNotes from "~/components/EditableNotes";
+import InfoView from "~/components/base/InfoView";
+import LastLoanView from "~/components/loans/LastLoanView";
 import { handleError } from "~/lib/db.server";
 import { prisma } from "~/lib/prisma.server";
-import { personWithTags } from "~/utils/types.server";
+import { LastLoanData, personWithTags } from "~/utils/types.server";
 import { formatFullName, isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -31,32 +34,36 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     });
 
     // Gather list of loaned items
-    const loanedItems = await prisma.loanedItem.findMany({
+    const loans = await prisma.loan.findMany({
       where: {
-        loan: {
-          personId: Number(params.personId),
-        },
+        personId: Number(params.personId),
       },
-      orderBy: [{ dateLoaned: "desc" }, { dateReturned: "desc" }],
+      orderBy: [{ createdDate: "desc" }],
       include: {
-        loan: {
+        tags: true,
+        person: {
           include: {
             tags: true,
-            person: {
+          },
+        },
+        items: {
+          include: {
+            item: {
+              include: {
+                tags: true,
+              },
+            },
+            returnedBy: {
               include: {
                 tags: true,
               },
             },
           },
         },
-        item: {
-          include: {
-            tags: true,
-          },
-        },
-        returnedBy: true,
       },
     });
+
+    const loanedItems = loans.flatMap((l) => l.items);
 
     const outstandingItems = loanedItems.filter(
       (li) => !li.dateReturned
@@ -66,7 +73,21 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       li.item.tags.some((t) => t.name === "Lost")
     ).length;
 
-    const lastLoan = loanedItems[0];
+    const lastLoan: LastLoanData | undefined =
+      loans.length === 0
+        ? undefined
+        : {
+            id: loans[0].id,
+            tags: loans[0].tags,
+            dateLoaned: loans[0].createdDate,
+            person: loans[0].person,
+            items: loans[0].items.map((i) => ({
+              id: i.item.id,
+              name: i.item.name,
+              dateReturned: i.dateReturned,
+              returnedBy: i.returnedBy,
+            })),
+          };
 
     // Calculate average loan time
     let averageReturnTime = 0;
@@ -122,7 +143,17 @@ export default function Page() {
       <Text>No person found</Text>
     </Center>
   ) : (
-    <Stack w="100%"></Stack>
+    <Stack w="100%">
+      <LastLoanView w="100%" data={data.lastLoan} showPerson={false} />
+
+      <InfoView title="Notes" cardProps={{ h: undefined }}>
+        <EditableNotes
+          //action={`/items/${data.item.id}`}
+          value={data.person.notes}
+          editable
+        />
+      </InfoView>
+    </Stack>
   );
 
   return data.error != undefined ? (

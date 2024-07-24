@@ -25,17 +25,7 @@ export default function Page() {
             notes={data.item.notes}
             createdDate={data.item.createdDate}
             updatedDate={data.item.updatedDate}
-            lastLoan={
-              data &&
-              data.lastLoan && {
-                id: data.lastLoan.loan.id,
-                person: data.lastLoan.loan.person,
-                dateLoaned: data.lastLoan.dateLoaned,
-                dateReturned: data.lastLoan.dateReturned,
-                returnedBy: data.lastLoan.returnedBy,
-                tags: data.lastLoan.loan.tags,
-              }
-            }
+            lastLoan={data?.lastLoan}
             loans={data.item._count.loans}
             averageLoanTime={data.averageLoanTime}
           />

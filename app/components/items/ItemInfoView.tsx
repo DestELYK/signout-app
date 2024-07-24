@@ -11,10 +11,11 @@ import {
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import { useDesktopOnly } from "~/lib/hooks";
+import { LastLoanData } from "~/utils/types.server";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import StatView from "../StatView";
 import InfoView from "../base/InfoView";
-import LastLoanView, { LastLoanViewProps } from "../loans/LastLoanView";
+import LastLoanView from "../loans/LastLoanView";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import TagGroup from "../tags/TagGroup";
 
@@ -26,7 +27,7 @@ export interface ItemInfoViewProps {
   description?: string | null;
   notes?: string | null;
   tags: Tag[];
-  lastLoan?: LastLoanViewProps["data"];
+  lastLoan?: LastLoanData;
   createdDate: Date;
   updatedDate: Date;
   loading?: boolean;
@@ -51,7 +52,9 @@ export default function ItemInfoView({
   const desktopOnly = useDesktopOnly();
 
   const itemOutstanding =
-    lastLoan && lastLoan.dateReturned === null ? true : false;
+    lastLoan && lastLoan.items?.some((item) => !item.dateReturned)
+      ? true
+      : false;
 
   return desktopOnly === undefined ? (
     <Center w="100%" h="100%">
@@ -62,7 +65,7 @@ export default function ItemInfoView({
       {/* Outstanding Items */}
       <StatView value={loans} label="Total Signouts" />
       <Divider w="100%" />
-      {averageLoanTime && (
+      {averageLoanTime !== undefined && (
         <>
           <StatView
             value={formatDuration(averageLoanTime)}
@@ -129,7 +132,7 @@ export default function ItemInfoView({
           <Title order={4} mt="sm">
             Last Loan
           </Title>
-          <LastLoanView data={lastLoan} />
+          <LastLoanView data={lastLoan} showItems={false} />
         </>
       )}
       {/* Notes */}

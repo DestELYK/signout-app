@@ -1,8 +1,11 @@
-import { Group } from "@mantine/core";
+import { Card, Center, Group, Loader } from "@mantine/core";
 import { Tag } from "@prisma/client";
+import { useDesktopOnly } from "~/lib/hooks";
 import { OUT_COLOR } from "~/utils/consts";
+import { LastLoanData } from "~/utils/types.server";
 import { dateDiff, formatDate, formatDuration } from "~/utils/utils";
 import StatView from "../StatView";
+import LastLoanView from "../loans/LastLoanView";
 import PersonCard from "./PersonCard";
 
 export interface PersonInfoViewProps {
@@ -20,6 +23,7 @@ export interface PersonInfoViewProps {
   outstandingItems: number;
   loans: number;
   averageReturnTime?: number;
+  lastLoan?: LastLoanData;
 }
 
 export default function PersonInfoView({
@@ -36,54 +40,79 @@ export default function PersonInfoView({
   outstandingItems,
   lostItems,
   averageReturnTime,
+  lastLoan,
 }: PersonInfoViewProps) {
-  return (
+  const desktopOnly = useDesktopOnly();
+
+  return desktopOnly === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : (
     <>
-      {/* Person Card */}
-      <PersonCard
-        {...{ firstName, lastName, nickname, tags, notes, qrCode }}
-        outstandingItems={outstandingItems}
-      />
+      {!desktopOnly && (
+        <>
+          <PersonCard
+            {...{ firstName, lastName, nickname, tags, notes, qrCode }}
+            outstandingItems={outstandingItems}
+          />
+
+          <LastLoanView data={lastLoan} showPerson={false} showItems={false} />
+        </>
+      )}
 
       {/* Outstanding Items */}
       <Group align="stretch" grow>
         {outstandingItems && (
-          <StatView
-            color={OUT_COLOR}
-            value={outstandingItems}
-            label="Outstanding Items"
-          />
+          <Card withBorder>
+            <StatView
+              color={OUT_COLOR}
+              value={outstandingItems}
+              label="Outstanding Items"
+            />
+          </Card>
         )}
-        <StatView value={loans} label="Total Item Sign-Outs" />
+
+        <Card withBorder>
+          <StatView value={loans} label="Total Item Sign-Outs" />
+        </Card>
       </Group>
 
       {/* Average Return Time */}
       <Group w="100%" mt="sm" align="stretch" grow>
         {lostItems && lostItems > 0 && (
-          <StatView color="red" value={lostItems} label="Lost Items" />
+          <Card withBorder>
+            <StatView color="red" value={lostItems} label="Lost Items" />
+          </Card>
         )}
         {averageReturnTime && Math.round(averageReturnTime) > 0 && (
-          <StatView
-            value={formatDuration(averageReturnTime)}
-            label="Average Return Time"
-          />
+          <Card withBorder>
+            <StatView
+              value={formatDuration(averageReturnTime)}
+              label="Average Return Time"
+            />
+          </Card>
         )}
       </Group>
 
       {/* Created Date */}
       <Group w="100%" mt="sm" align="stretch" grow>
-        <StatView
-          value={dateDiff({ date: createdDate, withoutSuffix: true })}
-          label="Since Creation"
-          caption={formatDate(createdDate)}
-        />
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: createdDate, withoutSuffix: true })}
+            label="Since Creation"
+            caption={formatDate(createdDate)}
+          />
+        </Card>
 
         {/* Updated Date */}
-        <StatView
-          value={dateDiff({ date: updatedDate, withoutSuffix: true })}
-          label="Since Updated"
-          caption={formatDate(updatedDate)}
-        />
+        <Card withBorder>
+          <StatView
+            value={dateDiff({ date: updatedDate, withoutSuffix: true })}
+            label="Since Updated"
+            caption={formatDate(updatedDate)}
+          />
+        </Card>
       </Group>
     </>
   );

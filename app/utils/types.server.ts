@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, Tag } from "@prisma/client";
 
 //#region POST Types
 
@@ -143,3 +143,29 @@ export const itemWithTags = Prisma.validator<Prisma.ItemDefaultArgs>()({
 export type ItemWithTags = Prisma.ItemGetPayload<typeof itemWithTags>;
 
 //#endregion
+
+export interface LastLoanData {
+  id: number;
+  person: {
+    id: number;
+    qrCode?: string | null;
+    firstName: string;
+    lastName: string;
+    nickname?: string | null;
+    tags: Tag[];
+  };
+  items?: {
+    id: number;
+    name: string;
+    dateReturned?: Date | null;
+    returnedBy?: {
+      id: number;
+      firstName: string;
+      lastName: string;
+      nickname?: string | null;
+    } | null;
+  }[];
+  dateLoaned: Date;
+  dateReturned?: Date | null;
+  tags: Tag[];
+}

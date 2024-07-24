@@ -168,8 +168,10 @@ export default function DetailsPage({
         gap="sm"
         style={{ overflowY: "hidden" }}
       >
-        {desktopComponent}
-        <Card miw={600} h="100%" p={0} withBorder>
+        <Box w="calc(100% - 600px)" h="100%">
+          {desktopComponent}
+        </Box>
+        <Card w={600} h="100%" p={0} withBorder>
           {pageComponent}
         </Card>
       </Flex>

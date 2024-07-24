@@ -30,6 +30,7 @@ export default function Page() {
             lostItems={data.lostItems}
             loans={data.totalItems}
             averageReturnTime={data.averageReturnTime}
+            lastLoan={data.lastLoan}
           />
         ) : (
           <>?</>

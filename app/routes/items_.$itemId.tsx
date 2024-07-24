@@ -14,7 +14,7 @@ import LastLoanView from "~/components/loans/LastLoanView";
 import { handleError } from "~/lib/db.server";
 import { useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
-import { itemWithTags } from "~/utils/types.server";
+import { LastLoanData, itemWithTags } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -38,28 +38,59 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
     });
 
     // Gather list of loaned items
-    const loanedItems = await prisma.loanedItem.findMany({
-      where: { itemId: itemId },
-      orderBy: [{ dateLoaned: "desc" }, { dateReturned: "desc" }],
+    const loans = await prisma.loan.findMany({
+      where: { items: { some: { itemId: itemId } } },
+      orderBy: [{ createdDate: "desc" }],
       include: {
-        loan: {
+        tags: true,
+        person: {
           include: {
             tags: true,
-            person: {
+          },
+        },
+        items: {
+          include: {
+            item: {
+              include: {
+                tags: true,
+              },
+            },
+            returnedBy: {
               include: {
                 tags: true,
               },
             },
           },
         },
-        returnedBy: true,
       },
     });
+
+    const loanedItems = loans.flatMap((l) => l.items);
 
     const outstanding =
       loanedItems.filter((li) => !li.dateReturned) !== undefined;
 
-    const lastLoan = loanedItems[0];
+    const lastLoan: LastLoanData | undefined =
+      loans.length === 0
+        ? undefined
+        : {
+            id: loans[0].id,
+            person: {
+              id: loans[0].person.id,
+              firstName: loans[0].person.firstName,
+              lastName: loans[0].person.lastName,
+              nickname: loans[0].person.nickname,
+              tags: loans[0].person.tags,
+            },
+            items: loans[0].items.map((li) => ({
+              id: li.item.id,
+              name: li.item.name,
+              dateReturned: li.dateReturned,
+              returnedBy: li.returnedBy,
+            })),
+            tags: loans[0].tags,
+            dateLoaned: loans[0].createdDate,
+          };
 
     // Calculate average loan time
     let averageLoanTime = 0;
@@ -106,20 +137,7 @@ export default function Page() {
     <Loader />
   ) : (
     <Stack w="100%" h="100%">
-      <LastLoanView
-        data={
-          data.lastLoan
-            ? {
-                id: data.lastLoan.loanId,
-                person: data.lastLoan.loan.person,
-                dateLoaned: data.lastLoan.dateLoaned,
-                dateReturned: data.lastLoan.dateReturned,
-                returnedBy: data.lastLoan.returnedBy,
-                tags: data.lastLoan.loan.tags,
-              }
-            : undefined
-        }
-      />
+      <LastLoanView data={data.lastLoan} showItems={false} />
 
       <InfoView title="Notes" cardProps={{ h: undefined }}>
         <EditableNotes
