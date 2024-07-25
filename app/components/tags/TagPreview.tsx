@@ -4,7 +4,7 @@ import TagGroup from "./TagGroup";
 
 const EXAMPLE_TAGS = [
   {
-    id: -1,
+    id: -100,
     name: "-100",
     color: "gray",
     priority: -100,
@@ -12,7 +12,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -2,
+    id: -200,
     name: "-50",
     color: "gray",
     priority: -50,
@@ -20,7 +20,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -3,
+    id: -300,
     name: "-25",
     color: "gray",
     priority: -25,
@@ -28,7 +28,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -4,
+    id: -400,
     name: "0",
     color: "gray",
     priority: 0,
@@ -36,7 +36,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -5,
+    id: -500,
     name: "25",
     color: "gray",
     priority: 25,
@@ -44,7 +44,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -6,
+    id: -600,
     name: "50",
     color: "gray",
     priority: 50,
@@ -52,7 +52,7 @@ const EXAMPLE_TAGS = [
     category: "example",
   },
   {
-    id: -7,
+    id: -700,
     name: "100",
     color: "gray",
     priority: 100,
