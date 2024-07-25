@@ -30,6 +30,7 @@ import invariant from "tiny-invariant";
 import InfoView from "~/components/base/InfoView";
 import { handleError } from "~/lib/db.server";
 import { useDesktopOnly, useFetcherWithErrorHandler } from "~/lib/hooks";
+import { prisma } from "~/lib/prisma.server";
 import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {

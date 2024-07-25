@@ -6,6 +6,7 @@ import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import MonthCombobox from "~/components/MonthCombobox";
 import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
+import { prisma } from "~/lib/prisma.server";
 import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
 import { updateByMonth } from "~/utils/utils";
 
@@ -153,15 +154,11 @@ export default function Page() {
                 orientation="horizontal"
                 label="Items Loaned"
                 value={loansInCurrentMonth.totalLoans}
-                withBorder={false}
-                cardProps={{ p: 0 }}
               />
               <StatView
                 orientation="horizontal"
                 label="Items Returned"
                 value={loansInCurrentMonth.totalReturns}
-                withBorder={false}
-                cardProps={{ p: 0 }}
               />
             </Stack>
             <Stack hiddenFrom="lg">
@@ -169,15 +166,11 @@ export default function Page() {
                 orientation="vertical"
                 label="Items Loaned"
                 value={loansInCurrentMonth.totalLoans}
-                withBorder={false}
-                cardProps={{ p: 0 }}
               />
               <StatView
                 orientation="vertical"
                 label="Items Returned"
                 value={loansInCurrentMonth.totalReturns}
-                withBorder={false}
-                cardProps={{ p: 0 }}
               />
             </Stack>
             {

@@ -13,6 +13,7 @@ import { useDesktopOnly } from "~/lib/hooks";
 import { getItemTypes } from "~/lib/items.server";
 import { getLoans, getLoansByYear } from "~/lib/loans.server";
 import { getPeopleWithInvalidItems } from "~/lib/people.server";
+import { prisma } from "~/lib/prisma.server";
 import { IN_COLOR, MAX_RECENT_ITEMS, OUT_COLOR } from "~/utils/consts";
 
 export const meta: MetaFunction = () => {

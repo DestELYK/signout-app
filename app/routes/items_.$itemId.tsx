@@ -18,7 +18,11 @@ import { LastLoanData, itemWithTags } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  return [{ title: `${data.item.name} | SJK Sign-Out` }];
+  return [
+    {
+      title: (data.item ? data.item.name : "No Item Found") + " | SJK Sign-Out",
+    },
+  ];
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {

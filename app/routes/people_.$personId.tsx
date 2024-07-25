@@ -17,7 +17,13 @@ import { LastLoanData, personWithTags } from "~/utils/types.server";
 import { formatFullName, isNumeric } from "~/utils/utils";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
-  return [{ title: `${formatFullName(data.person)} | SJK Sign-Out` }];
+  return [
+    {
+      title:
+        (data.person ? formatFullName(data.person) : "No Person Found") +
+        " | SJK Sign-Out",
+    },
+  ];
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {

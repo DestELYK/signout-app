@@ -1,5 +1,5 @@
 # base node image
-FROM --platform=arm64 node:20.12.2-bullseye-slim as base
+FROM --platform=arm64 node:20.12.2-bullseye-slim AS base
 
 # set for base and all layer that inherit from it
 ENV NODE_ENV production
@@ -8,7 +8,7 @@ ENV NODE_ENV production
 RUN apt-get update && apt-get install -y openssl
 
 # Install all node_modules, including dev dependencies
-FROM base as deps
+FROM base AS deps
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ ADD package.json ./
 RUN npm install --include=dev --loglevel verbose
 
 # Setup production node_modules
-FROM base as production-deps
+FROM base AS production-deps
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ ADD package.json ./
 RUN npm prune --omit=dev
 
 # Build the app
-FROM base as build
+FROM base AS build
 
 WORKDIR /app
 
