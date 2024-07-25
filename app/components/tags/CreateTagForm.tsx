@@ -1,8 +1,10 @@
 import {
   Button,
   ColorInput,
+  Group,
   LoadingOverlay,
   Slider,
+  Space,
   Stack,
   Switch,
   Text,
@@ -23,6 +25,7 @@ import {
   tagColorValidator,
   tagNameValidator,
 } from "~/utils/validators.client";
+import TagPreview from "./TagPreview";
 
 export type CreateTagFormProps = {
   onSubmit?: (values: PostTagFormData) => void;
@@ -96,23 +99,23 @@ export default function CreateTagForm({
   const loading = submitTag.state !== "idle";
 
   useEffect(() => {
-    name && form.setFieldValue("name", name);
+    name !== undefined && form.setFieldValue("name", name);
   }, [name]);
 
   useEffect(() => {
-    category && form.setFieldValue("category", category);
+    category !== undefined && form.setFieldValue("category", category);
   }, [category]);
 
   useEffect(() => {
-    color && form.setFieldValue("color", color);
+    color !== undefined && form.setFieldValue("color", color);
   }, [color]);
 
   useEffect(() => {
-    priority && form.setFieldValue("priority", priority);
+    priority !== undefined && form.setFieldValue("priority", priority);
   }, [priority]);
 
   useEffect(() => {
-    hidden && form.setFieldValue("hidden", hidden);
+    hidden !== undefined && form.setFieldValue("hidden", hidden);
   }, [hidden]);
 
   function handleSubmit() {
@@ -196,15 +199,38 @@ export default function CreateTagForm({
           label="Hidden"
           description="Hides tag from being displayed, but will still be used for filtering"
           {...form.getInputProps("hidden")}
+          checked={form.values.hidden}
+        />
+        <Space mt="auto" />
+        <TagPreview
+          tag={{
+            id: id ?? -1,
+            name: form.values.name,
+            color: form.values.color,
+            priority: form.values.priority ?? 0,
+            hidden: form.values.hidden ?? false,
+            category: form.values.category,
+          }}
+          previewProps={{ h: undefined }}
         />
         {formType === "edit" ? (
           form.isDirty() && (
-            <Button mt="auto" disabled={loading} onClick={() => handleSubmit()}>
-              Update
-            </Button>
+            <Group w="100%" grow>
+              <Button disabled={loading} onClick={() => handleSubmit()}>
+                Update
+              </Button>
+              <Button
+                disabled={loading}
+                onClick={() => form.reset()}
+                color="red"
+                variant="outline"
+              >
+                Reset
+              </Button>
+            </Group>
           )
         ) : (
-          <Button mt="auto" disabled={loading} onClick={() => handleSubmit()}>
+          <Button disabled={loading} onClick={() => handleSubmit()}>
             Create
           </Button>
         )}

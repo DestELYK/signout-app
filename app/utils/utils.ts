@@ -115,7 +115,13 @@ export const filterTags = (
 
       return result;
     })
-    .sort((a, b) => b.priority - a.priority);
+    .sort((a, b) => {
+      if (a.priority === b.priority) {
+        return a.name.localeCompare(b.name);
+      } else {
+        return b.priority - a.priority;
+      }
+    });
 };
 
 //#endregion

@@ -54,10 +54,34 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       where: {
         id: Number(tagId),
       },
+      include: {
+        _count: {
+          select: {
+            items: true,
+            loans: true,
+            people: true,
+          },
+        },
+      },
+    });
+
+    const categoryCount = await prisma.tag.groupBy({
+      by: ["category"],
+      orderBy: {
+        category: "asc",
+      },
+      where: {
+        category: tag.category,
+      },
+      _count: {
+        category: true,
+      },
     });
 
     return typedjson({
       tag: tag,
+      categoryCount:
+        categoryCount.length > 0 ? categoryCount[0]._count.category : 0,
       error: undefined,
     });
   } catch (e) {
@@ -67,6 +91,7 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
       return typedjson({
         error: error,
         tag: undefined,
+        categoryCount: undefined,
       });
     } else {
       throw new Response(String(e), {
@@ -138,6 +163,8 @@ export default function Page() {
   );
 
   function handleDelete() {
+    // TODO - implement prompt to move all items to another tag
+    // TODO - implement redirect to tags page
     modals.openConfirmModal({
       title: "Confirm Deletion",
       centered: true,
@@ -185,7 +212,7 @@ export default function Page() {
     });
   }
 
-  const editButtons = (
+  const bottomSection = (
     <Group mt="auto" grow>
       <Button
         disabled={loading}
@@ -196,12 +223,15 @@ export default function Page() {
                 relative: "path",
               })
         }
+        variant={editing ? "outline" : undefined}
       >
         {editing ? "Cancel" : "Edit"}
       </Button>
-      <Button disabled={loading} onClick={() => handleDelete()} color="red">
-        Delete
-      </Button>
+      {!editing && (
+        <Button disabled={loading} onClick={() => handleDelete()} color="red">
+          Delete
+        </Button>
+      )}
     </Group>
   );
 
@@ -209,12 +239,16 @@ export default function Page() {
     (editing ? "Editing " : "") +
     (data.tag ? `#${data.tag.id} - ${data.tag.name}` : "Unknown");
 
-  return desktopOnly ? (
+  return desktopOnly === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : desktopOnly ? (
     <InfoView
       title={title}
       titleProps={editing ? { fs: "italic" } : undefined}
-      headerProps={{ withBorder: true }}
-      bottomSection={editButtons}
+      headerProps={{ withBorder: true, mb: "sm" }}
+      bottomSection={bottomSection}
     >
       {content}
     </InfoView>
@@ -224,7 +258,7 @@ export default function Page() {
         {title}
       </Title>
       {content}
-      {editButtons}
+      {bottomSection}
     </Stack>
   );
 }

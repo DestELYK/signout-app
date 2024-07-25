@@ -42,7 +42,7 @@ export default function Page() {
   };
 
   return desktopOnly ? (
-    <Card withBorder>
+    <Card w="100%" h="100%" withBorder>
       <Center w="100%" h="100%">
         <Text c="dimmed">No tag selected</Text>
       </Center>
