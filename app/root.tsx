@@ -251,12 +251,11 @@ function Root({
                     onClick={close}
                   />
                   <NavLink
-                    to="https://forms.gle/u45D3TcSGS79f2hq9"
+                    to="/report"
                     component={NavLinkRemix}
                     label="Report"
                     leftSection={<IconBug size={24} />}
                     onClick={close}
-                    target="_blank"
                   />
                 </Stack>
               </AppShell.Navbar>

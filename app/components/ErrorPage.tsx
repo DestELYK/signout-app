@@ -1,5 +1,5 @@
 import { Center, Paper, Stack, Text, Title } from "@mantine/core";
-import { isRouteErrorResponse } from "@remix-run/react";
+import { Link, isRouteErrorResponse } from "@remix-run/react";
 
 export default function ErrorPage({ error }: { error: any }) {
   if (isRouteErrorResponse(error)) {
@@ -22,13 +22,7 @@ export default function ErrorPage({ error }: { error: any }) {
               {error.status} - {error.statusText}
             </Title>
             <Text ta="center">{error.data}</Text>
-            <a
-              href="https://forms.gle/u45D3TcSGS79f2hq9"
-              style={{ textAlign: "center" }}
-              target="_blank"
-            >
-              Fill out this error report form
-            </a>
+            <Link to="/report">Fill out this error report form</Link>
           </Stack>
         </Paper>
       </Center>
@@ -40,13 +34,7 @@ export default function ErrorPage({ error }: { error: any }) {
           <Stack>
             <Title>Server Error Occurred</Title>
             <Text>{error.message}</Text>
-            <a
-              href="https://forms.gle/u45D3TcSGS79f2hq9"
-              style={{ textAlign: "center" }}
-              target="_blank"
-            >
-              Fill out this report form
-            </a>
+            <Link to="/report">Fill out this report form</Link>
           </Stack>
         </Paper>
       </Center>
