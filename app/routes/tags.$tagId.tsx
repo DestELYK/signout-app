@@ -1,4 +1,12 @@
-import { Button, Center, Group, Loader, Text } from "@mantine/core";
+import {
+  Button,
+  Center,
+  Group,
+  Loader,
+  Stack,
+  Text,
+  Title,
+} from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
@@ -197,17 +205,26 @@ export default function Page() {
     </Group>
   );
 
-  return (
+  const title =
+    (editing ? "Editing " : "") +
+    (data.tag ? `#${data.tag.id} - ${data.tag.name}` : "Unknown");
+
+  return desktopOnly ? (
     <InfoView
-      title={data.tag ? `#${data.tag.id} - ${data.tag.name}` : "Unknown"}
-      headerProps={{ withBorder: desktopOnly }}
-      cardProps={{
-        withBorder: desktopOnly,
-        p: !desktopOnly ? "xs" : undefined,
-      }}
+      title={title}
+      titleProps={editing ? { fs: "italic" } : undefined}
+      headerProps={{ withBorder: true }}
       bottomSection={editButtons}
     >
       {content}
     </InfoView>
+  ) : (
+    <Stack h="100%">
+      <Title order={2} fs={editing ? "italic" : undefined}>
+        {title}
+      </Title>
+      {content}
+      {editButtons}
+    </Stack>
   );
 }

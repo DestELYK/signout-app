@@ -4,12 +4,14 @@ import {
   CardSectionProps,
   Collapse,
   Flex,
+  MantineStyleProps,
   Text,
 } from "@mantine/core";
 import { Link } from "@remix-run/react";
 
 export interface InfoViewProps {
   title?: string;
+  titleProps?: MantineStyleProps;
   href?: string;
   loading?: boolean;
   collapseOpen?: boolean;
@@ -24,6 +26,7 @@ export interface InfoViewProps {
 
 export default function InfoView({
   title,
+  titleProps,
   href,
   loading,
   collapseOpen = false,
@@ -62,6 +65,7 @@ export default function InfoView({
                 size="md"
                 aria-label={title}
                 {...(href && { component: Link, to: href })}
+                {...titleProps}
               >
                 {title}
               </Text>

@@ -25,7 +25,6 @@ import {
 import {
   NavLink as NavLinkRemix,
   Outlet,
-  useParams,
   useSearchParams,
 } from "@remix-run/react";
 import { IconPlus } from "@tabler/icons-react";
@@ -154,8 +153,6 @@ export default function Page() {
   const desktopOnly = useDesktopOnly();
 
   const [searchParams, setSearchParams] = useSearchParams();
-
-  const params = useParams();
 
   const [opened, { open, close }] = useCreateModal();
 
