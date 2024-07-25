@@ -98,34 +98,6 @@ function Root({
     offline ? true : undefined
   );
 
-  let value = "home";
-
-  if (location.pathname === "/") {
-    value = "home";
-  } else if (location.pathname.startsWith("/loans")) {
-    value = "loans";
-  } else if (location.pathname.startsWith("/items")) {
-    value = "items";
-  } else if (location.pathname.startsWith("/people")) {
-    value = "people";
-  } else if (location.pathname.startsWith("/tags")) {
-    value = "tags";
-  }
-
-  // TODO - Move to specific pages
-  // // Refresh data every 5 minutes
-  // useEffect(() => {
-  //   const timer = setInterval(() => {
-  //     notifications.show({
-  //       message: "Refreshing data...",
-  //     });
-
-  //     revalidator.revalidate();
-  //   }, 1000 * 60 * 5);
-
-  //   return () => clearInterval(timer);
-  // });
-
   // Start and stop nprogress depending on navigation state
   useEffect(() => {
     if (navigation.state !== "idle") {
@@ -248,7 +220,6 @@ function Root({
                   label="Home"
                   leftSection={<IconHome size={24} />}
                   onClick={close}
-                  active={value === "home"}
                 />
                 <NavLink
                   to="/loans"
@@ -256,7 +227,6 @@ function Root({
                   label="Loans"
                   leftSection={<IconClipboard size={24} />}
                   onClick={close}
-                  active={value === "loans"}
                 />
                 <NavLink
                   to="/items"
@@ -264,7 +234,6 @@ function Root({
                   label="Items"
                   leftSection={<IconDeviceImac size={24} />}
                   onClick={close}
-                  active={value === "items"}
                 />
                 <NavLink
                   to="/people"
@@ -272,7 +241,6 @@ function Root({
                   label="People"
                   leftSection={<IconUser size={24} />}
                   onClick={close}
-                  active={value === "people"}
                 />
                 <Stack mt="auto" gap={0}>
                   <NavLink
@@ -281,7 +249,6 @@ function Root({
                     label="Tags"
                     leftSection={<IconTag size={24} />}
                     onClick={close}
-                    active={value === "tags"}
                   />
                   <NavLink
                     to="https://forms.gle/u45D3TcSGS79f2hq9"
