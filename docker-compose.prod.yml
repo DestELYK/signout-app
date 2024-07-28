@@ -18,7 +18,6 @@ services:
   app:
     container_name: signout-app
     image: signout.app:5000/signout-app:latest
-    restart: always
     user: 110:114
     ports:
       - "127.0.0.1:3100:3000"
