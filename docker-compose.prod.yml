@@ -17,8 +17,15 @@ services:
 
   app:
     container_name: signout-app
-    image: signout.app:5000/signout-app:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      tags:
+        - signout-app
+        - signout-app:latest
+        - signout-app:0.1.0
     user: 110:114
+    restart: "on-failure"
     ports:
       - "127.0.0.1:3100:3000"
     depends_on:

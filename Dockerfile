@@ -1,5 +1,5 @@
 # base node image
-FROM --platform=arm64 node:20.12.2-bullseye-slim AS base
+FROM node:20.12.2-bullseye-slim AS base
 
 # set for base and all layer that inherit from it
 ENV NODE_ENV production
