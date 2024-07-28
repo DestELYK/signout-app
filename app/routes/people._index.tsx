@@ -45,8 +45,7 @@ export default function Page() {
         //#region Desktop
         <Flex
           w="100%"
-          mih={600}
-          h="calc(100dvh - 13rem)"
+          h="100%"
           direction="row"
           wrap="nowrap"
           gap="sm"
@@ -112,17 +111,19 @@ export default function Page() {
                   ]}
                 />
               ) : (
-                <Center h={300}>No data</Center>
+                <Center h={200}>No data</Center>
               )}
             </InfoView>
-            <Card w="100%" h={250} withBorder>
+            <Card w="100%" p={0} withBorder>
               <PeopleList
+                h={220}
                 data={data.peopleWithInvalidItems.map((person) => ({
                   ...person,
                   tags: undefined,
                 }))}
                 totalCount={data.peopleWithInvalidItems.length}
                 orientation="horizontal"
+                withOffset={true}
                 initialItemsPerPage={20}
                 emptyText="No people found"
                 showPagination={false}
@@ -154,7 +155,6 @@ export default function Page() {
         //#region Mobile
         <Flex
           w="100%"
-          mih={400}
           h="100%"
           align="center"
           direction="column"

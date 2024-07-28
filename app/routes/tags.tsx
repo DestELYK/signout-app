@@ -1,10 +1,7 @@
 import {
-  ActionIcon,
   Box,
-  Button,
   Card,
   Center,
-  Divider,
   Flex,
   Group,
   Highlight,
@@ -12,9 +9,7 @@ import {
   Modal,
   NavLink,
   Paper,
-  Tabs,
   Text,
-  Title,
 } from "@mantine/core";
 import { Tag } from "@prisma/client";
 import {
@@ -27,8 +22,9 @@ import {
   Outlet,
   useSearchParams,
 } from "@remix-run/react";
-import { IconPlus } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import TabbedContentView from "~/components/TabbedContentView";
+import TitlePage from "~/components/TitlePage";
 import ListView from "~/components/base/ListView";
 import CreateTagForm from "~/components/tags/CreateTagForm";
 import { handleError } from "~/lib/db.server";
@@ -186,27 +182,11 @@ export default function Page() {
         />
       </Modal>
 
-      <Flex
-        w="100%"
-        h="calc(100dvh - 60px)"
-        direction="column"
-        wrap="nowrap"
-        p="md"
+      <TitlePage
+        title="Tags"
+        buttonText="Create New Tag"
+        onButtonClick={() => open(true)}
       >
-        <Group h={80} align="center" justify="space-between" pb="md">
-          <Title order={1}>Tags</Title>
-          <Button
-            onClick={() => open(true)}
-            rightSection={<IconPlus />}
-            visibleFrom="sm"
-          >
-            Create New Tag
-          </Button>
-          <ActionIcon size="lg" onClick={() => open(true)} hiddenFrom="sm">
-            <IconPlus />
-          </ActionIcon>
-        </Group>
-        <Divider w="100%" mb="sm" />
         {data.error ? (
           <Center w="100%" h="100%">
             <Text c="error">{data.error}</Text>
@@ -218,14 +198,74 @@ export default function Page() {
         ) : desktopOnly ? (
           <Flex
             w="100%"
-            h="calc(100% - 80px)"
+            h="100%"
             direction="row"
             wrap="nowrap"
             gap="md"
             style={{ overflowY: "hidden" }}
           >
             <Card w="50%" h="100%" withBorder>
-              <Card.Section mb="sm">
+              <TabbedContentView
+                h="100%"
+                tabs={[
+                  {
+                    value: "all",
+                    label: (
+                      <Group gap="xs">
+                        All
+                        <Text c="dimmed" size="xs">
+                          ({data.totalCount})
+                        </Text>
+                      </Group>
+                    ),
+                  },
+                  ...data.categories.map((c) => ({
+                    value: c.category,
+                    label: (
+                      <Group gap="xs">
+                        {c.category}
+                        <Text c="dimmed" size="xs">
+                          ({c._count.category})
+                        </Text>
+                      </Group>
+                    ),
+                  })),
+                ]}
+                onChange={(value) => onChange(value ?? "all")}
+              >
+                <ListView
+                  h="100%"
+                  initialItemsPerPage={30}
+                  data={data.tags}
+                  showPagination={false}
+                  withQRCode={false}
+                  searchPlaceholder="Search for tags..."
+                  emptyText="No tags found"
+                >
+                  {(tag, query) => (
+                    <NavLink
+                      key={tag.id}
+                      to={`/tags/${tag.id}?${searchParams.toString()}`}
+                      component={NavLinkRemix}
+                      leftSection={
+                        <Paper
+                          withBorder
+                          radius={24}
+                          w={24}
+                          h={24}
+                          style={{ backgroundColor: tag.color }}
+                        />
+                      }
+                      label={
+                        <Highlight highlight={query ?? ""}>
+                          {tag.name}
+                        </Highlight>
+                      }
+                    />
+                  )}
+                </ListView>
+              </TabbedContentView>
+              {/* <Card.Section mb="sm">
                 <Tabs
                   w="100%"
                   value={searchParams.get("category") ?? "all"}
@@ -255,47 +295,16 @@ export default function Page() {
                     ))}
                   </Tabs.List>
                 </Tabs>
-              </Card.Section>
-              <ListView
-                h="calc(100% - 60px)"
-                initialItemsPerPage={30}
-                data={data.tags}
-                showPagination={false}
-                withQRCode={false}
-                searchPlaceholder="Search for tags..."
-                emptyText="No tags found"
-              >
-                {(tag, query) => (
-                  <NavLink
-                    key={tag.id}
-                    to={`/tags/${tag.id}?${searchParams.toString()}`}
-                    component={NavLinkRemix}
-                    leftSection={
-                      <Paper
-                        withBorder
-                        radius={24}
-                        w={24}
-                        h={24}
-                        style={{ backgroundColor: tag.color }}
-                      />
-                    }
-                    label={
-                      <Highlight highlight={query ?? ""}>{tag.name}</Highlight>
-                    }
-                  />
-                )}
-              </ListView>
+              </Card.Section> */}
             </Card>
             <Box w="50%" h="100%">
               <Outlet />
             </Box>
           </Flex>
         ) : (
-          <Box w="100%" h="calc(100% - 80px)">
-            <Outlet />
-          </Box>
+          <Outlet />
         )}
-      </Flex>
+      </TitlePage>
     </>
   );
 }

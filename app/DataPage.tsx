@@ -1,15 +1,8 @@
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Group,
-  SegmentedControl,
-  Tabs,
-  Title,
-} from "@mantine/core";
 import { upperFirst } from "@mantine/hooks";
 import { Outlet, useLocation, useNavigate } from "@remix-run/react";
 import { IconPlus } from "@tabler/icons-react";
+import TabbedContentView from "./components/TabbedContentView";
+import TitlePage from "./components/TitlePage";
 
 export interface DataPageProps {
   path: string;
@@ -44,60 +37,20 @@ export default function DataPage({
   };
 
   return (
-    <Box p="md">
-      <Group
-        pos="relative"
-        top={0}
-        align="center"
-        justify="space-between"
-        pb="md"
-      >
-        <Title order={1}>{title}</Title>
-        <Button
-          onClick={onCreateClick}
-          rightSection={<IconPlus />}
-          visibleFrom="sm"
-        >
-          {createLabel}
-        </Button>
-        <ActionIcon size="lg" onClick={onCreateClick} hiddenFrom="sm">
-          <IconPlus />
-        </ActionIcon>
-      </Group>
-
-      <Tabs
-        pos="relative"
-        top={0}
-        w="100%"
-        mb="sm"
-        visibleFrom="md"
-        value={currentLocation || tabs[0]}
+    <TitlePage
+      title={title}
+      buttonText={createLabel}
+      buttonIcon={<IconPlus />}
+      onButtonClick={onCreateClick}
+      withDivider={false}
+    >
+      <TabbedContentView
+        tabs={tabs.map((tab) => ({ value: tab, label: upperFirst(tab) }))}
+        current={currentLocation}
         onChange={handleTabChange}
       >
-        <Tabs.List>
-          {tabs.map((tab) => (
-            <Tabs.Tab key={tab} value={tab}>
-              {upperFirst(tab)}
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs>
-      <SegmentedControl
-        pos="relative"
-        top={0}
-        w="100%"
-        mb="sm"
-        hiddenFrom="md"
-        value={currentLocation || tabs[0]}
-        onChange={handleTabChange}
-        data={tabs.map((tab) => {
-          return {
-            value: tab,
-            label: upperFirst(tab),
-          };
-        })}
-      />
-      <Outlet />
-    </Box>
+        <Outlet />
+      </TabbedContentView>
+    </TitlePage>
   );
 }

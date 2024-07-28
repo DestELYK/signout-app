@@ -56,8 +56,7 @@ export default function Page() {
         //#region Desktop
         <Flex
           w="100%"
-          mih={600}
-          h="calc(100dvh - 13rem)"
+          h="100%"
           direction="row"
           wrap="nowrap"
           gap="sm"
@@ -184,7 +183,6 @@ export default function Page() {
         //#region Mobile
         <Flex
           w="100%"
-          mih={400}
           h="100%"
           align="center"
           direction="column"
@@ -194,7 +192,7 @@ export default function Page() {
         >
           <ScrollArea
             w="100%"
-            type="scroll"
+            type="always"
             scrollbars="x"
             offsetScrollbars="x"
           >
@@ -206,10 +204,10 @@ export default function Page() {
               justify="center"
               align="stretch"
             >
-              <Card withBorder>
+              <Card miw={150} withBorder>
                 <StatView label="Total Items" value={data.totalItems} />
               </Card>
-              <Card w={150} withBorder>
+              <Card miw={150} withBorder>
                 <StatView
                   label="Total Outstanding Items"
                   value={data.outstandingItems}
@@ -220,7 +218,7 @@ export default function Page() {
                 Object.keys(data.itemStatuses).length > 0 &&
                 Object.entries(data.itemStatuses).map(
                   ([status, { count, color }]) => (
-                    <Card key={status} withBorder>
+                    <Card key={status} miw={150} withBorder>
                       <StatView label={status} value={count} color={color} />
                     </Card>
                   )

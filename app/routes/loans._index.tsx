@@ -103,8 +103,7 @@ export default function Page() {
         //#region Desktop
         <Flex
           w="100%"
-          mih={600}
-          h="calc(100dvh - 13rem)"
+          h="100%"
           direction="row"
           wrap="nowrap"
           gap="sm"

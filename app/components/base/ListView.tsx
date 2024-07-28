@@ -156,7 +156,7 @@ export default function ListView<T extends { id: number }>({
           type="auto"
           scrollbarSize={20}
           scrollbars="x"
-          {...(withOffset ? { offsetScrollbars: "x" } : {})}
+          offsetScrollbars={withOffset ? "x" : undefined}
           viewportRef={scrollRef}
         >
           <Flex direction="row" align="center" wrap="nowrap" gap="md">
@@ -207,7 +207,7 @@ export default function ListView<T extends { id: number }>({
           h="100%"
           type="auto"
           scrollbars="y"
-          {...(withOffset ? { offsetScrollbars: "y" } : {})}
+          offsetScrollbars={withOffset ? "y" : undefined}
           viewportRef={scrollRef}
         >
           <Flex
