@@ -24,7 +24,10 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
+        restart: true
+        required: true
     environment:
       - DATABASE_URL=mysql://signout-app:mypassword@mariadb:3306/app
       - TZ=America/Toronto
