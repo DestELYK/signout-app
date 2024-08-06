@@ -25,7 +25,7 @@ export default function TitlePage({
   const desktopOnly = useDesktopOnly();
 
   return (
-    <Flex h="calc(100dvh - 60px)" direction="column" p="md">
+    <Flex mih={500} h="calc(100dvh - 60px)" direction="column" p="md">
       <Flex
         mih={60}
         direction="row"
@@ -38,25 +38,27 @@ export default function TitlePage({
           {tags && <TagGroup tags={tags} groupProps={{ justify: "start" }} />}
           <Title order={2}>{title}</Title>
         </Stack>
-        {buttonText &&
-          (desktopOnly ? (
+        {buttonText && (
+          <>
             <Button
               h={40}
               rightSection={buttonIcon}
               onClick={onButtonClick}
               disabled={!onButtonClick}
+              visibleFrom="xs"
             >
               {buttonText}
             </Button>
-          ) : (
             <ActionIcon
               size={40}
               onClick={onButtonClick}
               disabled={!onButtonClick}
+              hiddenFrom="xs"
             >
               {buttonIcon}
             </ActionIcon>
-          ))}
+          </>
+        )}
       </Flex>
       {withDivider && <Divider w="100%" mb="xs" />}
       {children}

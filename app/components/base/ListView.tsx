@@ -1,16 +1,16 @@
 import {
-  Center,
-  Collapse,
-  Divider,
-  Flex,
-  Group,
-  MantineStyleProps,
-  Pagination,
-  ScrollArea,
-  Skeleton,
-  Stack,
-  Text,
-  UnstyledButton,
+    Center,
+    Collapse,
+    Divider,
+    Flex,
+    Group,
+    MantineStyleProps,
+    Pagination,
+    ScrollArea,
+    Skeleton,
+    Stack,
+    Text,
+    UnstyledButton,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useNavigation, useSearchParams } from "@remix-run/react";
@@ -23,6 +23,7 @@ import SearchView from "../SearchView";
 // TODO - lazy load the list
 // TODO - allow sorting the list
 // TODO - virtual list
+// TODO - selection
 
 export interface ListViewProps<T extends { id: number }> {
   w?: MantineStyleProps["w"];

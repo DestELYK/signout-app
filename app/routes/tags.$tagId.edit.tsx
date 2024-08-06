@@ -1,16 +1,34 @@
 import { Center, Text } from "@mantine/core";
+import { useNavigate } from "@remix-run/react";
 import { useTypedRouteLoaderData } from "remix-typedjson";
-import CreateTagForm from "~/components/tags/CreateTagForm";
+import TagForm from "~/components/forms/TagForm";
 import { loader } from "./tags.$tagId";
 
 export default function Page() {
-  const data = useTypedRouteLoaderData<typeof loader>("routes/tags.$tagId");
+    const data = useTypedRouteLoaderData<typeof loader>("routes/tags.$tagId");
+    const navigate = useNavigate();
 
-  return data && data.tag ? (
-    <CreateTagForm {...data.tag} formType="edit" />
-  ) : (
-    <Center w="100%" h="100%">
-      <Text c="error">Tag not found</Text>
-    </Center>
-  );
+    return data && data.tag ? (
+        <TagForm
+            id={data.tag.id}
+            initialValues={{
+                name: data.tag.name,
+                color: data.tag.color,
+                category: data.tag.category,
+                priority: data.tag.priority,
+                hidden: data.tag.hidden,
+            }}
+            onResult={(result) => {
+                if (result.tag) {
+                    navigate(`/tags/${result.tag?.id}`);
+                } else {
+                    navigate("/tags");
+                }
+            }}
+        />
+    ) : (
+        <Center w="100%" h="100%">
+            <Text c="error">Tag not found</Text>
+        </Center>
+    );
 }

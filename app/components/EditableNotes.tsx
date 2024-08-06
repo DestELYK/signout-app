@@ -39,10 +39,9 @@ export default function EditableNotes({
 
     if (!form.validate().hasErrors) {
       fetcher.submit(form.values, {
-        action: action,
-        method: "PATCH",
-        encType: "application/json",
-        navigate: false,
+          action: action,
+          method: "PATCH",
+          encType: "application/json",
       });
     }
   }
