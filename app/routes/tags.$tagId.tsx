@@ -239,7 +239,7 @@ export default function Page() {
         <InfoView
             title={title}
             titleProps={editing ? { fs: "italic" } : undefined}
-            headerProps={{ withBorder: true, mb: "sm" }}
+            headerProps={{ mb: "sm" }}
             bottomSection={bottomSection}
         >
             <ScrollArea w="100%" h="calc(100% - 50px)" type="auto" scrollbars="y">

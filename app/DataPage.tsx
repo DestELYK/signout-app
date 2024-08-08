@@ -37,20 +37,20 @@ export default function DataPage({
   };
 
   return (
-    <TitlePage
-      title={title}
-      buttonText={createLabel}
-      buttonIcon={<IconPlus />}
-      onButtonClick={onCreateClick}
-      withDivider={false}
-    >
-      <TabbedContentView
-        tabs={tabs.map((tab) => ({ value: tab, label: upperFirst(tab) }))}
-        current={currentLocation}
-        onChange={handleTabChange}
+      <TitlePage
+          title={title}
+          buttonText={createLabel}
+          buttonIcon={<IconPlus />}
+          onButtonClick={onCreateClick}
+          withDivider={false}
       >
-        <Outlet />
-      </TabbedContentView>
-    </TitlePage>
+          <TabbedContentView
+              tabs={tabs.map((tab) => ({ value: tab, label: upperFirst(tab) }))}
+              current={currentLocation}
+              onChange={handleTabChange}
+          >
+              <Outlet />
+          </TabbedContentView>
+      </TitlePage>
   );
 }

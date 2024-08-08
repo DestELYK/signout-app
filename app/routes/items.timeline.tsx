@@ -119,116 +119,108 @@ export default function Page() {
   const months = data.itemsByMonth.map((month) => month.month);
 
   return (
-    <InfoView
-      title={`Items in ${dayjs(selectedMonth, "MM-YYYY").format("MMMM YYYY")}`}
-      headerProps={{ withBorder: true }}
-      rightSection={
-        <MonthCombobox
-          months={months}
-          value={selectedMonth}
-          onChange={(value) =>
-            setSearchParams(
-              (prev) => {
-                if (value === currentMonth) prev.delete("month");
-                else prev.set("month", value);
-                return prev;
-              },
-              { replace: true }
-            )
+      <InfoView
+          title={`Items in ${dayjs(selectedMonth, "MM-YYYY").format("MMMM YYYY")}`}
+          rightSection={
+              <MonthCombobox
+                  months={months}
+                  value={selectedMonth}
+                  onChange={(value) =>
+                      setSearchParams(
+                          (prev) => {
+                              if (value === currentMonth) prev.delete("month");
+                              else prev.set("month", value);
+                              return prev;
+                          },
+                          { replace: true }
+                      )
+                  }
+              />
           }
-        />
-      }
-    >
-      {loansInCurrentMonth ? (
-        <>
-          <Flex
-            w="100%"
-            h="100%"
-            direction="row"
-            gap="sm"
-            justify="center"
-            align="center"
-          >
-            <Stack visibleFrom="lg">
-              <StatView
-                orientation="horizontal"
-                label="Items Loaned"
-                value={loansInCurrentMonth.totalLoans}
-              />
-              <StatView
-                orientation="horizontal"
-                label="Items Returned"
-                value={loansInCurrentMonth.totalReturns}
-              />
-            </Stack>
-            <Stack hiddenFrom="lg">
-              <StatView
-                orientation="vertical"
-                label="Items Loaned"
-                value={loansInCurrentMonth.totalLoans}
-              />
-              <StatView
-                orientation="vertical"
-                label="Items Returned"
-                value={loansInCurrentMonth.totalReturns}
-              />
-            </Stack>
-            {
-              //#region Area Chart
-            }
-            <AreaChart
-              w="100%"
-              h="100%"
-              miw={{ lg: 300, md: 200 }}
-              mih={200}
-              p="sm"
-              data={loansInCurrentMonth.days.map(
-                ({ addedCount, loanCount, returnCount }, day) => {
-                  return {
-                    date: dayjs(selectedMonth, "MM-YYYY")
-                      .set("date", day + 1)
-                      .format("DD"),
-                    loaned: loanCount,
-                    returned: returnCount,
-                    added: addedCount,
-                  };
-                }
-              )}
-              dotProps={{
-                r: 1,
-              }}
-              xAxisProps={{ axisLine: true }}
-              xAxisLabel="Day in Month"
-              yAxisProps={{ axisLine: true }}
-              dataKey="date"
-              series={[
-                {
-                  name: "loaned",
-                  label: "Items Loaned",
-                  color: OUT_COLOR,
-                },
-                {
-                  name: "returned",
-                  label: "Items Returned",
-                  color: IN_COLOR,
-                },
-                {
-                  name: "added",
-                  label: "Items Added",
-                  color: "orange",
-                },
-              ]}
-              withLegend
-              curveType="linear"
-            />
-            {
-              //#endregion
-            }
-          </Flex>
-        </>
-      ) : (
-        <Center h={300}>No data for this month</Center>
-      )}
-    </InfoView>
+      >
+          {loansInCurrentMonth ? (
+              <>
+                  <Flex w="100%" h="100%" direction="row" gap="sm" justify="center" align="center">
+                      <Stack visibleFrom="lg">
+                          <StatView
+                              orientation="horizontal"
+                              label="Items Loaned"
+                              value={loansInCurrentMonth.totalLoans}
+                          />
+                          <StatView
+                              orientation="horizontal"
+                              label="Items Returned"
+                              value={loansInCurrentMonth.totalReturns}
+                          />
+                      </Stack>
+                      <Stack hiddenFrom="lg">
+                          <StatView
+                              orientation="vertical"
+                              label="Items Loaned"
+                              value={loansInCurrentMonth.totalLoans}
+                          />
+                          <StatView
+                              orientation="vertical"
+                              label="Items Returned"
+                              value={loansInCurrentMonth.totalReturns}
+                          />
+                      </Stack>
+                      {
+                          //#region Area Chart
+                      }
+                      <AreaChart
+                          w="100%"
+                          h="100%"
+                          miw={{ lg: 300, md: 200 }}
+                          mih={200}
+                          p="sm"
+                          data={loansInCurrentMonth.days.map(
+                              ({ addedCount, loanCount, returnCount }, day) => {
+                                  return {
+                                      date: dayjs(selectedMonth, "MM-YYYY")
+                                          .set("date", day + 1)
+                                          .format("DD"),
+                                      loaned: loanCount,
+                                      returned: returnCount,
+                                      added: addedCount,
+                                  };
+                              }
+                          )}
+                          dotProps={{
+                              r: 1,
+                          }}
+                          xAxisProps={{ axisLine: true }}
+                          xAxisLabel="Day in Month"
+                          yAxisProps={{ axisLine: true }}
+                          dataKey="date"
+                          series={[
+                              {
+                                  name: "loaned",
+                                  label: "Items Loaned",
+                                  color: OUT_COLOR,
+                              },
+                              {
+                                  name: "returned",
+                                  label: "Items Returned",
+                                  color: IN_COLOR,
+                              },
+                              {
+                                  name: "added",
+                                  label: "Items Added",
+                                  color: "orange",
+                              },
+                          ]}
+                          withLegend
+                          curveType="linear"
+                      />
+                      {
+                          //#endregion
+                      }
+                  </Flex>
+              </>
+          ) : (
+              <Center h={300}>No data for this month</Center>
+          )}
+      </InfoView>
   );
 }

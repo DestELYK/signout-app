@@ -1,184 +1,188 @@
 import { Prisma } from "@prisma/client";
 import dayjs from "dayjs";
-import {
-  LoanWithTagsAndItems,
-  loanWithTagsAndItems,
-} from "~/utils/types.server";
+import { LoanWithTagsAndItems, loanWithTagsAndItems } from "~/utils/types.server";
 import { isNumeric } from "~/utils/utils";
 import { prisma } from "./prisma.server";
 
 export const getLoans = async (
-  filters: {
-    query?: string;
-    status?: "outstanding" | "returned";
-    person?: string;
-    items?: string;
-  },
-  limit?: number,
-  offset?: number
+    filters: {
+        query?: string;
+        status?: "outstanding" | "returned";
+        person?: string;
+        personId?: number;
+        items?: string;
+    },
+    limit?: number,
+    offset?: number
 ): Promise<{
-  loans?: LoanWithTagsAndItems[];
-  totalCount?: number;
-  error?: string;
+    loans?: LoanWithTagsAndItems[];
+    totalCount?: number;
+    error?: string;
 }> => {
-  try {
-    filters.query = filters.query?.trim().toLocaleLowerCase();
-    filters.person = filters.person?.trim().toLocaleLowerCase();
-    filters.items = filters.items?.trim().toLocaleLowerCase();
-    filters.status = filters.status?.trim().toLocaleLowerCase() as
-      | "outstanding"
-      | "returned"
-      | undefined;
+    try {
+        filters.query = filters.query?.trim().toLocaleLowerCase();
+        filters.person = filters.person?.trim().toLocaleLowerCase();
+        filters.items = filters.items?.trim().toLocaleLowerCase();
+        filters.status = filters.status?.trim().toLocaleLowerCase() as
+            | "outstanding"
+            | "returned"
+            | undefined;
 
-    if (limit && limit <= 0) limit = undefined;
+        if (limit && limit <= 0) limit = undefined;
 
-    const filter: Prisma.LoanWhereInput =
-      filters.query && filters.query.length > 0
-        ? {
-            ...(filters.status === "outstanding"
-              ? { items: { some: { dateReturned: null } } }
-              : filters.status === "returned" && {
-                  items: { none: { dateReturned: null } },
-                }),
-            OR: [
-              {
-                person: {
-                  OR: [
-                    {
-                      firstName: {
-                        contains: filters.query,
-                      },
-                    },
-                    {
-                      lastName: {
-                        contains: filters.query,
-                      },
-                    },
-                    {
-                      nickname: {
-                        contains: filters.query,
-                      },
-                    },
-                    {
-                      AND: {
-                        OR: [
-                          {
-                            firstName: {
-                              contains: filters.query.split(" ", 2)[0],
-                            },
-                          },
-                          {
-                            nickname: {
-                              contains: filters.query.split(" ", 2)[0],
-                            },
-                          },
-                        ],
-                        lastName: { contains: filters.query.split(" ", 2)[1] },
-                      },
-                    },
-                  ],
-                },
-              },
-              {
-                items: {
-                  some: {
-                    item: {
-                      AND: filters.query.split(" ").map((s) => ({
-                        name: {
-                          contains: s,
-                        },
-                      })),
-                    },
-                  },
-                },
-              },
-            ],
-          }
-        : {
-            person: filters.person
-              ? {
-                  OR: [
-                    {
-                      firstName: {
-                        contains: filters.person,
-                      },
-                    },
-                    {
-                      lastName: {
-                        contains: filters.person,
-                      },
-                    },
-                    {
-                      nickname: {
-                        contains: filters.person,
-                      },
-                    },
-                    {
-                      AND: {
-                        OR: [
-                          {
-                            firstName: {
-                              contains: filters.person.split(" ", 2)[0],
-                            },
-                          },
-                          {
-                            nickname: {
-                              contains: filters.person.split(" ", 2)[0],
-                            },
-                          },
-                        ],
-                        lastName: { contains: filters.person.split(" ", 2)[1] },
-                      },
-                    },
-                  ],
-                }
-              : undefined,
-            items:
-              filters.status || filters.items
+        const filter: Prisma.LoanWhereInput =
+            filters.query && filters.query.length > 0
                 ? {
-                    some: {
-                      item: filters.items
-                        ? {
-                            AND: filters.items.split(" ").map((s) => ({
-                              name: {
-                                contains: s,
+                      ...(filters.status === "outstanding"
+                          ? { items: { some: { dateReturned: null } } }
+                          : filters.status === "returned" && {
+                                items: { none: { dateReturned: null } },
+                            }),
+                      OR: [
+                          {
+                              person: {
+                                  OR: [
+                                      {
+                                          firstName: {
+                                              contains: filters.query,
+                                          },
+                                      },
+                                      {
+                                          lastName: {
+                                              contains: filters.query,
+                                          },
+                                      },
+                                      {
+                                          nickname: {
+                                              contains: filters.query,
+                                          },
+                                      },
+                                      {
+                                          AND: {
+                                              OR: [
+                                                  {
+                                                      firstName: {
+                                                          contains: filters.query.split(" ", 2)[0],
+                                                      },
+                                                  },
+                                                  {
+                                                      nickname: {
+                                                          contains: filters.query.split(" ", 2)[0],
+                                                      },
+                                                  },
+                                              ],
+                                              lastName: {
+                                                  contains: filters.query.split(" ", 2)[1],
+                                              },
+                                          },
+                                      },
+                                  ],
                               },
-                            })),
-                          }
-                        : undefined,
-                      dateReturned:
-                        filters.status === "outstanding"
-                          ? null
-                          : filters.status === "returned"
-                          ? { not: null }
-                          : undefined,
-                    },
+                          },
+                          {
+                              items: {
+                                  some: {
+                                      item: {
+                                          AND: filters.query.split(" ").map((s) => ({
+                                              name: {
+                                                  contains: s,
+                                              },
+                                          })),
+                                      },
+                                  },
+                              },
+                          },
+                      ],
                   }
-                : undefined,
-          };
+                : {
+                      person: filters.personId
+                          ? {
+                                id: filters.personId,
+                            }
+                          : filters.person
+                          ? {
+                                OR: [
+                                    {
+                                        firstName: {
+                                            contains: filters.person,
+                                        },
+                                    },
+                                    {
+                                        lastName: {
+                                            contains: filters.person,
+                                        },
+                                    },
+                                    {
+                                        nickname: {
+                                            contains: filters.person,
+                                        },
+                                    },
+                                    {
+                                        AND: {
+                                            OR: [
+                                                {
+                                                    firstName: {
+                                                        contains: filters.person.split(" ", 2)[0],
+                                                    },
+                                                },
+                                                {
+                                                    nickname: {
+                                                        contains: filters.person.split(" ", 2)[0],
+                                                    },
+                                                },
+                                            ],
+                                            lastName: { contains: filters.person.split(" ", 2)[1] },
+                                        },
+                                    },
+                                ],
+                            }
+                          : undefined,
+                      items:
+                          filters.status || filters.items
+                              ? {
+                                    some: {
+                                        item: filters.items
+                                            ? {
+                                                  AND: filters.items.split(" ").map((s) => ({
+                                                      name: {
+                                                          contains: s,
+                                                      },
+                                                  })),
+                                              }
+                                            : undefined,
+                                        dateReturned:
+                                            filters.status === "outstanding"
+                                                ? null
+                                                : filters.status === "returned"
+                                                ? { not: null }
+                                                : undefined,
+                                    },
+                                }
+                              : undefined,
+                  };
 
-    const loans = await prisma.loan.findMany({
-      where: filter,
-      include: loanWithTagsAndItems.include,
-      orderBy: {
-        id: "desc",
-      },
-      take: limit,
-      skip: offset,
-    });
+        const loans = await prisma.loan.findMany({
+            where: filter,
+            include: loanWithTagsAndItems.include,
+            orderBy: {
+                id: "desc",
+            },
+            take: limit,
+            skip: offset,
+        });
 
-    return {
-      loans: loans,
-      totalCount: await prisma.loan.count({ where: filter }),
-    };
-  } catch (e) {
-    console.error(`Failed to get loans`, e);
+        return {
+            loans: loans,
+            totalCount: await prisma.loan.count({ where: filter }),
+        };
+    } catch (e) {
+        console.error(`Failed to get loans`, e);
 
-    let message = "Unknown Error";
-    if (e instanceof Error) message = e.message;
+        let message = "Unknown Error";
+        if (e instanceof Error) message = e.message;
 
-    return { error: message };
-  }
+        return { error: message };
+    }
 };
 
 export const getLoanById = async (

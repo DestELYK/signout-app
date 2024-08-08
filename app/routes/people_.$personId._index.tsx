@@ -9,38 +9,39 @@ export default function Page() {
   );
 
   return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
-      {data !== undefined ? (
-        data.error !== undefined ? (
-          <Center w="100%" h="100%">
-            <Text ta="center">{data.error}</Text>
-          </Center>
-        ) : data.person !== undefined && data.person !== undefined ? (
-          <PersonInfoView
-            id={data.person.id}
-            firstName={data.person.firstName}
-            lastName={data.person.lastName}
-            nickname={data.person.nickname}
-            qrCode={data.person.qrCode}
-            notes={data.person.notes}
-            tags={data.person.tags}
-            createdDate={data.person.createdDate}
-            updatedDate={data.person.updatedDate}
-            outstandingItems={data.outstandingItems}
-            lostItems={data.lostItems}
-            loans={data.totalItems}
-            averageReturnTime={data.averageReturnTime}
-            lastLoan={data.lastLoan}
-          />
-        ) : (
-          <>?</>
-        )
-      ) : (
-        <>
-          <Skeleton h={160} />
-          <Skeleton h={130} />
-        </>
-      )}
-    </Flex>
+      <Flex direction="column" w="100%" h="100%" gap="md">
+          {data !== undefined ? (
+              data.error !== undefined ? (
+                  <Center w="100%" h="100%">
+                      <Text ta="center">{data.error}</Text>
+                  </Center>
+              ) : data.person !== undefined && data.person !== undefined ? (
+                  <PersonInfoView
+                      id={data.person.id}
+                      firstName={data.person.firstName}
+                      lastName={data.person.lastName}
+                      nickname={data.person.nickname}
+                      role={data.person.role}
+                      studentId={data.person.studentId}
+                      notes={data.person.notes}
+                      tags={data.person.tags}
+                      createdDate={data.person.createdDate}
+                      updatedDate={data.person.updatedDate}
+                      outstandingItems={data.outstandingItems}
+                      lostItems={data.lostItems}
+                      loans={data.totalItems}
+                      averageReturnTime={data.averageReturnTime}
+                      lastLoan={data.lastLoan}
+                  />
+              ) : (
+                  <>?</>
+              )
+          ) : (
+              <>
+                  <Skeleton h={160} />
+                  <Skeleton h={130} />
+              </>
+          )}
+      </Flex>
   );
 }

@@ -17,26 +17,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const status = searchParams.get("status");
   const person = searchParams.get("person");
+  const personId = searchParams.get("personId");
   const items = searchParams.get("items");
 
-  const pageSize = parseNumber(
-    limit,
-    INITIAL_PAGE_SIZE,
-    undefined,
-    MAX_PAGE_SIZE
-  );
+  const pageSize = parseNumber(limit, INITIAL_PAGE_SIZE, undefined, MAX_PAGE_SIZE);
 
   return typedjson(
-    await getLoans(
-      {
-        query: query ?? undefined,
-        status: status as "outstanding" | "returned" | undefined,
-        person: person ?? undefined,
-        items: items ?? undefined,
-      },
-      pageSize,
-      parseNumber(page, 0) * pageSize
-    )
+      await getLoans(
+          {
+              query: query ?? undefined,
+              status: status as "outstanding" | "returned" | undefined,
+              person: person ?? undefined,
+              personId: parseNumber(personId, undefined, 0),
+              items: items ?? undefined,
+          },
+          pageSize,
+          parseNumber(page, 0) * pageSize
+      )
   );
 };
 

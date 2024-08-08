@@ -14,13 +14,14 @@ datasource db {
 }
 
 model Person {
-  id        Int     @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   firstName String
   lastName  String
   nickname  String?
+  role      PersonRole @relation(fields: [roleId], references: [id])
   tags      Tag[]
-  notes     String  @default("") @db.VarChar(200)
-  qrCode    String?
+  notes     String     @default("") @db.VarChar(200)
+  studentId String? 
 
   loans         Loan[]
   returnedItems LoanedItem[]
@@ -28,15 +29,26 @@ model Person {
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
 
+  roleId Int
+
   @@unique([firstName, lastName, nickname])
 }
 
-model Item {
-  id     Int     @id @default(autoincrement())
-  qrCode String?
-  name   String  @unique
+model PersonRole {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
   description String @default("") @db.VarChar(50)
-  notes  String  @default("") @db.VarChar(200)
+  color       String @default("#000000") @db.VarChar(7)
+
+  people Person[]
+}
+
+model Item {
+  id          Int     @id @default(autoincrement())
+  qrCode      String?
+  name        String  @unique
+  description String  @default("") @db.VarChar(50)
+  notes       String  @default("") @db.VarChar(200)
 
   tags Tag[]
 
@@ -80,10 +92,10 @@ model LoanedItem {
 }
 
 model Tag {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   name     String
   color    String
-  priority Int @default(0)
+  priority Int     @default(0)
   category String
   hidden   Boolean @default(false)
 

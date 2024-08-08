@@ -62,21 +62,19 @@ const EXAMPLE_TAGS = [
 ];
 
 export interface TagPreviewProps {
-  tag: Tag;
-  previewProps?: InfoViewProps["cardProps"];
+    tag: Tag;
+    previewProps?: InfoViewProps["cardProps"];
 }
 
 export default function TagPreview({ tag, previewProps }: TagPreviewProps) {
-  const tags = [
-    ...EXAMPLE_TAGS.filter((t) =>
-      tag.hidden ? true : t.priority !== tag.priority
-    ),
-    tag,
-  ];
+    const tags = [
+        ...EXAMPLE_TAGS.filter((t) => (tag.hidden ? true : t.priority !== tag.priority)),
+        tag,
+    ];
 
-  return (
-    <InfoView title="Tag Preview" cardProps={previewProps}>
-      <TagGroup groupProps={{ justify: "center" }} tags={tags} />
-    </InfoView>
-  );
+    return (
+        <InfoView title="Tag Preview" cardProps={previewProps}>
+            <TagGroup groupProps={{ justify: "center" }} tags={tags} />
+        </InfoView>
+    );
 }

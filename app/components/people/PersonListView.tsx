@@ -1,116 +1,99 @@
-import {
-  Flex,
-  Group,
-  Highlight,
-  Space,
-  Text,
-  Title,
-  UnstyledButton,
-} from "@mantine/core";
-import { Tag } from "@prisma/client";
+import { Badge, Flex, Group, Highlight, Space, Text, Title, UnstyledButton } from "@mantine/core";
+import { PersonRole, Tag } from "@prisma/client";
 import { useNavigate } from "@remix-run/react";
-import { IconArrowRight } from "@tabler/icons-react";
-import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
+import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
 import { formatFullName } from "~/utils/utils";
-import TagGroup from "../tags/TagGroup";
 
 export interface PersonListViewProps {
-  id: number;
-  firstName: string;
-  lastName: string;
-  nickname?: string | null;
-  tags?: Tag[];
-  totalLoans?: number;
-  outstandingLoans?: number;
-  query?: string;
-  qrCode?: string;
-  showChevron?: boolean;
-  invalidItems?: {
     id: number;
-    name: string;
-    status: Tag;
-  }[];
+    firstName: string;
+    lastName: string;
+    nickname?: string | null;
+    role?: PersonRole;
+    tags?: Tag[];
+    totalLoans?: number;
+    outstandingLoans?: number;
+    query?: string;
+    qrCode?: string;
+    showChevron?: boolean;
+    invalidItems?: {
+        id: number;
+        name: string;
+        status: Tag;
+    }[];
 }
 
 export default function PersonListView({
-  id,
-  firstName,
-  lastName,
-  nickname,
-  tags = [],
-  totalLoans,
-  outstandingLoans,
-  query,
-  qrCode,
-  showChevron = true,
-  invalidItems,
+    id,
+    firstName,
+    lastName,
+    nickname,
+    role,
+    tags = [],
+    totalLoans,
+    outstandingLoans,
+    query,
+    qrCode,
+    showChevron = true,
+    invalidItems,
 }: PersonListViewProps) {
-  const navigate = useNavigate();
-  const fullName = formatFullName({
-    firstName: firstName,
-    lastName: lastName,
-    nickname: nickname,
-  });
+    const navigate = useNavigate();
+    const fullName = formatFullName({
+        firstName: firstName,
+        lastName: lastName,
+        nickname: nickname,
+    });
 
-  return (
-    <UnstyledButton
-      className="list-item"
-      miw={200}
-      w="100%"
-      h="100%"
-      p="xs"
-      onClick={() => navigate(`/people/${id}`)}
-    >
-      <Flex
-        h="100%"
-        w="100%"
-        direction="row"
-        align="center"
-        justify="space-between"
-      >
-        <Flex w="100%" h="100%" direction="column" mr="lg" align="center">
-          <Group align="center" gap="xs">
-            <Highlight
-              highlight={qrCode ? fullName : query ? query.split(" ") : ""}
-              component={Title}
-              order={4}
-              ta="center"
-            >
-              {fullName}
-            </Highlight>
-            <TagGroup tags={tags} categories={["Person Role"]} />
-          </Group>
-          <Space h="sm" />
-          {totalLoans !== undefined && (
-            <Text size="xs">
-              {totalLoans > 0
-                ? totalLoans + " total loan" + (totalLoans > 1 ? "s" : "")
-                : "No loans"}
-            </Text>
-          )}
-          {outstandingLoans !== undefined && (
-            <Text size="xs" c={outstandingLoans > 0 ? OUT_COLOR : IN_COLOR}>
-              {outstandingLoans
-                ? outstandingLoans +
-                  " loan" +
-                  (outstandingLoans > 1 ? "s" : "") +
-                  " currently out"
-                : "No loans currently out"}
-            </Text>
-          )}
-          {invalidItems &&
-            invalidItems.length > 0 &&
-            invalidItems.map((item) => (
-              <Text size="xs">
-                {item.name} is{" "}
-                <Text inherit span fw="bold" c={item.status.color}>
-                  {item.status.name}
-                </Text>
-              </Text>
-            ))}
-        </Flex>
-        {showChevron && <IconArrowRight size={24} />}
-      </Flex>
-    </UnstyledButton>
-  );
+    return (
+        <UnstyledButton
+            className="list-item"
+            w="100%"
+            h="100%"
+            onClick={() => navigate(`/people/${id}`)}
+        >
+            <Flex p="xs" direction="row" align="center" justify="space-between">
+                <Flex w="100%" direction="column" mr="lg">
+                    <Group w="100%">
+                        {invalidItems && invalidItems.length > 0 && <IconInfoCircle color="red" />}
+                        <Highlight
+                            component={Title}
+                            order={4}
+                            c={invalidItems && invalidItems.length > 0 ? "red" : undefined}
+                            highlight={qrCode ? fullName : query ? query.split(" ") : ""}
+                        >
+                            {fullName}
+                        </Highlight>
+                    </Group>
+                    {role && (
+                        <Badge color={role.color} variant="dot" autoContrast>
+                            {role.name}
+                        </Badge>
+                    )}
+                    <Space h="xs" />
+
+                    <Text size="xs">
+                        {totalLoans} Total Loans{" "}
+                        {outstandingLoans ? (
+                            <>
+                                <Text span inherit c="red" fw="bold">
+                                    ({outstandingLoans} Outstanding)
+                                </Text>
+                            </>
+                        ) : undefined}
+                    </Text>
+                    {invalidItems && invalidItems.length > 0 && (
+                        <>
+                            <Space h="xs" />
+                            {invalidItems.map((item) => (
+                                <Text key={item.id} size="xs">
+                                    {item.name} - {item.status.name}
+                                </Text>
+                            ))}
+                        </>
+                    )}
+                </Flex>
+                {showChevron && <IconChevronRight />}
+            </Flex>
+        </UnstyledButton>
+    );
 }

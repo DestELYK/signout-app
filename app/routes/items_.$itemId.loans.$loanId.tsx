@@ -2,11 +2,7 @@ import { Button, Center, Flex, Group, Loader, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
-import {
-  typedjson,
-  useTypedLoaderData,
-  useTypedRouteLoaderData,
-} from "remix-typedjson";
+import { typedjson, useTypedLoaderData, useTypedRouteLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import { QRCodeWithComponent } from "~/components/qrCode/QRCodeWithComponent";
 import TagGroup from "~/components/tags/TagGroup";
@@ -24,39 +20,39 @@ export const loader = async ({ params }: LoaderFunctionArgs) => {
 
   try {
     return typedjson({
-      item: await prisma.loanedItem.findFirstOrThrow({
-        where: { loanId: loanId, itemId: itemId },
-        select: {
-          loan: {
+        item: await prisma.loanedItem.findFirstOrThrow({
+            where: { loanId: loanId, itemId: itemId },
             select: {
-              person: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  nickname: true,
-                  tags: true,
+                loan: {
+                    select: {
+                        person: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                nickname: true,
+                                tags: true,
+                            },
+                        },
+                        tags: true,
+                    },
                 },
-              },
-              tags: true,
+                returnedBy: {
+                    select: {
+                        id: true,
+                        studentId: true,
+                        firstName: true,
+                        lastName: true,
+                        nickname: true,
+                        tags: true,
+                    },
+                },
+                itemId: true,
+                dateLoaned: true,
+                dateReturned: true,
             },
-          },
-          returnedBy: {
-            select: {
-              id: true,
-              qrCode: true,
-              firstName: true,
-              lastName: true,
-              nickname: true,
-              tags: true,
-            },
-          },
-          itemId: true,
-          dateLoaned: true,
-          dateReturned: true,
-        },
-      }),
-      error: undefined,
+        }),
+        error: undefined,
     });
   } catch (e) {
     const error = handleError(e, "no item was returned");

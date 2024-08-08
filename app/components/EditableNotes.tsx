@@ -35,8 +35,6 @@ export default function EditableNotes({
   function updateNotes(notes?: string | null) {
     form.setFieldValue("notes", notes);
 
-    console.log("updateNotes", notes);
-
     if (!form.validate().hasErrors) {
       fetcher.submit(form.values, {
           action: action,

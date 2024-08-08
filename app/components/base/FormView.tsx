@@ -12,51 +12,60 @@ import {
     Select,
     Slider,
     Switch,
-    Text,
     Textarea,
     TextInput,
     Tooltip,
 } from "@mantine/core";
-import { Form, useForm } from "@mantine/form";
+import { Form, useField, useForm } from "@mantine/form";
 import { upperFirst, useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+import { Tag } from "@prisma/client";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { IconArrowBackUp, IconArrowRight, IconPlus } from "@tabler/icons-react";
 import { FormErrors, UseFormReturnType } from "node_modules/@mantine/form/lib/types";
 import React, { useEffect, useRef, useState } from "react";
 import { UseDataFunctionReturn } from "remix-typedjson";
+import { z } from "zod";
 import { useFetcherWithErrorHandler } from "~/lib/hooks";
+import QRInputField from "../QRInputField";
+import TagCombobox from "../tags/TagCombobox";
 
-type FormInputData<T> = {
-    [key in keyof T]: {
-        type:
-            | "text"
-            | "number"
-            | "textarea"
-            | "select"
-            | "checkbox"
-            | "tags"
-            | "color"
-            | "toggle"
-            | "range"
-            | "custom";
-        description?: string;
-        placeholder?: string;
-        required?: boolean;
-        disabled?: boolean;
-        options?: { value: string; label: string }[];
-        sliderMarks?: { value: number; label: string }[];
-        min?: number;
-        max?: number;
-        step?: number;
-        handleCustomInput?: (form: UseFormReturnType<T>) => React.ReactNode;
-    };
+type InputData<T> = {
+    type:
+        | "text"
+        | "number"
+        | "textarea"
+        | "select"
+        | "checkbox"
+        | "tags"
+        | "color"
+        | "toggle"
+        | "range"
+        | "qrcode"
+        | "custom";
+    label?: string;
+    description?: string;
+    placeholder?: string;
+    required?: boolean;
+    disabled?: boolean;
+    options?: { value: string; label: string }[];
+    sliderMarks?: { value: number; label: string }[];
+    min?: number;
+    max?: number;
+    step?: number;
+    category?: string;
+    groupId?: number;
+    handleCustomInput?: (form: UseFormReturnType<T>) => React.ReactNode;
 };
 
-type FormData<T> = Omit<T, "id">;
+type FormInputData<T> = {
+    [key in keyof T]?: InputData<T>;
+};
+
+type FormData<T> = Omit<T, "id" | "createdDate" | "updatedDate">;
 
 export interface FormViewProps<T, R> {
-    initialValues: FormData<T>;
+    initialValues: Partial<FormData<T>>;
     errors?: Record<string, string>;
     action: string;
     method: "POST" | "PATCH";
@@ -99,9 +108,31 @@ export default function FormView<T extends Record<string, any>, R>({
         clearInputErrorOnChange: true,
         validateInputOnBlur,
         validateInputOnChange,
-        initialValues: initialValues as T,
+        initialValues: initialValues as FormData<T>,
         validate: validator,
     });
+
+    // Only used if there is a tag field
+    const tagField = useField<Tag[]>({
+        initialValue: form.values.tag,
+        validate: (value) => {
+            const result = z.array(z.coerce.number()).nonempty().safeParse(value);
+
+            if (result.success) {
+                return undefined;
+            } else {
+                return result.error.message;
+            }
+        },
+    });
+
+    const formData = {
+        ...form.getValues(),
+        tags:
+            tagField.getValue()?.length > 0
+                ? tagField.getValue().map((tag) => tag.id.toString())
+                : undefined,
+    };
 
     const fetcher = useFetcherWithErrorHandler<R>(
         (data) => {
@@ -120,6 +151,17 @@ export default function FormView<T extends Record<string, any>, R>({
             }
         },
         (error) => {
+            notifications.update({
+                id: notificationId,
+                message: `Failed to ${method === "POST" ? "create" : "update"} ${
+                    submitLabel ? submitLabel.toLocaleLowerCase() : ""
+                }`,
+                color: "red",
+                loading: false,
+                autoClose: 5000,
+                withCloseButton: true,
+            });
+
             form.setErrors({
                 name: error,
                 color: error,
@@ -135,6 +177,122 @@ export default function FormView<T extends Record<string, any>, R>({
     }, [errors]);
 
     const loading = navigation.state !== "idle";
+
+    const groupedInputs: {
+        [row: string]: { key: string; value: InputData<FormData<T>> }[];
+    } = {};
+
+    Object.entries(inputData).forEach(([key, value], index) => {
+        if (value) {
+            if (value.groupId) {
+                if (!groupedInputs[value.groupId]) {
+                    groupedInputs[value.groupId] = [];
+                }
+
+                groupedInputs[value.groupId].push({ key, value });
+            } else {
+                if (!groupedInputs["none"]) {
+                    groupedInputs["none"] = [];
+                }
+
+                groupedInputs["none"].push({ key, value });
+            }
+        }
+    });
+
+    function createInputField(key: string, value: InputData<FormData<T>>, index: number) {
+        const props = {
+            ...(index === 0 && { "data-autofocus": true }),
+            name: key,
+            label:
+                value.label ??
+                key
+                    .split(/(?=[A-Z])/)
+                    .map((s) => upperFirst(s))
+                    .join(" "),
+            description: value.description,
+            placeholder: value.placeholder,
+            required: value.required,
+            disabled: disabled || value.disabled || loading,
+            ...form.getInputProps(key),
+        };
+
+        switch (value.type) {
+            case "qrcode":
+                return (
+                    <QRInputField
+                        key={key}
+                        loading={loading}
+                        onChanged={props.onChange}
+                        {...props}
+                    />
+                );
+            case "number":
+                return (
+                    <TextInput
+                        key={key}
+                        {...props}
+                        type="number"
+                        min={value.min}
+                        max={value.max}
+                        step={value.step}
+                    />
+                );
+            case "textarea":
+                return <Textarea key={key} {...props} />;
+            case "select":
+                return <Select key={key} {...props} data={value.options || []} />;
+            case "tags":
+                return (
+                    <TagCombobox
+                        category={value.category ?? ""}
+                        key={key}
+                        disabled={props.disabled}
+                        error={props.error}
+                        limit={value.max}
+                        required={props.required}
+                        value={tagField.getValue()}
+                        onTagsChange={(tags) => {
+                            tagField.setValue(tags);
+                        }}
+                    />
+                );
+            case "checkbox":
+                return <Checkbox key={key} {...props} type="checkbox" checked={form.values[key]} />;
+            case "color":
+                return <ColorInput key={key} {...props} disabled={disabled} />;
+            case "toggle":
+                return <Switch key={key} {...props} checked={form.values[key]} />;
+            case "range":
+                return (
+                    <InputWrapper
+                        key={key}
+                        label={props.label}
+                        description={props.description}
+                        error={props.error}
+                        required={props.required}
+                    >
+                        <Slider
+                            value={props.value}
+                            onChange={props.onChange}
+                            onBlur={props.onBlur}
+                            onFocus={props.onFocus}
+                            name={props.name}
+                            marks={value.sliderMarks}
+                            step={value.step}
+                            min={value.min}
+                            max={value.max}
+                            p="sm"
+                            mb="sm"
+                        />
+                    </InputWrapper>
+                );
+            case "custom":
+                return value.handleCustomInput ? value.handleCustomInput(form) : null;
+            default:
+                return <TextInput key={key} {...props} />;
+        }
+    }
 
     const buttons = (
         <Group justify="end">
@@ -155,79 +313,26 @@ export default function FormView<T extends Record<string, any>, R>({
 
     const formContent = (
         <>
-            {Object.entries(inputData).map(([key, value], index) => {
-                const props = {
-                    ...(index === 0 && { "data-autofocus": true }),
-                    name: key,
-                    label: upperFirst(key),
-                    description: value.description,
-                    placeholder: value.placeholder,
-                    required: value.required,
-                    disabled: disabled || value.disabled || loading,
-                    ...form.getInputProps(key),
-                };
-
-                switch (value.type) {
-                    case "number":
-                        return (
-                            <TextInput
-                                key={key}
-                                {...props}
-                                type="number"
-                                min={value.min}
-                                max={value.max}
-                                step={value.step}
-                            />
-                        );
-                    case "textarea":
-                        return <Textarea key={key} {...props} />;
-                    case "select":
-                        return <Select key={key} {...props} data={value.options || []} />;
-                    case "tags":
-                        return <Text key={key}>TODO</Text>;
-                    case "checkbox":
-                        return (
-                            <Checkbox
-                                key={key}
-                                {...props}
-                                type="checkbox"
-                                checked={form.values[key]}
-                            />
-                        );
-                    case "color":
-                        return <ColorInput key={key} {...props} disabled={disabled} />;
-                    case "toggle":
-                        return <Switch key={key} {...props} checked={form.values[key]} />;
-                    case "range":
-                        return (
-                            <InputWrapper
-                                key={key}
-                                label={props.label}
-                                description={props.description}
-                                error={props.error}
-                                required={props.required}
-                            >
-                                <Slider
-                                    value={props.value}
-                                    onChange={props.onChange}
-                                    onBlur={props.onBlur}
-                                    onFocus={props.onFocus}
-                                    name={props.name}
-                                    marks={value.sliderMarks}
-                                    step={value.step}
-                                    min={value.min}
-                                    max={value.max}
-                                    p="sm"
-                                    mb="sm"
-                                />
-                            </InputWrapper>
-                        );
-                    case "custom":
-                        return value.handleCustomInput ? value.handleCustomInput(form) : null;
-                    default:
-                        return <TextInput key={key} {...props} />;
+            {Object.entries(groupedInputs).map(([row, value], index) => {
+                if (row !== "none") {
+                    return (
+                        <Group key={row} align="start" grow>
+                            {value.map(({ key, value }, index) => {
+                                if (value) {
+                                    return createInputField(key, value, index);
+                                }
+                            })}
+                        </Group>
+                    );
+                } else {
+                    return value.map(({ key, value }, index) => {
+                        if (value) {
+                            return createInputField(key, value, index);
+                        }
+                    });
                 }
             })}
+
             {previewContent && (
                 <>
                     <Divider mt="auto" w="100%" />
@@ -243,32 +348,30 @@ export default function FormView<T extends Record<string, any>, R>({
         <Box w="100%" h="100%">
             <LoadingOverlay visible={loading} zIndex={1000} />
             <Modal title={`Confirm ${submitLabel}`} centered opened={opened} onClose={close}>
-                {confirmContent(form.values)}
+                {confirmContent(formData)}
                 <Group mt="auto" justify="end">
                     <Button onClick={close} variant="outline">
                         Cancel
                     </Button>
                     <Button
                         onClick={() => {
-                            if (!onSubmit || (onSubmit && onSubmit(form.values))) {
-                                setNotificationId(
-                                    notifications.show({
-                                        message: `${method === "POST" ? "Creating" : "Updating"} ${
-                                            submitLabel ? submitLabel.toLocaleLowerCase() : ""
-                                        }`,
-                                        loading: true,
-                                        autoClose: false,
-                                        withCloseButton: false,
-                                    })
-                                );
+                            setNotificationId(
+                                notifications.show({
+                                    message: `${method === "POST" ? "Creating" : "Updating"} ${
+                                        submitLabel ? submitLabel.toLocaleLowerCase() : ""
+                                    }`,
+                                    loading: true,
+                                    autoClose: false,
+                                    withCloseButton: false,
+                                })
+                            );
 
-                                fetcher.submit(form.values, {
-                                    action,
-                                    method,
-                                    encType: "application/json",
-                                });
-                                close();
-                            }
+                            fetcher.submit(formData, {
+                                action,
+                                method,
+                                encType: "application/json",
+                            });
+                            close();
                         }}
                     >
                         Confirm
@@ -278,7 +381,11 @@ export default function FormView<T extends Record<string, any>, R>({
             <Form
                 form={form}
                 ref={formRef}
-                onSubmit={() => open()}
+                onSubmit={() => {
+                    if (!onSubmit || (onSubmit && onSubmit(formData))) {
+                        open();
+                    }
+                }}
                 onReset={form.onReset}
                 style={{
                     width: "100%",

@@ -2,11 +2,7 @@ import { Button, Flex, Group, Text } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useParams } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
-import {
-  typedjson,
-  useTypedLoaderData,
-  useTypedRouteLoaderData,
-} from "remix-typedjson";
+import { typedjson, useTypedLoaderData, useTypedRouteLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import QRCodePreview from "~/components/qrCode/QRCodePreview";
 import TagGroup from "~/components/tags/TagGroup";
@@ -16,53 +12,53 @@ import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import { loader as loanLoader } from "./loans_.$loanId";
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
-  invariant(params.loanId, "Expected params.loanId");
-  invariant(params.itemId, "Expected params.itemId");
+    invariant(params.loanId, "Expected params.loanId");
+    invariant(params.itemId, "Expected params.itemId");
 
-  const loanId = parseInt(params.loanId);
-  const itemId = parseInt(params.itemId);
+    const loanId = parseInt(params.loanId);
+    const itemId = parseInt(params.itemId);
 
-  try {
-    return typedjson({
-      item: await prisma.loanedItem.findFirstOrThrow({
-        where: { loanId: loanId, itemId: itemId },
-        select: {
-          item: {
-            select: {
-              qrCode: true,
-              name: true,
-              description: true,
-              tags: true,
-            },
-          },
-          returnedBy: {
-            select: {
-              id: true,
-              qrCode: true,
-              firstName: true,
-              lastName: true,
-              nickname: true,
-              tags: true,
-            },
-          },
-          itemId: true,
-          dateLoaned: true,
-          dateReturned: true,
-        },
-      }),
-      error: undefined,
-    });
-  } catch (e) {
-    const error = handleError(e, "no item was returned");
+    try {
+        return typedjson({
+            item: await prisma.loanedItem.findFirstOrThrow({
+                where: { loanId: loanId, itemId: itemId },
+                select: {
+                    item: {
+                        select: {
+                            qrCode: true,
+                            name: true,
+                            description: true,
+                            tags: true,
+                        },
+                    },
+                    returnedBy: {
+                        select: {
+                            id: true,
+                            studentId: true,
+                            firstName: true,
+                            lastName: true,
+                            nickname: true,
+                            tags: true,
+                        },
+                    },
+                    itemId: true,
+                    dateLoaned: true,
+                    dateReturned: true,
+                },
+            }),
+            error: undefined,
+        });
+    } catch (e) {
+        const error = handleError(e, "no item was returned");
 
-    if (error) {
-      return typedjson({ error: error, item: undefined });
-    } else {
-      throw new Response(String(e), {
-        status: 500,
-      });
+        if (error) {
+            return typedjson({ error: error, item: undefined });
+        } else {
+            throw new Response(String(e), {
+                status: 500,
+            });
+        }
     }
-  }
 };
 
 export default function Page() {

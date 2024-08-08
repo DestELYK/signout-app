@@ -32,27 +32,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     MAX_PAGE_SIZE
   );
 
+  console.log("Query: %s", query);
+
   return typedjson({
-    ...(await getPeople(
-      {
-        query: query ?? undefined,
-        firstName: firstName ?? undefined,
-        lastName: lastName ?? undefined,
-        nickname: nickname ?? undefined,
-        roles: roles ?? undefined,
-        outstanding:
-          outstanding === null
-            ? undefined
-            : outstanding.toLocaleLowerCase() === "true",
-      },
-      pageSize,
-      parseNumber(page, 0) * pageSize
-    )),
-    roles: await prisma.tag.findMany({
-      where: {
-        category: "Person Role",
-      },
-    }),
+      ...(await getPeople(
+          {
+              query: query ?? undefined,
+              firstName: firstName ?? undefined,
+              lastName: lastName ?? undefined,
+              nickname: nickname ?? undefined,
+              roles: roles ?? undefined,
+              outstanding:
+                  outstanding === null ? undefined : outstanding.toLocaleLowerCase() === "true",
+          },
+          pageSize,
+          parseNumber(page, 0) * pageSize
+      )),
+      roles: await prisma.personRole.findMany(),
   });
 };
 
