@@ -1,121 +1,116 @@
-import {
-  Flex,
-  Highlight,
-  Space,
-  Text,
-  Title,
-  UnstyledButton,
-} from "@mantine/core";
-import { Tag } from "@prisma/client";
+import { Badge, Flex, Highlight, Space, Text, UnstyledButton } from "@mantine/core";
 import { Link, useNavigate } from "@remix-run/react";
 import { IconChevronRight } from "@tabler/icons-react";
-import { dateDiff, formatDate } from "~/utils/utils";
-import TagGroup from "../tags/TagGroup";
+import { ItemData } from "~/utils/types.server";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
+import LocationBadge from "./LocationBadge";
 
+/**
+ * Props for the ItemListView component.
+ */
 export interface ItemListViewProps {
-  id: number;
-  name: string;
-  description?: string;
-  createdDate?: Date;
-  tags?: Tag[];
-  qrCode?: string;
-  query?: string;
-  lastLoan?: {
-    id: number;
-    fullName: string;
-    personId: number;
-    loanedDate: Date;
-    returnedDate?: Date;
-  };
+    data: ItemData;
+    highlight?: string;
+    displayQRCode?: boolean;
 }
 
-export default function ItemListView({
-  id,
-  name,
-  description,
-  createdDate,
-  tags = [],
-  qrCode,
-  query,
-  lastLoan,
-}: ItemListViewProps) {
-  const navigate = useNavigate();
+export default function ItemListView({ data, highlight, displayQRCode }: ItemListViewProps) {
+    const navigate = useNavigate();
 
-  return (
-    <UnstyledButton
-      className="list-item"
-      w="100%"
-      h="100%"
-      onClick={() => navigate(`/items/${id}`)}
-      p="xs"
-    >
-      <Flex direction="row" align="center" justify="space-between">
-        <Flex w="100%" direction="column" mr="lg">
-          <Highlight
-            component={Title}
-            order={4}
-            highlight={qrCode ? name : query ? query.split(" ") : ""}
-          >
-            {name}
-          </Highlight>
-          <TagGroup
-            tags={tags}
-            categories={["Item Status", "Location"]}
-            limit={1}
-            groupProps={{ justify: "start" }}
-          />
-          <Space h="xs" />
-          {description && (
-            <Text size="xs" fs="italic" lineClamp={1} mt="xs">
-              {description}
-            </Text>
-          )}
+    const content = (
+        <Flex direction="row" align="center" justify="space-between">
+            <Flex w="100%" direction="column" mr="lg">
+                <Flex w="100%" direction="row" align="center" justify="space-between" wrap="nowrap">
+                    <Highlight
+                        fw="bold"
+                        size="md"
+                        lineClamp={2}
+                        highlight={highlight ? highlight.split(" ") : ""}
+                    >
+                        {data.name}
+                    </Highlight>
+                    <LocationBadge data={data.location} />
+                </Flex>
+                {data.status && (
+                    <Badge color={data.status.color} autoContrast>
+                        {data.status.name}
+                    </Badge>
+                )}
+                <Space h="xs" />
+                {data.description && (
+                    <Text size="xs" fs="italic" lineClamp={1} mt="xs">
+                        {data.description}
+                    </Text>
+                )}
 
-          {createdDate && (
-            <Text size="xs">
-              Added:{" "}
-              {formatDate(createdDate, {
-                month: "short",
-                day: "2-digit",
-                year: "numeric",
-              })}{" "}
-              <b>({dateDiff({ date: createdDate })})</b>
-            </Text>
-          )}
+                {data.createdDate && (
+                    <Text size="xs">
+                        Added:{" "}
+                        {formatDate(data.createdDate, {
+                            month: "short",
+                            day: "2-digit",
+                            year: "numeric",
+                        })}{" "}
+                        <b>({dateDiff({ date: data.createdDate })})</b>
+                    </Text>
+                )}
 
-          {lastLoan && (
-            <>
-              <Text size="xs">
-                Last Loaned by{" "}
-                <Link
-                  to={`/people/${lastLoan.personId}`}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  {lastLoan.fullName}
-                </Link>
-              </Text>
-              <Text size="xs">
-                {lastLoan.returnedDate ? "Returned" : "Loaned"}{" "}
-                {formatDate(lastLoan.loanedDate, {
-                  month: "short",
-                  day: "2-digit",
-                  year: "numeric",
-                })}{" "}
-                <b>
-                  (
-                  {dateDiff({
-                    date: lastLoan.loanedDate,
-                    otherDate: lastLoan.returnedDate,
-                    withoutSuffix: lastLoan.returnedDate !== undefined,
-                  })}
-                  )
-                </b>
-              </Text>
-            </>
-          )}
+                {data.lastLoan && (
+                    <>
+                        {data.lastLoan.person && (
+                            <Text size="xs">
+                                Last Loaned by{" "}
+                                <Link
+                                    to={`/people/${data.lastLoan.person.id}`}
+                                    onClick={(event) => event.stopPropagation()}
+                                >
+                                    {formatFullName(data.lastLoan.person)}
+                                </Link>
+                            </Text>
+                        )}
+
+                        {data.lastLoan.dateLoaned && (
+                            <Text size="xs">
+                                {data.lastLoan.dateAllReturned ? "Returned " : "Loaned "}
+                                {formatDate(data.lastLoan.dateLoaned, {
+                                    month: "short",
+                                    day: "2-digit",
+                                    year: "numeric",
+                                })}
+                                <b>
+                                    (
+                                    {dateDiff({
+                                        date: data.lastLoan.dateLoaned,
+                                        otherDate: data.lastLoan.dateAllReturned,
+                                        withoutSuffix: data.lastLoan.dateAllReturned !== undefined,
+                                    })}
+                                    )
+                                </b>
+                            </Text>
+                        )}
+                    </>
+                )}
+            </Flex>
+            <IconChevronRight />
         </Flex>
-        <IconChevronRight />
-      </Flex>
-    </UnstyledButton>
-  );
+    );
+
+    return (
+        <UnstyledButton
+            className="list-item"
+            w="100%"
+            h="100%"
+            onClick={() => navigate(`/items/${data.id}`)}
+            p="xs"
+        >
+            {displayQRCode ? (
+                <QRCodeWithComponent qrCode={data.uuid} scale={2}>
+                    {content}
+                </QRCodeWithComponent>
+            ) : (
+                content
+            )}
+        </UnstyledButton>
+    );
 }

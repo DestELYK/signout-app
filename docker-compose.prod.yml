@@ -25,7 +25,7 @@ services:
       tags:
         - signout-app
         - signout-app:latest
-        - signout-app:0.1.0
+        - signout-app:1.0.0
     user: 110:114
     restart: "on-failure"
     ports:
@@ -38,7 +38,7 @@ services:
     env_file: .env.production
     environment:
       - TZ=America/Toronto
-    command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]        
+    command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]
     healthcheck:
       test: curl --fail http://localhost:3000/api/health-check || exit 1
       interval: 60s

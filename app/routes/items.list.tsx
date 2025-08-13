@@ -1,81 +1,112 @@
-import { Center, Loader } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
+import { Box, Center, Loader } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import ItemList from "~/components/items/ItemList";
 import ItemTable from "~/components/tables/ItemTable";
-import { getItems } from "~/lib/items.server";
-import { prisma } from "~/lib/prisma.server";
-import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
+import { handleError } from "~/lib/db.server";
+import { useDesktopOnly } from "~/lib/hooks";
+import { deleteItems, getItemLocations, getItems, getItemTypes } from "~/lib/items.server";
+import { getTags } from "~/lib/tags.server";
+import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE, STATUS_OPTIONS } from "~/utils/consts";
 import { parseNumber } from "~/utils/utils";
 
+import { ActionFunctionArgs } from "@remix-run/node";
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const searchParams = new URL(request.url).searchParams;
+    const searchParams = new URL(request.url).searchParams;
 
-  const query = searchParams.get("q");
-  const limit = searchParams.get("limit");
-  const page = searchParams.get("page");
+    try {
+        const pageSize = parseNumber(
+            searchParams.get("limit"),
+            INITIAL_PAGE_SIZE,
+            undefined,
+            MAX_PAGE_SIZE
+        );
 
-  const status = searchParams.get("status");
-  const name = searchParams.get("name");
+        const offset = parseNumber(searchParams.get("page"), 0);
 
-  const types = searchParams.get("type");
-  const type = types ? types.split(",") : undefined;
+        console.log("pageSize", pageSize);
+        console.log("offset", offset);
 
-  const itemStatuses =
-    (await prisma.tag.findMany({
-      where: {
-        category: "Item Status",
-      },
-    })) ?? [];
+        const itemResult = await getItems(
+            {
+                query: searchParams.get("query") || searchParams.get("q") || undefined,
+                name: searchParams.get("name") || undefined,
+                statuses: searchParams.getAll("status") ?? undefined,
+                types: searchParams.getAll("type"),
+                locations: searchParams.getAll("location"),
+                sortBy: searchParams.get("sortBy") || undefined,
+                sortOrder: searchParams.get("sortOrder") || undefined,
+                personId: searchParams.get("personId") || undefined,
+                tags: searchParams.getAll("tag") || undefined,
+            },
+            pageSize,
+            parseNumber(searchParams.get("page"), 0) * pageSize
+        );
 
-  const pageSize = parseNumber(
-    limit,
-    INITIAL_PAGE_SIZE,
-    undefined,
-    MAX_PAGE_SIZE
-  );
+        const itemTypes = await getItemTypes();
 
-  return typedjson({
-    ...(await getItems(
-      {
-        query: query ?? undefined,
-        name: name ?? undefined,
-        status: status ?? undefined,
-        types: type ?? undefined,
-      },
-      pageSize,
-      parseNumber(page, 0) * pageSize
-    )),
-    statuses: [
-      "Outstanding",
-      "Available",
-      ...itemStatuses.map((tag) => tag.name),
-    ],
-    types: await prisma.tag.findMany({
-      where: {
-        category: "Item Type",
-      },
-    }),
-  });
+        const itemLocations = await getItemLocations();
+
+        const tags = await getTags({});
+
+        console.log("itemResult", itemResult.totalCount);
+
+        console.log("itemCount", itemResult.data?.length);
+
+        return typedjson({
+            items: itemResult.data,
+            totalCount: itemResult.totalCount,
+            error: itemResult.error,
+            statuses: STATUS_OPTIONS,
+            itemTypes: itemTypes.data,
+            itemLocations: itemLocations.data,
+            tags: tags,
+        });
+    } catch (error) {
+        return typedjson({
+            items: undefined,
+            totalCount: undefined,
+            statuses: undefined,
+            itemTypes: undefined,
+            itemLocations: undefined,
+            tags: undefined,
+            error: handleError(error),
+        });
+    }
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+    switch (request.method) {
+        case "DELETE":
+            return typedjson(await deleteItems(await request.json()));
+        default:
+            throw new Response("Method Not Allowed", { status: 405 });
+    }
 };
 
 export default function Page() {
-  const matches = useMediaQuery("(min-width: 62em)");
-  const data = useTypedLoaderData<typeof loader>();
+    const desktopOnly = useDesktopOnly();
+    const data = useTypedLoaderData<typeof loader>();
 
-  return matches === undefined ? (
-    <Center w="100%" h="100%">
-      <Loader />
-    </Center>
-  ) : matches ? (
-    <ItemTable
-      data={data?.items}
-      totalCount={data?.totalCount}
-      statuses={data.statuses}
-      types={data.types}
-    />
-  ) : (
-    <ItemList data={data?.items} totalCount={data?.totalCount} />
-  );
+    return desktopOnly === undefined ? (
+        <Center w="100%" h="100%">
+            <Loader />
+        </Center>
+    ) : (
+        <Box pos="relative" w="100%" h="100%" p="sm">
+            {desktopOnly ? (
+                <ItemTable
+                    data={data.items}
+                    totalCount={data.totalCount}
+                    statuses={data.statuses ?? []}
+                    types={data.itemTypes ?? []}
+                    locations={data.itemLocations ?? []}
+                    tags={data.tags?.tags ?? []}
+                />
+            ) : (
+                <ItemList data={data?.items} totalCount={data?.totalCount} />
+            )}
+        </Box>
+    );
 }

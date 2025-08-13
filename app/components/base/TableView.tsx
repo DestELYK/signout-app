@@ -13,6 +13,8 @@ import { useEffect, useMemo, useState } from "react";
 import { INITIAL_PAGE_SIZE, MAX_PAGE_SIZE } from "~/utils/consts";
 import { parseNumber } from "~/utils/utils";
 
+// TODO - Move to separate files
+
 export interface TableViewProps<T extends MRT_RowData> {
     data: T[] | undefined;
     columns: MRT_ColumnDef<T>[];
@@ -112,9 +114,14 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
 
         filters?.forEach((filter) => {
             if (filter.value) {
+                const newValue = handleColumnFilter?.(filter.id, filter.value, "get");
+
+                if (newValue === undefined) {
+                    return;
+                }
                 newFilters.push({
                     id: filter.id,
-                    value: handleColumnFilter?.(filter.id, filter.value, "get") ?? filter.value,
+                    value: newValue,
                 });
             }
         }) ?? [];
@@ -122,7 +129,7 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
         if (newFilters != _columnFilters) {
             setColumnFilters(newFilters);
         }
-    }, [filters]);
+    }, [filters, handleColumnFilter]);
 
     const table = useMantineReactTable<T>({
         data: data ?? [],
@@ -143,7 +150,7 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
         renderDetailPanel: renderDetailPanel ?? undefined,
         enableTableFooter: true,
         mantineTableContainerProps: {
-            style: { height: "calc(100dvh - 21rem)", minHeight: 300 },
+            style: { height: "calc(100dvh - 19rem)", minHeight: 300 },
         },
         mantineTableBodyRowProps: (row) => ({
             onClick: () => onRowClick?.(row.row.original),
@@ -239,7 +246,6 @@ export default function TableView<T extends MRT_RowData & { id: number }>({
             );
 
             if (added.length > 0 || removed.length > 0) {
-                console.log("Column filters changed", added, removed);
                 setColumnFilters(newValue);
                 setSearchParams(
                     (prev) => {

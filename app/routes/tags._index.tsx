@@ -47,13 +47,13 @@ export default function Page() {
                 <Text c="dimmed">No tag selected</Text>
             </Center>
         </Card>
-    ) : data === undefined ? (
+    ) : desktopOnly === undefined || data === undefined ? (
         <Stack w="100%" h="100%" justify="center" align="center">
             <Loader />
             <Text className="loading-text">Loading</Text>
         </Stack>
     ) : (
-        <Stack w="100%" h="100%">
+        <Stack w="100%" p="md">
             <Box w="100%" h={40}>
                 <ScrollArea w="100%" type="always" scrollbars="x" offsetScrollbars="x">
                     <SegmentedControl
@@ -81,7 +81,6 @@ export default function Page() {
             </Box>
             <ListView
                 w="100%"
-                h="calc(100% - 40px)"
                 initialItemsPerPage={30}
                 data={data.tags}
                 showPagination={false}

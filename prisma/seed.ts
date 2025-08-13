@@ -1,10 +1,14 @@
 import { PrismaClient } from "@prisma/client";
-import { randomInt, randomUUID } from "node:crypto";
 
 import dayjs from "dayjs";
 
 import durations from "dayjs/plugin/duration";
-import { DEFAULT_ROLES, DEFAULT_TAGS } from "~/utils/consts.server";
+import { randomInt } from "node:crypto";
+import { createItem, createItemLocation, createItemType } from "~/lib/items.server";
+import { createPerson, createPersonRole } from "~/lib/people.server";
+import { PersonFormType } from "~/lib/schemas";
+import { DEFAULT_ROLES, STATUS_OPTIONS } from "~/utils/consts";
+import { ItemData, PersonData, TagData } from "~/utils/types.server";
 
 dayjs.extend(durations);
 
@@ -82,215 +86,45 @@ const nicknames = [
 const itemList = [
     {
         name: "MacBook",
-        tags: [
-            {
-                name: "Apple",
-            },
-            {
-                name: "MacBook",
-            },
-        ],
     },
     {
         name: "Asus Chromebook",
-        tags: [
-            {
-                name: "Asus",
-            },
-            {
-                name: "Chromebook",
-            },
-        ],
     },
     {
         name: "HP Chromebook",
-        tags: [
-            {
-                name: "HP",
-            },
-            {
-                name: "Chromebook",
-            },
-        ],
     },
     {
         name: "Dell Laptop",
-        tags: [
-            {
-                name: "Dell",
-            },
-            {
-                name: "Laptop",
-            },
-        ],
-    },
-    {
-        name: "Lenovo Laptop",
-        tags: [
-            {
-                name: "Lenovo",
-            },
-            {
-                name: "Laptop",
-            },
-        ],
     },
     {
         name: "USB-C Cable",
-        tags: [
-            {
-                name: "USB-C",
-            },
-            {
-                name: "Cable",
-            },
-            {
-                name: "USB-C Cable",
-            },
-        ],
     },
     {
         name: "Lightning Cable",
-        tags: [
-            {
-                name: "Lightning",
-            },
-            {
-                name: "Cable",
-            },
-            {
-                name: "Lightning Cable",
-            },
-        ],
     },
     {
         name: "USB-A Block",
-        tags: [
-            {
-                name: "USB-A",
-            },
-            {
-                name: "Block",
-            },
-            {
-                name: "USB-A Block",
-            },
-        ],
-    },
-    {
-        name: "Aux Cable",
-        tags: [
-            {
-                name: "Audio",
-            },
-            {
-                name: "Cable",
-            },
-            {
-                name: "Aux Cable",
-            },
-        ],
     },
     {
         name: "USB-C Charger",
-        tags: [
-            {
-                name: "USB-C",
-            },
-            {
-                name: "Charger",
-            },
-            {
-                name: "Laptop Charger",
-            },
-        ],
     },
     {
         name: "MagSafe 2 Charger",
-        tags: [
-            {
-                name: "Apple",
-            },
-            {
-                name: "MagSafe",
-            },
-            {
-                name: "Charger",
-            },
-            {
-                name: "Laptop Charger",
-            },
-        ],
     },
     {
         name: "Micro-USB Cable",
-        tags: [
-            {
-                name: "Micro-USB",
-            },
-            {
-                name: "USB-A",
-            },
-            {
-                name: "Cable",
-            },
-            {
-                name: "Micro-USB Cable",
-            },
-        ],
     },
     {
         name: "Mini-USB Cable",
-        tags: [
-            {
-                name: "Mini-USB",
-            },
-            {
-                name: "USB-A",
-            },
-            {
-                name: "Cable",
-            },
-            {
-                name: "Mini-USB Cable",
-            },
-        ],
     },
     {
         name: "USB-C Block",
-        tags: [
-            {
-                name: "USB-C",
-            },
-            {
-                name: "Block",
-            },
-            {
-                name: "USB-C Block",
-            },
-        ],
     },
     {
         name: "USB-C Adapter",
-        tags: [
-            {
-                name: "USB-C",
-            },
-            {
-                name: "Adapter",
-            },
-        ],
     },
     {
         name: "USB-C Hub",
-        tags: [
-            {
-                name: "USB-C",
-            },
-            {
-                name: "Hub",
-            },
-        ],
     },
 ];
 
@@ -298,342 +132,235 @@ const LOREM_IPSUM =
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris ut purus in odio sagittis egestas in et massa. Suspendisse porttitor fermentum felis id euismod. Mauris tempus urna a quam blandit, et suscipit neque sodales. Morbi laoreet pretium eros a fringilla. Nunc quis ligula varius, ornare augue et, sagittis justo. Fusce sit amet lacinia ex. Aliquam condimentum dui id tortor volutpat, ut euismod enim vestibulum. Integer porta, tortor at feugiat pharetra, sem ante ultrices libero, at consequat purus nibh in metus. Aliquam molestie nulla ut ligula mollis, eu venenatis urna pretium. Nam tempus ipsum lorem. Quisque a est euismod, aliquam elit a, sodales lectus";
 
 async function main() {
-    for (let i = 0; i < DEFAULT_TAGS.length; i++) {
-        try {
-            await prisma.tag.create({
-                data: {
-                    ...DEFAULT_TAGS[i],
-                },
-            });
-        } catch (e) {
-            console.error(e);
-        }
+    const tags: TagData[] = [];
+
+    for (let i = 0; i < 20; i++) {
+        const tag = await prisma.tag.create({
+            data: {
+                name: `Tag ${i}`,
+                category: "default",
+                color: "#54c0ff",
+            },
+        });
+
+        tags.push({
+            id: tag.id,
+            name: tag.name,
+            color: tag.color,
+            category: tag.category,
+            hidden: tag.hidden,
+            priority: tag.priority,
+        });
     }
 
-    for (let i = 0; i < DEFAULT_ROLES.length; i++) {
-        try {
-            await prisma.personRole.create({
-                data: {
-                    ...DEFAULT_ROLES[i],
-                },
-            });
-        } catch (e) {
-            console.error(e);
-        }
-    }
+    const roles = (await Promise.all(DEFAULT_ROLES.map((role) => createPersonRole(role))))
+        .map((result) => {
+            if (result.data) {
+                return result.data;
+            }
+        })
+        .filter((role) => role !== undefined);
 
-    const personRoles = await prisma.personRole.findMany();
-
-    const itemStatus = await prisma.tag.findMany({
-        where: { category: "Item Status" },
-    });
-
-    const itemTypeTags = await prisma.tag.findMany({
-        where: { category: "Item Type" },
-    });
-
-    const location = await prisma.tag.findFirstOrThrow({
-        where: { name: "Helpdesk" },
-    });
-
-    for (let i = 0; i < 150; i++) {
-        const listItem = itemList[randomInt(0, itemList.length)];
-        const description = randomInt(0, 100) > 50 ? LOREM_IPSUM.slice(0, 100) : null;
-        const notes =
-            randomInt(0, 100) > 50
-                ? LOREM_IPSUM.slice(0, randomInt(50, 200)).replaceAll(" ", "\n")
-                : null;
-
-        const item = {
-            ...listItem,
-            name: `${listItem.name} ${randomInt(1, 50)}`,
+    let people: PersonData[] = [];
+    for (let i = 0; i < 100; i++) {
+        const person: PersonFormType = {
+            firstName: firstNames[randomInt(firstNames.length)],
+            lastName: lastNames[randomInt(lastNames.length)],
+            role: { id: roles[randomInt(roles.length)].id },
+            tags: Array(randomInt(0, 5))
+                .fill(0)
+                .map(() => tags[randomInt(tags.length)]),
         };
 
         try {
-            const tagIds = await prisma.tag.findMany({
-                where: {
-                    OR: item.tags.map((t) => {
-                        return { name: t.name };
-                    }),
-                },
-                select: {
-                    id: true,
-                },
-            });
-            tagIds.push(location);
-            await prisma.item.create({
-                data: {
-                    ...item,
-                    locationId: location.id,
-                    description: description ?? undefined,
-                    notes: notes ?? undefined,
-                    tags: {
-                        connect: tagIds,
-                    },
-                    qrCode: randomUUID(),
-                },
-            });
-        } catch (e) {
+            const result = await createPerson(person);
+
+            if (result.error) {
+                throw new Error();
+            }
+
+            if (result.data) {
+                people.push(result.data);
+            }
+        } catch (e: any) {
+            i--;
             continue;
         }
     }
 
-    for (let i = 0; i < 100; i++) {
+    const itemTypes = (
+        await Promise.all(itemList.map((item) => createItemType({ name: item.name })))
+    )
+        .map((result) => result.data)
+        .filter((itemType) => itemType !== undefined);
+
+    const locations = [(await createItemLocation({ name: "Helpdesk" })).data].filter(
+        (location) => location !== undefined
+    );
+
+    let items: ItemData[] = [];
+    for (let i = 0; i < 50; i++) {
         try {
-            const firstName = firstNames[randomInt(firstNames.length)];
-            const lastName = lastNames[randomInt(lastNames.length)];
-            const nickname =
-                randomInt(0, 100) > 75 ? nicknames[randomInt(nicknames.length)] : undefined;
-            const role = personRoles[randomInt(personRoles.length)];
-            const personQrCode =
-                randomInt(0, 100) > 50 ? randomInt(100000, 999999).toString() : undefined;
+            const type = itemTypes[randomInt(itemTypes.length)];
+            const name = `${type.name} ${randomInt(0, 50)}`;
+            const location = locations[0];
+            const description =
+                randomInt(0, 100) > 50
+                    ? LOREM_IPSUM.slice(randomInt(0, 100), randomInt(100, 200)).slice(0, 50)
+                    : undefined;
             const notes =
                 randomInt(0, 100) > 50
-                    ? LOREM_IPSUM.slice(0, randomInt(50, 200)).replaceAll(" ", "\n")
-                    : null;
-
-            await prisma.person.create({
-                data: {
-                    firstName: firstName,
-                    lastName: lastName,
-                    role: {
-                        connect: {
-                            id: role.id,
-                        },
-                    },
-                    tags: {
-                        connect: {
-                            id: role.id,
-                        },
-                    },
-                    notes: notes ?? undefined,
-                    qrCode: personQrCode,
-                    ...(nickname && { nickname: nickname }),
-                },
+                    ? LOREM_IPSUM.slice(randomInt(0, 100), randomInt(100, 200)).replaceAll(
+                          " ",
+                          "\n"
+                      )
+                    : undefined;
+            const result = await createItem({
+                name,
+                type,
+                description,
+                location,
+                notes,
+                tags: Array(randomInt(0, 5))
+                    .fill(0)
+                    .map(() => tags[randomInt(tags.length)]),
             });
 
-            // const dateReturned = outCount >= 15 ? new Date() : ((randomInt(1)) ? new Date() : null)
+            if (result.error) {
+                throw new Error(result.error);
+            }
 
-            // const status =  dateReturned ? "IN" : "OUT"
-
-            // const loan = await prisma.loan.create({
-            //     data: {
-            //         person: {
-            //             create: {
-            //                 firstName: firstName,
-            //                 lastName: lastName,
-            //                 role: role,
-            //                 qrCode: personQrCode
-            //             }
-            //         },
-            //         items: {
-            //             create: [
-            //                 {
-            //                     item: {
-            //                         create: {
-            //                             name: item.name,
-            //                             type: item.type,
-            //                             status: status
-            //                         }
-            //                     },
-            //                     dateLoaned: new Date(),
-            //                     dateReturned: dateReturned
-            //                 }
-            //             ]
-            //         }
-            //     }
-            // })
-
-            // if (status === "OUT") {
-            //     outCount++;
-            // }
+            if (result.data) {
+                items.push(result.data);
+            }
         } catch (e) {
-            console.error(e);
+            i--;
             continue;
         }
     }
 
-    const items = await prisma.item.findMany();
-    const people = await prisma.person.findMany();
-    const loanInfoTags = await prisma.tag.findMany({
-        where: { category: "Loan Info" },
+    console.log("Creating item info");
+    const itemInfo = items.map((item) => {
+        let currentDate = dayjs()
+            .subtract(randomInt(300, 365), "day")
+            .set("second", 0)
+            .set("millisecond", 0);
+
+        return {
+            itemId: item.id,
+            loans: Array(50)
+                .fill(0)
+                .map(() => {
+                    const randomPerson = people[randomInt(people.length)];
+                    const dateLoaned = currentDate.toDate();
+                    const dateReturned = currentDate.add(randomInt(1, 500), "hour").toDate();
+
+                    currentDate = dayjs(dateReturned).add(randomInt(1, 500), "minute");
+
+                    if (currentDate.isAfter(dayjs())) {
+                        return undefined;
+                    }
+
+                    return {
+                        personId: randomPerson.id,
+                        dateLoaned: dateLoaned,
+                        dateReturned: dateReturned,
+                    };
+                })
+                .filter((loan) => loan !== undefined),
+        };
     });
 
-    const noItems: number[] = [];
+    for (let i = 0; i < itemInfo.length; i++) {
+        const item = itemInfo[i];
 
-    let currentDate = dayjs()
-        .subtract(dayjs.duration({ months: 6 }))
-        .set("hour", 8)
-        .set("minute", 0)
-        .set("second", 0)
-        .set("millisecond", 0);
+        await prisma.item.update({
+            where: {
+                id: item.itemId,
+            },
+            data: {
+                createdDate: item.loans[0].dateLoaned,
+            },
+        });
 
-    // Creates 1000 loaned items for testing
-    for (let i = 0, o = 0; i < 100; i++, o++) {
-        console.log("Current Date: %s", currentDate.format("YYYY-MM-DD HH:mm:ss"));
+        console.log("Creating %i loans for item %i", item.loans.length, item.itemId);
+        for (let j = 0; j < item.loans.length; j++) {
+            try {
+                const loan = item.loans[j];
 
-        const item = items[randomInt(0, items.length)];
-        const person = people[randomInt(0, people.length)];
-        let dateCreated = dayjs(currentDate).add(
-            dayjs.duration({ minutes: randomInt(2, 30), seconds: randomInt(0, 60) })
-        );
-        console.log("Date Created: %s", dateCreated.format("YYYY-MM-DD HH:mm:ss"));
-
-        const tags =
-            randomInt(0, 100) > 60 ? loanInfoTags[randomInt(loanInfoTags.length)] : undefined;
-
-        try {
-            const lastItem = await prisma.loanedItem.findFirst({
-                where: { itemId: item.id },
-                include: {
-                    loan: {
-                        include: {
-                            person: true,
+                const createdLoan = await prisma.loan.create({
+                    data: {
+                        createdDate: loan.dateLoaned,
+                        updatedDate: loan.dateReturned,
+                        person: {
+                            connect: {
+                                id: loan.personId,
+                            },
+                        },
+                        items: {
+                            create: {
+                                item: {
+                                    connect: {
+                                        id: item.itemId,
+                                    },
+                                },
+                                status: "returned",
+                                createdDate: loan.dateLoaned,
+                                updatedDate: loan.dateReturned,
+                                dateLoaned: loan.dateLoaned,
+                                dateReturned: loan.dateReturned,
+                                returnedBy: {
+                                    connect: {
+                                        id:
+                                            randomInt(0, 100) > 50
+                                                ? loan.personId
+                                                : people[randomInt(people.length)].id,
+                                    },
+                                },
+                            },
+                        },
+                        tags: {
+                            connect: Array(randomInt(0, 5))
+                                .fill(0)
+                                .map(() => ({ id: tags[randomInt(tags.length)].id })),
                         },
                     },
-                },
-                orderBy: {
-                    dateLoaned: "desc",
-                },
-            });
+                });
 
-            if (lastItem) {
-                if (lastItem.dateReturned) {
-                    dateCreated = dayjs(lastItem.dateReturned).add(
-                        dayjs.duration({
-                            minutes: randomInt(2, 120),
-                            seconds: randomInt(0, 60),
-                        })
-                    );
-                    console.log(
-                        "Date Created After Return: %s",
-                        dateCreated.format("YYYY-MM-DD HH:mm:ss")
-                    );
-                } else {
-                    const dateReturned = dayjs(lastItem.dateLoaned).add(
-                        dayjs.duration({
-                            days: randomInt(0, 3),
-                            minutes: randomInt(2, 120),
-                            seconds: randomInt(0, 60),
-                        })
-                    );
-                    console.log(
-                        "Date Loaned: %s",
-                        dayjs(lastItem.dateLoaned).format("YYYY-MM-DD HH:mm:ss")
-                    );
-                    console.log("Date Returned: %s", dateReturned.format("YYYY-MM-DD HH:mm:ss"));
+                console.log("Created loan %i", createdLoan.id);
 
-                    await prisma.loanedItem.update({
+                if (j === item.loans.length - 1) {
+                    const randomStatus = STATUS_OPTIONS[randomInt(0, STATUS_OPTIONS.length)].id;
+
+                    const updatedItem = await prisma.loanedItem.update({
                         where: {
                             loanId_itemId: {
-                                itemId: lastItem.itemId,
-                                loanId: lastItem.loanId,
+                                loanId: createdLoan.id,
+                                itemId: item.itemId,
                             },
                         },
                         data: {
-                            dateReturned: dateReturned.toDate(),
-                            returnedBy: {
-                                connect: {
-                                    id: lastItem.loan.personId,
-                                },
-                            },
+                            dateReturned: randomStatus === "out" ? null : loan.dateReturned,
+                            status: randomStatus,
+                            returnedById: randomStatus === "out" ? null : undefined,
                         },
                     });
 
-                    dateCreated = dayjs(
-                        dateReturned.isAfter(dateCreated) ? dateReturned : dateCreated
-                    ).add(dayjs.duration({ minutes: randomInt(2, 30) }));
-                    console.log(
-                        "Date Created After Update: %s",
-                        dateCreated.format("YYYY-MM-DD HH:mm:ss")
-                    );
+                    console.log("Updated item %i status to %s", item.itemId, randomStatus);
                 }
-            } else {
-                await prisma.item.update({
-                    where: { id: item.id },
-                    data: {
-                        createdDate: dateCreated.toDate(),
-                        updatedDate: dateCreated.toDate(),
-                    },
-                });
+            } catch (e: any) {
+                console.error(e.message);
             }
-
-            await prisma.loan.create({
-                data: {
-                    person: {
-                        connect: {
-                            id: person.id,
-                        },
-                    },
-                    items: {
-                        create: {
-                            item: {
-                                connect: {
-                                    id: item.id,
-                                },
-                            },
-                            dateLoaned: dateCreated.toDate(),
-                            createdDate: dateCreated.toDate(),
-                            updatedDate: dateCreated.toDate(),
-                        },
-                    },
-                    tags: {
-                        connect: tags,
-                    },
-                    createdDate: dateCreated.toDate(),
-                    updatedDate: dateCreated.toDate(),
-                },
-            });
-        } catch (e) {
-            console.warn("Skipping %i", i);
-        }
-
-        console.log();
-
-        currentDate = dayjs(dateCreated)
-            .set("hour", 8)
-            .add(
-                dayjs.duration({
-                    days: randomInt(0, 3),
-                    hours: randomInt(1, 3),
-                    minutes: randomInt(2, 30),
-                })
-            );
-    }
-
-    const loanedItems = await prisma.loanedItem.findMany({
-        select: {
-            itemId: true,
-            loanId: true,
-            dateLoaned: true,
-            dateReturned: true,
-        },
-    });
-
-    for (let i = 0; i < loanedItems.length; i++) {
-        const generateInvalid = randomInt(0, 100) > 50;
-
-        if (generateInvalid) {
-            await prisma.item.update({
-                where: { id: loanedItems[i].itemId },
-                data: {
-                    tags: {
-                        connect: {
-                            id: itemStatus[randomInt(itemStatus.length)].id,
-                        },
-                    },
-                },
-            });
         }
     }
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+    .then(async () => {
+        await prisma.$disconnect();
+    })
+    .catch(async (e) => {
+        console.error(e);
+        await prisma.$disconnect();
+        process.exit(1);
+    });

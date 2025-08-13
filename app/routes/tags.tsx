@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Card,
     Center,
     Flex,
@@ -8,11 +9,11 @@ import {
     Modal,
     NavLink,
     Paper,
+    Stack,
     Text,
 } from "@mantine/core";
 import { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { NavLink as NavLinkRemix, Outlet, useNavigate, useSearchParams } from "@remix-run/react";
-import { IconPlus } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import TabbedContentView from "~/components/TabbedContentView";
 import TitlePage from "~/components/TitlePage";
@@ -21,29 +22,25 @@ import TagForm from "~/components/forms/TagForm";
 import { handleError } from "~/lib/db.server";
 import { useCreateModal, useDesktopOnly } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
-import { TagFormSchema } from "~/lib/schemas";
+import { TagFormSchema, TagQuerySchema } from "~/lib/schemas";
+import { getTags } from "~/lib/tags.server";
+import { parseNumber } from "~/utils/utils";
 
 export const meta: MetaFunction = () => {
     return [{ title: "Tags | SJK Sign-Out" }];
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-    const url = new URL(request.url);
+    const searchParams = new URL(request.url).searchParams;
 
-    const category = url.searchParams.get("category");
-    const query = url.searchParams.get("q") || url.searchParams.get("query");
+    const limit = parseNumber(searchParams.get("limit"), 30);
 
     try {
-        const tags = await prisma.tag.findMany({
-            where: {
-                ...(category && { category: category }),
-                ...(query && {
-                    name: {
-                        contains: query,
-                    },
-                }),
-            },
-        });
+        const tags = await getTags(
+            TagQuerySchema.parse(searchParams.entries()),
+            limit,
+            parseNumber(searchParams.get("page"), 0)
+        );
 
         const categories = await prisma.tag.groupBy({
             by: ["category"],
@@ -56,25 +53,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         });
 
         return typedjson({
-            tags: tags,
-            totalCount: await prisma.tag.count(),
+            ...tags,
             categories: categories,
-            error: undefined,
         });
     } catch (e) {
-        const error = handleError(e, "no tag was returned");
-
-        if (error) {
-            return typedjson({
-                error: error,
-                tags: undefined,
-                categories: undefined,
-            });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
+        return typedjson({
+            error: handleError(e, "getting tags"),
+            tags: undefined,
+            categories: undefined,
+            totalCount: undefined,
+        });
     }
 };
 
@@ -83,8 +71,6 @@ export async function action({ request }: ActionFunctionArgs) {
         switch (request.method) {
             case "POST":
                 const newTag = TagFormSchema.parse(await request.json());
-
-                // TODO - blacklist categories that can't be hidden
 
                 const result = await prisma.tag.create({
                     data: {
@@ -135,6 +121,12 @@ export default function Page() {
         );
     };
 
+    const rightSection = (
+        <Button onClick={() => open()} color="blue">
+            Create Tag
+        </Button>
+    );
+
     return (
         <>
             <Modal opened={opened} onClose={close} centered={true} title={"Create New Tag"}>
@@ -150,18 +142,14 @@ export default function Page() {
                     onResult={(data) => {
                         close();
 
-                        navigate(`/tags/${data.tag?.id}`);
+                        navigate(`/tags/${data.data?.id}`);
                     }}
                     validateInputOnBlur={false}
                 />
             </Modal>
 
-            <TitlePage
-                title="Tags"
-                buttonText="Create New Tag"
-                buttonIcon={<IconPlus />}
-                onButtonClick={() => open(true)}
-            >
+            <Stack h="calc(100dvh - 60px)" gap={0}>
+                <TitlePage title="Tags" rightSection={rightSection} />
                 {data.error ? (
                     <Center w="100%" h="100%">
                         <Text c="error">{data.error}</Text>
@@ -171,14 +159,7 @@ export default function Page() {
                         <Loader />
                     </Center>
                 ) : desktopOnly ? (
-                    <Flex
-                        w="100%"
-                        h="100%"
-                        direction="row"
-                        wrap="nowrap"
-                        gap="md"
-                        style={{ overflowY: "hidden" }}
-                    >
+                    <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="md" p="md">
                         <Card w="50%" h="100%" withBorder>
                             <TabbedContentView
                                 h="100%"
@@ -208,69 +189,40 @@ export default function Page() {
                                 ]}
                                 current={searchParams.get("category") ?? "all"}
                                 onChange={(value) => onChange(value ?? "all")}
+                            />
+                            <ListView
+                                initialItemsPerPage={30}
+                                data={data.tags}
+                                showPagination={false}
+                                withQRCode={false}
+                                searchPlaceholder="Search for tags..."
+                                emptyText="No tags found"
+                                w="100%"
+                                h="100%"
+                                withinParent
                             >
-                                <ListView
-                                    initialItemsPerPage={30}
-                                    data={data.tags}
-                                    showPagination={false}
-                                    withQRCode={false}
-                                    searchPlaceholder="Search for tags..."
-                                    emptyText="No tags found"
-                                >
-                                    {(tag, query) => (
-                                        <NavLink
-                                            key={tag.id}
-                                            to={`/tags/${tag.id}?${searchParams.toString()}`}
-                                            component={NavLinkRemix}
-                                            leftSection={
-                                                <Paper
-                                                    withBorder
-                                                    radius={24}
-                                                    w={24}
-                                                    h={24}
-                                                    style={{ backgroundColor: tag.color }}
-                                                />
-                                            }
-                                            label={
-                                                <Highlight highlight={query ?? ""}>
-                                                    {tag.name}
-                                                </Highlight>
-                                            }
-                                        />
-                                    )}
-                                </ListView>
-                            </TabbedContentView>
-                            {/* <Card.Section mb="sm">
-				<Tabs
-				  w="100%"
-				  value={searchParams.get("category") ?? "all"}
-				  onChange={(value) => onChange(value ?? "all")}
-				>
-				  <Tabs.List>
-					<Tabs.Tab value="all">
-					  <Group gap="xs">
-						All
-						<Text c="dimmed" size="xs">
-						  ({data.totalCount})
-						</Text>
-					  </Group>
-					</Tabs.Tab>
-					{data.categories.map((category) => (
-					  <Tabs.Tab
-						key={category.category}
-						value={category.category}
-					  >
-						<Group gap="xs">
-						  {category.category}
-						  <Text c="dimmed" size="xs">
-							({category._count.category})
-						  </Text>
-						</Group>
-					  </Tabs.Tab>
-					))}
-				  </Tabs.List>
-				</Tabs>
-			  </Card.Section> */}
+                                {(tag, query) => (
+                                    <NavLink
+                                        key={tag.id}
+                                        to={`/tags/${tag.id}?${searchParams.toString()}`}
+                                        component={NavLinkRemix}
+                                        leftSection={
+                                            <Paper
+                                                withBorder
+                                                radius={24}
+                                                w={24}
+                                                h={24}
+                                                style={{ backgroundColor: tag.color }}
+                                            />
+                                        }
+                                        label={
+                                            <Highlight highlight={query ?? ""}>
+                                                {tag.name}
+                                            </Highlight>
+                                        }
+                                    />
+                                )}
+                            </ListView>
                         </Card>
                         <Box w="50%" h="100%">
                             <Outlet />
@@ -279,7 +231,7 @@ export default function Page() {
                 ) : (
                     <Outlet />
                 )}
-            </TitlePage>
+            </Stack>
         </>
     );
 }

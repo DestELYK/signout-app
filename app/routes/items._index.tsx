@@ -1,11 +1,12 @@
 import { BarChart } from "@mantine/charts";
 import {
+    Box,
     Card,
     Center,
     Flex,
     Group,
-    Loader,
     ScrollArea,
+    Skeleton,
     Stack,
     Text,
     Title,
@@ -19,23 +20,31 @@ import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
 import ItemList from "~/components/items/ItemList";
 import { useDesktopOnly } from "~/lib/hooks";
-import { getInvalidItems, getItemTypes } from "~/lib/items.server";
-import { prisma } from "~/lib/prisma.server";
-import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
+import {
+    getItemCount as getItemsCount,
+    getItemsGroupedByType,
+    getItemStatusCount,
+    getOutstandingItemsCount,
+} from "~/lib/items.server";
 
 export const loader = async () => {
-    const itemTypes = await getItemTypes();
-    const invalidItems = await getInvalidItems();
+    const itemsByType = await getItemsGroupedByType();
+    const invalidItems = await getItemStatusCount();
+    const totalItems = await getItemsCount();
+    const outstandingItems = await getOutstandingItemsCount();
+
+    if (itemsByType.error || invalidItems.error || totalItems.error || outstandingItems.error) {
+        throw new Error(
+            itemsByType.error || invalidItems.error || totalItems.error || outstandingItems.error
+        );
+    }
 
     return typedjson({
-        itemsByType: itemTypes.itemsByType,
-        itemTypes: itemTypes.itemTypes,
-        itemStatuses: invalidItems.statusCount,
-        totalItems: await prisma.item.count(),
-        outstandingItems: await prisma.item.count({
-            where: { loans: { some: { dateReturned: null } } },
-        }),
-        invalidItems: invalidItems.invalidItems,
+        itemsByType: itemsByType.data,
+        itemStatuses: invalidItems.data,
+        totalItems: totalItems.data,
+        outstandingItems: outstandingItems.data,
+        invalidItems: invalidItems.data,
     });
 };
 
@@ -48,34 +57,34 @@ export default function Page() {
 
     return (
         <>
-            {desktopOnly === undefined ? (
-                <Stack w="100%" h="100%" justify="center" align="center">
-                    <Loader />
-                    <Text className="loading-text">Loading</Text>
-                </Stack>
+            {desktopOnly === undefined || data === undefined ? (
+                <Box w="100%" h="100%" pos="relative" p="sm">
+                    <Skeleton w="100%" h="100%" />
+                </Box>
             ) : desktopOnly ? (
                 //#region Desktop
-                <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="sm" visibleFrom="md">
-                    <Stack w="100%" h="100%">
+                <Flex
+                    w="100%"
+                    h="100%"
+                    direction="row"
+                    wrap="nowrap"
+                    gap="sm"
+                    visibleFrom="md"
+                    pos="relative"
+                    p="sm"
+                >
+                    <Stack w={{ md: "60%", lg: "65%" }} h="100%">
                         <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
                             <Card withBorder>
-                                <StatView label="Total Items" value={data.totalItems} />
+                                <StatView label="Total Items" value={data.totalItems ?? 0} />
                             </Card>
-                            <Card withBorder>
-                                <StatView
-                                    label="Total Outstanding Items"
-                                    value={data.outstandingItems}
-                                    color={OUT_COLOR}
-                                    onClick={() => navigate("/items/list?status=outstanding")}
-                                />
-                            </Card>
-                            {data.itemStatuses &&
-                                Object.keys(data.itemStatuses).length > 0 &&
-                                Object.entries(data.itemStatuses).map(
-                                    ([status, { count, color }]) => (
+                            {data.itemStatuses?.statusCount &&
+                                Object.keys(data.itemStatuses?.statusCount).length > 0 &&
+                                Object.entries(data.itemStatuses?.statusCount).map(
+                                    ([status, { name, count, color }]) => (
                                         <Card key={status} withBorder>
                                             <StatView
-                                                label={status}
+                                                label={name}
                                                 value={count}
                                                 color={color}
                                                 onClick={() =>
@@ -89,19 +98,21 @@ export default function Page() {
                                 )}
                         </Group>
                         <InfoView title="Current Inventory">
-                            {data.itemsByType && data.itemsByType.length > 0 ? (
+                            {data.itemsByType?.itemByTypes &&
+                            data.itemsByType.itemByTypes.length > 0 ? (
                                 <BarChart
                                     w="100%"
                                     h="100%"
-                                    p="md"
+                                    p="sm"
                                     orientation="vertical"
-                                    data={data.itemsByType.map(
-                                        ({ type, available, outstanding }) => ({
-                                            itemType: type,
-                                            available: available,
-                                            outstanding: outstanding,
-                                        })
-                                    )}
+                                    data={data.itemsByType.itemByTypes.map((i) => ({
+                                        itemType: i.type,
+                                        available: i.statusCount["returned"],
+                                        out:
+                                            i.statusCount["out"] +
+                                            i.statusCount["lost"] +
+                                            i.statusCount["unknown"],
+                                    }))}
                                     type="stacked"
                                     dataKey="itemType"
                                     barChartProps={{
@@ -122,13 +133,13 @@ export default function Page() {
                                     series={[
                                         {
                                             name: "available",
+                                            color: "green",
                                             label: "Available",
-                                            color: IN_COLOR,
                                         },
                                         {
-                                            name: "outstanding",
+                                            name: "out",
+                                            color: "red",
                                             label: "Outstanding",
-                                            color: OUT_COLOR,
                                         },
                                     ]}
                                 />
@@ -143,25 +154,21 @@ export default function Page() {
                     <InfoView
                         title={`Invalid Items`}
                         cardProps={{
-                            w: "auto",
+                            w: { md: "40%", lg: "35%" },
+                            h: "100%",
                             padding: 0,
-                            miw: { md: 300, lg: 350, xl: 400 },
+                            pos: "relative",
                         }}
                     >
                         <ItemList
-                            data={data.invalidItems?.map((item) => ({
-                                id: item.id,
-                                name: item.name,
-                                tags: [item.status],
-                                lastLoan: {
-                                    ...item.lastLoan,
-                                    loanedDate: item.lastLoan.date,
-                                },
-                            }))}
-                            totalCount={data.invalidItems?.length}
+                            data={data.invalidItems?.items ?? []}
+                            totalCount={data.invalidItems?.items.length ?? 0}
                             withSearch={false}
                             initialItemsPerPage={20}
                             showPagination={false}
+                            withinParent
+                            w="100%"
+                            h="100%"
                         />
                     </InfoView>
                     {
@@ -173,52 +180,56 @@ export default function Page() {
                 //#region Mobile
                 <Flex
                     w="100%"
-                    h="100%"
                     align="center"
                     direction="column"
                     wrap="nowrap"
                     gap="sm"
                     hiddenFrom="md"
+                    p="sm"
                 >
-                    <ScrollArea w="100%" type="always" scrollbars="x" offsetScrollbars="x">
-                        <Flex
-                            h={100}
-                            direction="row"
-                            wrap="nowrap"
-                            gap="md"
-                            justify="center"
-                            align="stretch"
-                        >
-                            <Card miw={150} withBorder>
-                                <StatView label="Total Items" value={data.totalItems} />
-                            </Card>
-                            <Card miw={150} withBorder>
-                                <StatView
-                                    label="Total Outstanding Items"
-                                    value={data.outstandingItems}
-                                    color={OUT_COLOR}
-                                />
-                            </Card>
-                            {data.itemStatuses &&
-                                Object.keys(data.itemStatuses).length > 0 &&
-                                Object.entries(data.itemStatuses).map(
-                                    ([status, { count, color }]) => (
-                                        <Card key={status} miw={150} withBorder>
-                                            <StatView label={status} value={count} color={color} />
-                                        </Card>
-                                    )
-                                )}
-                        </Flex>
-                    </ScrollArea>
+                    <Box w="100%" pos="relative">
+                        <ScrollArea w="100%" type="always" scrollbars="x" offsetScrollbars="x">
+                            <Flex
+                                h={100}
+                                direction="row"
+                                wrap="nowrap"
+                                gap="md"
+                                justify="center"
+                                align="stretch"
+                            >
+                                <Card miw={150} withBorder>
+                                    <StatView label="Total Items" value={data.totalItems ?? 0} />
+                                </Card>
+                                {data.itemStatuses?.statusCount &&
+                                    Object.keys(data.itemStatuses.statusCount).length > 0 &&
+                                    Object.entries(data.itemStatuses.statusCount).map(
+                                        ([status, { count, name, color }]) => (
+                                            <Card key={status} miw={150} withBorder>
+                                                <StatView
+                                                    label={name}
+                                                    value={count}
+                                                    color={color}
+                                                />
+                                            </Card>
+                                        )
+                                    )}
+                            </Flex>
+                        </ScrollArea>
+                    </Box>
 
                     <InfoView title="Current Inventory" cardProps={{ padding: 0 }}>
                         <ListView
-                            data={data.itemsByType?.map((i) => ({ id: i.typeId, ...i })) ?? []}
+                            data={
+                                data.itemsByType?.itemByTypes.map((i) => ({
+                                    id: i.typeId,
+                                    ...i,
+                                })) ?? []
+                            }
                             withSearch={false}
                             showPagination={false}
                             withOffset={false}
                         >
-                            {({ type, available, outstanding }) => (
+                            {({ type, statusCount }) => (
                                 <UnstyledButton
                                     w="100%"
                                     className="list-item"
@@ -231,8 +242,15 @@ export default function Page() {
                                         </Title>
                                         <Group>
                                             <Stack gap={0}>
-                                                <Text c={IN_COLOR}>{available} available</Text>
-                                                <Text c={OUT_COLOR}>{outstanding} outstanding</Text>
+                                                <Text c="green">
+                                                    {statusCount["returned"]} available
+                                                </Text>
+                                                <Text c="red">
+                                                    {statusCount["out"] +
+                                                        statusCount["lost"] +
+                                                        statusCount["unknown"]}{" "}
+                                                    outstanding
+                                                </Text>
                                             </Stack>
                                             <IconChevronRight />
                                         </Group>

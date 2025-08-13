@@ -1,4 +1,5 @@
 import {
+    Box,
     Center,
     Collapse,
     Divider,
@@ -12,12 +13,13 @@ import {
     Text,
     UnstyledButton,
 } from "@mantine/core";
-import { useForm } from "@mantine/form";
+import { useField } from "@mantine/form";
 import { useNavigation, useSearchParams } from "@remix-run/react";
 import { IconSearch } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { INITIAL_PAGE_SIZE } from "~/utils/consts";
-import QRInputField from "../QRInputField";
+import QRInputField from "./QRInputField";
 
 // TODO - implement importing and exporting data
 // TODO - allow filtering the list
@@ -40,12 +42,15 @@ export interface ListViewProps<T extends { id: number }> {
     withOffset?: boolean;
     withQRCode?: boolean;
     searchPlaceholder?: string;
-    children: (item: T, query?: string, qrCode?: string) => React.ReactNode;
+    rightSearchSection?: React.ReactNode;
+    withinParent?: boolean;
+    error?: string;
+    children: (item: T, query?: string, qrCodeUsed?: boolean) => React.ReactNode;
 }
 
 export default function ListView<T extends { id: number }>({
-    w = "100%",
-    h = "100%",
+    w,
+    h,
     orientation = "vertical",
     emptyText = "No entries for section",
     data = [],
@@ -55,8 +60,11 @@ export default function ListView<T extends { id: number }>({
     initialItemsPerPage = INITIAL_PAGE_SIZE,
     showPagination = true,
     withOffset = true,
+    rightSearchSection,
     withQRCode = true,
     searchPlaceholder = "Search...",
+    withinParent = false,
+    error,
     children,
 }: ListViewProps<T>) {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -72,28 +80,30 @@ export default function ListView<T extends { id: number }>({
 
     const filteredItems = data && data.length > itemsPerPage ? data.slice(0, itemsPerPage) : data;
 
-    const form = useForm({
-        validateInputOnChange: true,
-        initialValues: { query: "", qrCode: "" },
-        onValuesChange: (values) => {},
-        validate: {
-            query: (value) => {
-                if (value && /[^A-Z0-9- ]+/gi.test(value)) {
-                    return "Invalid characters used";
-                }
-            },
+    const [qrCodeUsed, setQRCodeUsed] = useState(false);
+
+    const searchField = useField({
+        initialValue: "",
+        clearErrorOnChange: true,
+        validateOnBlur: false,
+        validateOnChange: true,
+        validate: (value) => {
+            const result = z
+                .string()
+                .regex(/^[a-zA-Z0-9-_\s]+$|^$/)
+                .max(100)
+                .safeParse(value);
+
+            if (!result.success) {
+                return "Invalid search query";
+            }
         },
     });
 
-    const searchQuery = searchParams.get("q");
+    const searchQuery = searchParams.get("qrCode") || searchParams.get("q");
     useEffect(() => {
-        form.setFieldValue("query", searchQuery || "");
+        searchField.setValue(searchQuery || "");
     }, [searchQuery]);
-
-    const searchQrCode = searchParams.get("qrCode");
-    useEffect(() => {
-        form.setFieldValue("qrCode", searchQrCode || "");
-    }, [searchQrCode]);
 
     const searchPage = searchParams.get("page");
     useEffect(() => {
@@ -106,29 +116,52 @@ export default function ListView<T extends { id: number }>({
     }, [searchLimit]);
 
     return (
-        <Flex w={w} h={h} direction="column" align="center">
+        <Flex pos="relative" w={w} h={h} direction="column" align="center">
             {withSearch && (
                 <Stack w="100%" gap={0}>
                     <QRInputField
                         icon={<IconSearch />}
                         withQRCode={withQRCode}
                         placeholder={searchPlaceholder}
+                        rightSection={rightSearchSection}
                         loading={
                             navigation.location &&
                             new URLSearchParams(navigation.location.search).has("q")
                         }
-                        onChanged={(value, qrScanned) => {
-                            if (qrScanned) {
-                                form.setFieldValue("query", "");
-                                form.setFieldValue("qrCode", value);
-                            } else {
-                                form.setFieldValue("query", value);
-                                form.setFieldValue("qrCode", "");
-                            }
+                        value={searchField.getValue()}
+                        onScan={(result) => {
+                            setQRCodeUsed(true);
+                            searchField.setValue(result.data);
+                            setSearchParams(
+                                (prev) => {
+                                    prev.set("qrCode", result.data);
+                                    prev.delete("q");
+                                    return prev;
+                                },
+                                { replace: true }
+                            );
+                        }}
+                        onClear={() => {
+                            setQRCodeUsed(false);
+                            searchField.setValue("");
+                            setSearchParams(
+                                (prev) => {
+                                    prev.delete("qrCode");
+                                    prev.delete("q");
+                                    return prev;
+                                },
+                                { replace: true }
+                            );
+                        }}
+                        error={searchField.error}
+                        onChange={(value) => {
+                            setQRCodeUsed(false);
+                            searchField.setValue(value);
 
-                            if (!form.validate().hasErrors) {
+                            searchField.validate().then(() => {
                                 setSearchParams(
                                     (prev) => {
+                                        prev.delete("qrCode");
                                         if (!value || value === "") {
                                             prev.delete("q");
                                         } else {
@@ -139,135 +172,146 @@ export default function ListView<T extends { id: number }>({
                                     },
                                     { replace: true }
                                 );
-                            }
+                            });
                         }}
                     />
                     {filteredItems.length > 0 && <Divider my="sm" />}
                 </Stack>
             )}
-            {filteredItems.length === 0 && (data !== undefined || !loading) ? (
-                <Center w="100%" h="100%" p="xl">
-                    <Text>{emptyText}</Text>
-                </Center>
-            ) : orientation === "horizontal" ? (
-                <ScrollArea
-                    w="100%"
-                    h="100%"
-                    type="auto"
-                    scrollbarSize={20}
-                    scrollbars="x"
-                    offsetScrollbars={withOffset ? "x" : undefined}
-                    viewportRef={scrollRef}
-                >
-                    <Flex
+            <Box w="100%" h="100%" pos="relative">
+                {error !== undefined && error.length > 0 ? (
+                    <Center w="100%" h="100%">
+                        <Text c="error">{error}</Text>
+                    </Center>
+                ) : filteredItems.length === 0 && (data !== undefined || !loading) ? (
+                    <Center w="100%" h="100%" p="xl">
+                        <Text>{emptyText}</Text>
+                    </Center>
+                ) : orientation === "horizontal" ? (
+                    <ScrollArea
+                        pos={withinParent ? "absolute" : undefined}
                         w="100%"
                         h="100%"
-                        direction="row"
-                        justify="center"
-                        align="center"
-                        wrap="nowrap"
+                        type="auto"
+                        scrollbarSize={20}
+                        scrollbars="x"
+                        offsetScrollbars={withOffset ? "x" : undefined}
+                        viewportRef={scrollRef}
                     >
-                        {data === undefined || loading
-                            ? Array(initialItemsPerPage)
-                                  .fill(0)
-                                  .map((_, index) => (
-                                      <Group key={index}>
-                                          {index !== 0 && (
-                                              <Divider h="100%" orientation="vertical" />
-                                          )}
-                                          <Skeleton w={100} />
-                                      </Group>
-                                  ))
-                            : filteredItems.length > 0 &&
-                              filteredItems.map((item, index) => (
-                                  <Flex
-                                      direction="row"
-                                      key={item.id}
-                                      justify="center"
-                                      align="center"
-                                  >
-                                      {index !== 0 && <Divider h="100%" orientation="vertical" />}
-                                      {children(item, form.values.query, form.values.qrCode)}
-                                  </Flex>
-                              ))}
-                        {!showPagination && data.length > itemsPerPage && (
-                            <>
-                                <Divider h="100%" orientation="vertical" />
-                                <UnstyledButton
-                                    className="list-item"
-                                    w="100%"
-                                    onClick={() =>
-                                        setItemsPerPage((itemsPerPage) =>
-                                            Math.min(totalCount, itemsPerPage + 10)
-                                        )
-                                    }
-                                    p="sm"
-                                >
-                                    <Text miw={100} c="dimmed" size="sm" ta="center">
-                                        Tap to view more entries
-                                    </Text>
-                                </UnstyledButton>
-                            </>
-                        )}
-                    </Flex>
-                </ScrollArea>
-            ) : (
-                <ScrollArea
-                    w="100%"
-                    h="100%"
-                    type="auto"
-                    scrollbars="y"
-                    offsetScrollbars={withOffset ? "y" : undefined}
-                    viewportRef={scrollRef}
-                >
-                    <Flex w="100%" direction="column" align="center" wrap="nowrap">
-                        {data === undefined || loading
-                            ? Array(initialItemsPerPage)
-                                  .fill(0)
-                                  .map((_, index) => (
-                                      <Stack w="100%" key={index}>
+                        <Flex
+                            h="100%"
+                            direction="row"
+                            justify="center"
+                            align="stretch"
+                            wrap="nowrap"
+                        >
+                            {data === undefined || loading
+                                ? Array(initialItemsPerPage)
+                                      .fill(0)
+                                      .map((_, index) => (
+                                          <Group key={index}>
+                                              {index !== 0 && <Divider orientation="vertical" />}
+                                              <Skeleton w={100} />
+                                          </Group>
+                                      ))
+                                : filteredItems.length > 0 &&
+                                  filteredItems.map((item, index) => (
+                                      <Flex
+                                          direction="row"
+                                          key={item.id}
+                                          justify="center"
+                                          align="stretch"
+                                          pos="relative"
+                                      >
+                                          {index !== 0 && <Divider orientation="vertical" />}
+                                          {children(item, searchField.getValue(), qrCodeUsed)}
+                                      </Flex>
+                                  ))}
+                            {!showPagination && data.length > itemsPerPage && (
+                                <>
+                                    <Divider h="100%" orientation="vertical" />
+                                    <UnstyledButton
+                                        className="list-item"
+                                        w="100%"
+                                        onClick={() =>
+                                            setItemsPerPage((itemsPerPage) =>
+                                                Math.min(totalCount, itemsPerPage + 10)
+                                            )
+                                        }
+                                        p="sm"
+                                    >
+                                        <Text miw={100} c="dimmed" size="sm" ta="center">
+                                            Tap to view more entries
+                                        </Text>
+                                    </UnstyledButton>
+                                </>
+                            )}
+                        </Flex>
+                    </ScrollArea>
+                ) : (
+                    <ScrollArea
+                        pos={withinParent ? "absolute" : undefined}
+                        w="100%"
+                        h="100%"
+                        type="auto"
+                        scrollbars="y"
+                        offsetScrollbars={withOffset ? "y" : undefined}
+                        viewportRef={scrollRef}
+                    >
+                        <Flex
+                            w="100%"
+                            direction="column"
+                            justify="center"
+                            align="stretch"
+                            wrap="nowrap"
+                        >
+                            {data === undefined || loading
+                                ? Array(initialItemsPerPage)
+                                      .fill(0)
+                                      .map((_, index) => (
+                                          <Stack key={index}>
+                                              {index !== 0 && <Divider />}
+                                              <Skeleton h={100} />
+                                          </Stack>
+                                      ))
+                                : filteredItems.length > 0 &&
+                                  filteredItems.map((item, index) => (
+                                      <Flex
+                                          direction="column"
+                                          key={item.id}
+                                          justify="center"
+                                          align="stretch"
+                                      >
                                           {index !== 0 && <Divider w="100%" />}
-                                          <Skeleton w="100%" h={100} />
-                                      </Stack>
-                                  ))
-                            : filteredItems.length > 0 &&
-                              filteredItems.map((item, index) => (
-                                  <Flex
-                                      w="100%"
-                                      direction="column"
-                                      key={item.id}
-                                      justify="center"
-                                      align="center"
-                                  >
-                                      {index !== 0 && <Divider w="100%" />}
-                                      {children(item, form.values.query, form.values.qrCode)}
-                                  </Flex>
-                              ))}
-                        {!showPagination && data.length > itemsPerPage && (
-                            <>
-                                <Divider w="100%" />
-                                <UnstyledButton
-                                    className="list-item"
-                                    w="100%"
-                                    onClick={() =>
-                                        setItemsPerPage((itemsPerPage) =>
-                                            Math.min(totalCount, itemsPerPage + 10)
-                                        )
-                                    }
-                                    p="sm"
-                                >
-                                    <Text c="dimmed" size="sm" ta="center">
-                                        {data.length - itemsPerPage} more entries...
-                                    </Text>
-                                    <Text c="dimmed" size="sm" ta="center">
-                                        Tap to view more entries
-                                    </Text>
-                                </UnstyledButton>
-                            </>
-                        )}
-                    </Flex>
-                </ScrollArea>
-            )}
+                                          {children(item, searchField.getValue(), qrCodeUsed)}
+                                      </Flex>
+                                  ))}
+                            {!showPagination && data.length > itemsPerPage && (
+                                <>
+                                    <Divider w="100%" />
+                                    <UnstyledButton
+                                        className="list-item"
+                                        w="100%"
+                                        onClick={() =>
+                                            setItemsPerPage((itemsPerPage) =>
+                                                Math.min(totalCount, itemsPerPage + 10)
+                                            )
+                                        }
+                                        p="sm"
+                                    >
+                                        <Text c="dimmed" size="sm" ta="center">
+                                            {data.length - itemsPerPage} more entries...
+                                        </Text>
+                                        <Text c="dimmed" size="sm" ta="center">
+                                            Tap to view more entries
+                                        </Text>
+                                    </UnstyledButton>
+                                </>
+                            )}
+                        </Flex>
+                    </ScrollArea>
+                )}
+            </Box>
             {showPagination && (
                 <Collapse w="100%" in={totalCount > itemsPerPage}>
                     <Divider mt="sm" />

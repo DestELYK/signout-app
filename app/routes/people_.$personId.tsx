@@ -1,16 +1,20 @@
 import { Badge, Center, Stack, Text } from "@mantine/core";
 import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { IconClipboard, IconInfoCircle, IconTimeline } from "@tabler/icons-react";
+import { IconClipboard, IconInfoCircle } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
-import invariant from "tiny-invariant";
 import DetailsPage from "~/DetailsPage";
 import EditableNotes from "~/components/EditableNotes";
 import InfoView from "~/components/base/InfoView";
 import LastLoanView from "~/components/loans/LastLoanView";
-import { handleError } from "~/lib/db.server";
-import { prisma } from "~/lib/prisma.server";
-import { LastLoanData, personWithTags } from "~/utils/types.server";
-import { formatFullName, isNumeric } from "~/utils/utils";
+import { deletePerson, getPersonById, updatePerson } from "~/lib/people.server";
+import { formatFullName } from "~/utils/utils";
+
+import { upperFirst } from "@mantine/hooks";
+import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
+import { ActionFunctionArgs } from "@remix-run/node";
+import { useNavigate } from "@remix-run/react";
+import { useFetcherWithErrorHandler } from "~/lib/hooks";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
     return [
@@ -22,142 +26,106 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
-    invariant(params.personId, "Expected params.personId");
+    return typedjson(await getPersonById(params.personId));
+};
 
-    if (!isNumeric(params.personId)) {
-        throw new Response(null, { status: 404 });
-    }
-
-    try {
-        const person = await prisma.person.findFirstOrThrow({
-            where: { id: Number(params.personId) },
-            include: personWithTags.include,
-        });
-
-        // Gather list of loaned items
-        const loans = await prisma.loan.findMany({
-            where: {
-                personId: Number(params.personId),
-            },
-            orderBy: [{ createdDate: "desc" }],
-            include: {
-                tags: true,
-                person: {
-                    include: {
-                        role: true,
-                        tags: true,
-                    },
-                },
-                items: {
-                    include: {
-                        item: {
-                            include: {
-                                tags: true,
-                            },
-                        },
-                        returnedBy: {
-                            include: {
-                                tags: true,
-                            },
-                        },
-                    },
-                },
-            },
-        });
-
-        const loanedItems = loans.flatMap((l) => l.items);
-
-        const outstandingItems = loanedItems.filter((li) => !li.dateReturned).length;
-
-        const lostItems = loanedItems.filter((li) =>
-            li.item.tags.some((t) => t.name === "Lost")
-        ).length;
-
-        const lastLoan: LastLoanData | undefined =
-            loans.length === 0
-                ? undefined
-                : {
-                      id: loans[0].id,
-                      tags: loans[0].tags,
-                      dateLoaned: loans[0].createdDate,
-                      person: loans[0].person,
-                      items: loans[0].items.map((i) => ({
-                          id: i.item.id,
-                          name: i.item.name,
-                          dateReturned: i.dateReturned,
-                          returnedBy: i.returnedBy,
-                      })),
-                  };
-
-        // Calculate average loan time
-        let averageReturnTime = 0;
-        loanedItems.forEach((li) => {
-            if (li.dateReturned) {
-                averageReturnTime += li.dateReturned.getTime() - li.dateLoaned.getTime();
-            }
-        });
-
-        if (loanedItems.length > 0) {
-            averageReturnTime /= loanedItems.length;
-        }
-        return typedjson({
-            person: person,
-            outstandingItems: outstandingItems,
-            lostItems: lostItems,
-            totalItems: loanedItems.length,
-            averageReturnTime: averageReturnTime,
-            lastLoan: lastLoan,
-            error: undefined,
-        });
-    } catch (e) {
-        const error = handleError(e, "no item was returned");
-
-        if (error) {
-            return typedjson({
-                error: error,
-                person: undefined,
-                outstanding: undefined,
-                lostItems: undefined,
-                totalItems: undefined,
-                averageReturnTime: undefined,
-                lastLoan: undefined,
-            });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
+export const action = async ({ params, request }: ActionFunctionArgs) => {
+    switch (request.method) {
+        case "PATCH":
+            return updatePerson(params.personId, await request.json());
+        case "DELETE":
+            return deletePerson(params.personId);
+        default:
+            throw new Response("Method Not Allowed", { status: 405 });
     }
 };
 
 export default function Page() {
-    const data = useTypedLoaderData<typeof loader>();
+    const personData = useTypedLoaderData<typeof loader>();
+    const navigate = useNavigate();
 
-    const personView = data.error ? (
+    const fullName = personData.data ? formatFullName(personData.data) : "Unknown";
+
+    const notificationId = "person-delete";
+
+    const deleteFetcher = useFetcherWithErrorHandler<typeof action>(
+        (data) => {
+            if (data?.data) {
+                notifications.update({
+                    id: notificationId,
+                    message: "Successfully deleted person " + formatFullName(data.data),
+                    loading: false,
+                    autoClose: 5000,
+                    withCloseButton: true,
+                });
+
+                navigate("/people", { replace: true });
+            }
+        },
+        (error) => {
+            notifications.update({
+                id: notificationId,
+                message: error,
+                color: "red",
+                loading: false,
+                autoClose: 5000,
+                withCloseButton: true,
+            });
+        }
+    );
+
+    const handleDelete = () => {
+        modals.openConfirmModal({
+            title: "Delete Person",
+            children: `Are you sure you want to delete ${fullName}?`,
+            onConfirm: () => {
+                notifications.show({
+                    id: notificationId,
+                    message: "Deleting person " + fullName,
+                    loading: true,
+                    autoClose: false,
+                    withCloseButton: true,
+                });
+
+                deleteFetcher.submit(null, { method: "DELETE" });
+            },
+            labels: {
+                cancel: "Cancel",
+                confirm: "Delete",
+            },
+        });
+    };
+
+    const personView = personData.error ? (
         <Center w="100%" h="100%">
-            <Text c="error">{data.error}</Text>
+            <Text c="error">{personData.error}</Text>
         </Center>
-    ) : data.person === undefined ? (
+    ) : personData.data === undefined ? (
         <Center w="100%" h="100%">
             <Text>No person found</Text>
         </Center>
     ) : (
         <Stack w="100%">
-            <LastLoanView w="100%" data={data.lastLoan} showPerson={false} />
+            <LastLoanView
+                w="100%"
+                data={personData.data.lastLoan}
+                showPerson={false}
+                prefix="Last Loan:"
+            />
 
-            <InfoView title="Notes" cardProps={{ h: undefined }}>
+            <InfoView title="Notes" cardProps={{ h: undefined }} headerProps={{ mb: "sm" }}>
                 <EditableNotes
                     //action={`/items/${data.item.id}`}
-                    value={data.person.notes}
+                    value={personData.data.notes}
                     editable
                 />
             </InfoView>
         </Stack>
     );
 
-    return data.error != undefined ? (
+    return personData.error != undefined ? (
         <Center h="100%">
-            <Text c="error">{data.error}</Text>
+            <Text c="error">{personData.error}</Text>
         </Center>
     ) : (
         <DetailsPage
@@ -169,20 +137,32 @@ export default function Page() {
                 loans: {
                     icon: <IconClipboard size={24} />,
                     label: "Loans",
-                },
-                timeline: {
-                    icon: <IconTimeline size={24} />,
-                    label: "Timeline",
+                    count: personData.data?.loansCount,
                 },
             }}
             topSection={
-                <Badge color={data.person.role.color} variant="outline" autoContrast>
-                    {data.person.role.name}
-                </Badge>
+                personData.data &&
+                personData.data.role && (
+                    <Badge color={personData.data.role.color} autoContrast>
+                        {personData.data.role.name}
+                    </Badge>
+                )
             }
-            tags={data.person.tags}
+            bannerText={upperFirst(
+                [
+                    (personData.data?.outstandingItemsCount ?? 0) > 1
+                        ? "more than one outstanding item"
+                        : undefined,
+                    (personData.data?.lostItemsCount ?? 0) > 0 ? "lost items" : undefined,
+                ]
+                    .filter((x) => x)
+                    .join(" & ")
+            )}
+            handleDelete={handleDelete}
+            tags={personData.data?.tags}
+            disabled={personData.error != undefined}
             desktopComponent={personView}
-            title={formatFullName(data.person)}
+            title={personData.data ? formatFullName(personData.data) : "Unknown"}
         />
     );
 }

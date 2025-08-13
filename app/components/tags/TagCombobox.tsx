@@ -10,21 +10,17 @@ import {
     useCombobox,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { Tag } from "@prisma/client";
 import { IconPlus } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 import { loader } from "~/routes/tags";
-import { PostTagFormData } from "~/utils/types.server";
+import { TagData } from "~/utils/types.server";
 import { filterTags } from "~/utils/utils";
 import TagForm from "../forms/TagForm";
 
-export type OnTagSubmit = (values: PostTagFormData) => void;
-export type OnTagSearch = (value: string, category: string) => void;
-
 export type TagComboboxProps = {
-    onTagSearch?: OnTagSearch;
-    onTagsChange?: (value: Tag[], error?: string) => void;
+    onTagSearch?: (value: string, category: string) => void;
+    onTagsChange?: (value: TagData[], error?: string) => void;
     fieldInfo?: {
         label?: string;
         description?: string;
@@ -33,10 +29,11 @@ export type TagComboboxProps = {
     };
     category: string;
     unstyled?: boolean;
+    lockCategory?: boolean;
     autoFocus?: boolean;
     limit?: number;
     error?: string;
-    value?: Tag[];
+    value?: TagData[];
     disabled?: boolean;
     required?: boolean;
 };
@@ -52,6 +49,7 @@ export default function TagCombobox({
     category,
     unstyled,
     autoFocus,
+    lockCategory = true,
     limit = 5,
     error,
     value,
@@ -59,7 +57,7 @@ export default function TagCombobox({
 
     required,
 }: TagComboboxProps) {
-    const [tags, setTags] = useState<Tag[]>(value || []);
+    const [tags, setTags] = useState<TagData[]>(value || []);
     const [search, setSearch] = useState("");
 
     const combobox = useCombobox({
@@ -75,7 +73,7 @@ export default function TagCombobox({
 
     const data =
         searchTagsFetcher.data && searchTagsFetcher.data.tags
-            ? filterTags(searchTagsFetcher.data.tags)
+            ? filterTags(searchTagsFetcher.data.tags ?? [])
             : [];
 
     const handleValueRemove = (val: string) => {
@@ -132,8 +130,7 @@ export default function TagCombobox({
         updateSearch("");
     }, []);
 
-    function updateTags(tags: Tag[]) {
-        console.log(tags);
+    function updateTags(tags: TagData[]) {
         setTags(tags);
         onTagsChange?.(tags);
     }
@@ -149,19 +146,14 @@ export default function TagCombobox({
         <>
             <Modal opened={opened} onClose={close} centered title="Create New Tag">
                 <TagForm
-                    onResult={(data) => {
-                        const tag = data.tag;
+                    onResult={(tagData) => {
+                        const tag = tagData.data;
                         if (tag) {
                             close();
-
+                            const newTags = [...tags, tag];
                             // updates the tags with the new tag
-                            setTags((tags) => {
-                                const newTags = [...tags, tag];
-
-                                onTagsChange?.(newTags);
-
-                                return newTags;
-                            });
+                            setTags(newTags);
+                            onTagsChange?.(newTags);
                             updateSearch("");
                         }
                     }}
@@ -172,7 +164,7 @@ export default function TagCombobox({
                         priority: 0,
                         hidden: false,
                     }}
-                    lockCategory
+                    lockCategory={lockCategory}
                 />
             </Modal>
             <Combobox

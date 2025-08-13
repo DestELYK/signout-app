@@ -16,19 +16,18 @@ import {
     TextInput,
     Tooltip,
 } from "@mantine/core";
-import { Form, useField, useForm } from "@mantine/form";
+import { useForm } from "@mantine/form";
 import { upperFirst, useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { Tag } from "@prisma/client";
-import { useNavigate, useNavigation } from "@remix-run/react";
+import { useNavigation } from "@remix-run/react";
 import { IconArrowBackUp, IconArrowRight, IconPlus } from "@tabler/icons-react";
 import { FormErrors, UseFormReturnType } from "node_modules/@mantine/form/lib/types";
 import React, { useEffect, useRef, useState } from "react";
 import { UseDataFunctionReturn } from "remix-typedjson";
-import { z } from "zod";
 import { useFetcherWithErrorHandler } from "~/lib/hooks";
-import QRInputField from "../QRInputField";
+import { DataReturn } from "~/utils/types.server";
 import TagCombobox from "../tags/TagCombobox";
+import QRInputField from "./QRInputField";
 
 type InputData<T> = {
     type:
@@ -50,10 +49,12 @@ type InputData<T> = {
     disabled?: boolean;
     options?: { value: string; label: string }[];
     sliderMarks?: { value: number; label: string }[];
+    autoComplete?: React.HTMLInputAutoCompleteAttribute;
     min?: number;
     max?: number;
     step?: number;
     category?: string;
+    lockCategory?: boolean;
     groupId?: number;
     handleCustomInput?: (form: UseFormReturnType<T>) => React.ReactNode;
 };
@@ -78,7 +79,7 @@ export interface FormViewProps<T, R> {
     confirmContent?: (values: FormData<T>) => React.ReactNode;
     previewContent?: (values: FormData<T>) => React.ReactNode;
     onSubmit?: (values: FormData<T>) => boolean;
-    onResult?: (data: UseDataFunctionReturn<R>) => void;
+    onResult?: (data: UseDataFunctionReturn<DataReturn<R>>) => void;
 }
 
 export default function FormView<T extends Record<string, any>, R>({
@@ -92,7 +93,7 @@ export default function FormView<T extends Record<string, any>, R>({
     validateInputOnBlur = true,
     validateInputOnChange = true,
     validator,
-    confirmContent = (values) => "Are you sure you want to submit this form?",
+    confirmContent = () => "Are you sure you want to submit this form?",
     previewContent,
     onSubmit,
     onResult,
@@ -101,10 +102,12 @@ export default function FormView<T extends Record<string, any>, R>({
     const [opened, { open, close }] = useDisclosure();
     const formRef = useRef<HTMLFormElement>(null);
     const [notificationId, setNotificationId] = useState<string>();
-    const navigate = useNavigate();
 
     const form = useForm<FormData<T>>({
         mode: "controlled",
+        onValuesChange: (values) => {
+            console.log("Values changed: ", values);
+        },
         clearInputErrorOnChange: true,
         validateInputOnBlur,
         validateInputOnChange,
@@ -112,29 +115,7 @@ export default function FormView<T extends Record<string, any>, R>({
         validate: validator,
     });
 
-    // Only used if there is a tag field
-    const tagField = useField<Tag[]>({
-        initialValue: form.values.tag,
-        validate: (value) => {
-            const result = z.array(z.coerce.number()).nonempty().safeParse(value);
-
-            if (result.success) {
-                return undefined;
-            } else {
-                return result.error.message;
-            }
-        },
-    });
-
-    const formData = {
-        ...form.getValues(),
-        tags:
-            tagField.getValue()?.length > 0
-                ? tagField.getValue().map((tag) => tag.id.toString())
-                : undefined,
-    };
-
-    const fetcher = useFetcherWithErrorHandler<R>(
+    const fetcher = useFetcherWithErrorHandler<DataReturn<R>>(
         (data) => {
             if (data) {
                 notifications.update({
@@ -161,12 +142,6 @@ export default function FormView<T extends Record<string, any>, R>({
                 autoClose: 5000,
                 withCloseButton: true,
             });
-
-            form.setErrors({
-                name: error,
-                color: error,
-                category: error,
-            });
         }
     );
 
@@ -174,7 +149,7 @@ export default function FormView<T extends Record<string, any>, R>({
         if (errors) {
             form.setErrors(errors);
         }
-    }, [errors]);
+    }, [form, errors]);
 
     const loading = navigation.state !== "idle";
 
@@ -211,6 +186,7 @@ export default function FormView<T extends Record<string, any>, R>({
                     .map((s) => upperFirst(s))
                     .join(" "),
             description: value.description,
+            autoComplete: value.autoComplete,
             placeholder: value.placeholder,
             required: value.required,
             disabled: disabled || value.disabled || loading,
@@ -223,7 +199,9 @@ export default function FormView<T extends Record<string, any>, R>({
                     <QRInputField
                         key={key}
                         loading={loading}
-                        onChanged={props.onChange}
+                        value={props.value}
+                        onClear={() => props.onChange("")}
+                        onScan={(result) => props.onChange(result?.data ?? "")}
                         {...props}
                     />
                 );
@@ -251,10 +229,9 @@ export default function FormView<T extends Record<string, any>, R>({
                         error={props.error}
                         limit={value.max}
                         required={props.required}
-                        value={tagField.getValue()}
-                        onTagsChange={(tags) => {
-                            tagField.setValue(tags);
-                        }}
+                        value={props.value}
+                        lockCategory={value.lockCategory}
+                        onTagsChange={props.onChange}
                     />
                 );
             case "checkbox":
@@ -288,7 +265,11 @@ export default function FormView<T extends Record<string, any>, R>({
                     </InputWrapper>
                 );
             case "custom":
-                return value.handleCustomInput ? value.handleCustomInput(form) : null;
+                return (
+                    <Box key={key}>
+                        {value.handleCustomInput !== undefined && value.handleCustomInput(form)}
+                    </Box>
+                );
             default:
                 return <TextInput key={key} {...props} />;
         }
@@ -297,13 +278,28 @@ export default function FormView<T extends Record<string, any>, R>({
     const buttons = (
         <Group justify="end">
             <Tooltip label="Reset form" position="left">
-                <ActionIcon variant="outline" size="input-sm" color="red" type="reset">
+                <ActionIcon
+                    variant="outline"
+                    size="input-sm"
+                    color="red"
+                    onClick={() => {
+                        form.reset();
+                    }}
+                >
                     <IconArrowBackUp />
                 </ActionIcon>
             </Tooltip>
             <Button
                 rightSection={method === "POST" ? <IconPlus /> : <IconArrowRight />}
-                type="submit"
+                onClick={(event) => {
+                    if (!onSubmit || (onSubmit && onSubmit(form.values))) {
+                        if (confirmContent !== undefined) {
+                            open();
+                        } else {
+                            submit();
+                        }
+                    }
+                }}
             >
                 {method === "POST" ? "Create" : "Update"}
                 {submitLabel ? ` ${submitLabel}` : ""}
@@ -344,49 +340,46 @@ export default function FormView<T extends Record<string, any>, R>({
         </>
     );
 
+    function submit() {
+        setNotificationId(
+            notifications.show({
+                message: `${method === "POST" ? "Creating" : "Updating"} ${
+                    submitLabel ? submitLabel.toLocaleLowerCase() : ""
+                }`,
+                loading: true,
+                autoClose: false,
+                withCloseButton: false,
+            })
+        );
+
+        fetcher.submit(form.values, {
+            action,
+            method,
+            encType: "application/json",
+        });
+        close();
+    }
+
     return (
         <Box w="100%" h="100%">
             <LoadingOverlay visible={loading} zIndex={1000} />
             <Modal title={`Confirm ${submitLabel}`} centered opened={opened} onClose={close}>
-                {confirmContent(formData)}
+                {confirmContent(form.values)}
                 <Group mt="auto" justify="end">
                     <Button onClick={close} variant="outline">
                         Cancel
                     </Button>
                     <Button
                         onClick={() => {
-                            setNotificationId(
-                                notifications.show({
-                                    message: `${method === "POST" ? "Creating" : "Updating"} ${
-                                        submitLabel ? submitLabel.toLocaleLowerCase() : ""
-                                    }`,
-                                    loading: true,
-                                    autoClose: false,
-                                    withCloseButton: false,
-                                })
-                            );
-
-                            fetcher.submit(formData, {
-                                action,
-                                method,
-                                encType: "application/json",
-                            });
-                            close();
+                            submit();
                         }}
                     >
                         Confirm
                     </Button>
                 </Group>
             </Modal>
-            <Form
-                form={form}
+            <form
                 ref={formRef}
-                onSubmit={() => {
-                    if (!onSubmit || (onSubmit && onSubmit(formData))) {
-                        open();
-                    }
-                }}
-                onReset={form.onReset}
                 style={{
                     width: "100%",
                     height: "100%",
@@ -396,7 +389,7 @@ export default function FormView<T extends Record<string, any>, R>({
                 }}
             >
                 {formContent}
-            </Form>
+            </form>
         </Box>
     );
 }

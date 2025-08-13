@@ -12,7 +12,7 @@ export default function Page() {
     const category = data
         ? {
               name: data.tag?.category ?? "Unknown",
-              count: data.categoryCount,
+              count: data.categoryCount?.find((c) => c.category === data.tag?.category)?.count ?? 0,
           }
         : undefined;
 
@@ -53,24 +53,24 @@ export default function Page() {
                 </Text>
                 <Space mt="auto" />
                 <Group>
-                    {data.tag._count.items > 0 && (
+                    {data.itemCount && data.itemCount > 0 && (
                         <StatView
                             label="Items"
-                            value={data.tag._count.items}
+                            value={data.itemCount}
                             onClick={() => navigate("/items")}
                         />
                     )}
-                    {data.tag._count.loans > 0 && (
+                    {data.loanCount && data.loanCount > 0 && (
                         <StatView
                             label="Loans"
-                            value={data.tag._count.loans}
+                            value={data.loanCount}
                             onClick={() => navigate("/loans")}
                         />
                     )}
-                    {data.tag._count.people > 0 && (
+                    {data.personCount && data.personCount > 0 && (
                         <StatView
                             label="People"
-                            value={data.tag._count.people}
+                            value={data.personCount}
                             onClick={() => navigate("/people")}
                         />
                     )}

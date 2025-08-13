@@ -1,26 +1,14 @@
 import { Button, Center, Group, Loader, ScrollArea, Stack, Text, Title } from "@mantine/core";
-import { useForm } from "@mantine/form";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
-import { Tag } from "@prisma/client";
 import { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import {
-    Outlet,
-    useLocation,
-    useNavigate,
-    useNavigation,
-    useParams,
-    useSearchParams,
-} from "@remix-run/react";
-import { useEffect } from "react";
-import { redirect, typedjson, useTypedLoaderData } from "remix-typedjson";
+import { Outlet, useLocation, useNavigate, useNavigation, useSearchParams } from "@remix-run/react";
+import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import invariant from "tiny-invariant";
 import InfoView from "~/components/base/InfoView";
-import { handleError } from "~/lib/db.server";
 import { useDesktopOnly, useFetcherWithErrorHandler } from "~/lib/hooks";
 import { prisma } from "~/lib/prisma.server";
-import { deleteTag, updateTag } from "~/lib/tags.server";
-import { isNumeric } from "~/utils/utils";
+import { deleteTag, getTagById, updateTag } from "~/lib/tags.server";
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
     return [
@@ -33,59 +21,73 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 export const loader = async ({ params }: LoaderFunctionArgs) => {
     invariant(params.tagId, "Expected params.tagId");
 
-    const tagId = params.tagId;
+    const result = await getTagById(params.tagId);
 
-    try {
-        if (!isNumeric(tagId)) return redirect("/tags");
-
-        const tag = await prisma.tag.findUniqueOrThrow({
-            where: {
-                id: Number(tagId),
-            },
-            include: {
-                _count: {
-                    select: {
-                        items: true,
-                        loans: true,
-                        people: true,
-                    },
-                },
-            },
-        });
-
-        const categoryCount = await prisma.tag.groupBy({
+    const categoryCount =
+        result.tag &&
+        (await prisma.tag.groupBy({
             by: ["category"],
             orderBy: {
                 category: "asc",
             },
             where: {
-                category: tag.category,
+                category: result.tag?.category,
             },
             _count: {
                 category: true,
             },
-        });
+        }));
 
-        return typedjson({
-            tag: tag,
-            categoryCount: categoryCount.length > 0 ? categoryCount[0]._count.category : 0,
-            error: undefined,
-        });
-    } catch (e) {
-        const error = handleError(e, "no tag was returned");
+    const itemCount =
+        result.tag &&
+        (await prisma.item.count({
+            where: {
+                tags: {
+                    some: {
+                        id: result.tag.id,
+                    },
+                },
+            },
+        }));
 
-        if (error) {
-            return typedjson({
-                error: error,
-                tag: undefined,
-                categoryCount: undefined,
-            });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
-    }
+    const personCount =
+        result.tag &&
+        (await prisma.person.count({
+            where: {
+                tags: {
+                    some: {
+                        id: result.tag.id,
+                    },
+                },
+            },
+        }));
+
+    const loanCount =
+        result.tag &&
+        (await prisma.loan.count({
+            where: {
+                person: {
+                    tags: {
+                        some: {
+                            id: result.tag.id,
+                        },
+                    },
+                },
+            },
+        }));
+
+    return typedjson({
+        tag: result.tag,
+        error: result.error,
+        categoryCount:
+            categoryCount?.map((c) => ({
+                category: c.category,
+                count: c._count?.category,
+            })) ?? undefined,
+        itemCount: itemCount,
+        personCount: personCount,
+        loanCount: loanCount,
+    });
 };
 
 export const action = async ({ params, request }: ActionFunctionArgs) => {
@@ -109,18 +111,6 @@ export default function Page() {
     const [searchParams] = useSearchParams();
     const desktopOnly = useDesktopOnly();
 
-    const params = useParams();
-
-    const form = useForm<Omit<Tag, "id">>({});
-
-    useEffect(() => {
-        if (data.tag) {
-            form.setValues({
-                ...data.tag,
-            });
-        }
-    }, [data.tag]);
-
     const editing = location.pathname.endsWith("edit");
 
     const loading =
@@ -142,30 +132,33 @@ export default function Page() {
         (data) => {
             if (data.tag) {
                 notifications.show({
-                    message: <>Deleted tag: {/* <b>{data.tag.name}</b>. */}</>,
+                    message: (
+                        <>
+                            Deleted tag: <b>{data.tag.name}</b>.
+                        </>
+                    ),
                 });
 
                 navigate("/tags");
             }
         },
         (error) => {
-            form.setErrors({
-                name: error,
-                color: error,
+            notifications.show({
+                message: error,
+                color: "red",
             });
         }
     );
 
     function handleDelete() {
         // TODO - implement prompt to move all items to another tag
-        // TODO - implement redirect to tags page
         modals.openConfirmModal({
             title: "Confirm Deletion",
             centered: true,
             children: (
                 <Text>
                     This action is irreversible, are you sure you want to delete the tag named{" "}
-                    <b>{form.values.name}</b>?
+                    <b>{data.tag?.name}</b>?
                 </Text>
             ),
             labels: {
@@ -179,7 +172,12 @@ export default function Page() {
                 modals.openConfirmModal({
                     title: "Confirm Deletion",
                     centered: true,
-                    children: <Text>Confirm if you want to delete the tag</Text>,
+                    children: (
+                        <Text>
+                            This will remove this tag from all loans, items and people. Are you sure
+                            you want to continue?
+                        </Text>
+                    ),
                     labels: {
                         confirm: "Yes",
                         cancel: "No",
@@ -189,7 +187,7 @@ export default function Page() {
                     },
                     onConfirm: () => {
                         modals.closeAll();
-                        deleteFetcher.submit(form.values, {
+                        deleteFetcher.submit(null, {
                             method: "DELETE",
                             encType: "application/json",
                         });
@@ -208,7 +206,7 @@ export default function Page() {
     const bottomSection = (
         <Group mt="auto" grow>
             <Button
-                disabled={loading}
+                disabled={loading || data.tag === undefined}
                 onClick={() =>
                     editing
                         ? navigate(-1)
@@ -221,7 +219,11 @@ export default function Page() {
                 {editing ? "Cancel" : "Edit"}
             </Button>
             {!editing && (
-                <Button disabled={loading} onClick={() => handleDelete()} color="red">
+                <Button
+                    disabled={loading || data.tag === undefined}
+                    onClick={() => handleDelete()}
+                    color="red"
+                >
                     Delete
                 </Button>
             )}

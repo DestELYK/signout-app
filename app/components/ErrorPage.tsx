@@ -1,45 +1,42 @@
-import { Center, Paper, Stack, Text, Title } from "@mantine/core";
+import { Button, Center, Paper, Stack, Text, Title } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import { Link, isRouteErrorResponse } from "@remix-run/react";
 
 export default function ErrorPage({ error }: { error: any }) {
-  if (isRouteErrorResponse(error)) {
-    switch (error.status) {
-      case 404:
-        error.statusText = "Not Found";
-        break;
-      case 500:
-        error.statusText = "Server Error";
-        break;
-      default:
-        error.statusText = "Unknown Status";
+    notifications.clean();
+
+    const errorData = {
+        title: "Server Error Occurred",
+        message: "An error occurred while trying to load this page.",
+    };
+
+    if (isRouteErrorResponse(error)) {
+        switch (error.status) {
+            case 404:
+                errorData.title = `${error.status} - Not Found`;
+                break;
+            case 500:
+                errorData.title = `${error.status} - Server Error`;
+                break;
+            default:
+                errorData.title = `${error.status} - Unknown Status`;
+                break;
+        }
+    } else if (error instanceof Error) {
+        errorData.message = error.message;
     }
 
     return (
-      <Center w="100%" h="100%">
-        <Paper p="5rem" shadow="md" withBorder>
-          <Stack>
-            <Title>
-              {error.status} - {error.statusText}
-            </Title>
-            <Text ta="center">{error.data}</Text>
-            <Link to="/report">Fill out this error report form</Link>
-          </Stack>
-        </Paper>
-      </Center>
+        <Center w="100%" h="100%" p="lg">
+            <Paper p="5rem" shadow="md" withBorder>
+                <Stack>
+                    <Title>{errorData.title}</Title>
+                    <Text ta="center">{errorData.message}</Text>
+                    <Button component={Link} to="/report">
+                        Fill out this error report form
+                    </Button>
+                </Stack>
+            </Paper>
+        </Center>
     );
-  } else if (error instanceof Error) {
-    return (
-      <Center w="100%" h="100%">
-        <Paper p="5rem" shadow="md" withBorder>
-          <Stack>
-            <Title>Server Error Occurred</Title>
-            <Text>{error.message}</Text>
-            <Link to="/report">Fill out this report form</Link>
-          </Stack>
-        </Paper>
-      </Center>
-    );
-  } else {
-    return <></>;
-  }
 }

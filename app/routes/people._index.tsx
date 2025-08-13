@@ -1,5 +1,5 @@
 import { BarChart } from "@mantine/charts";
-import { Card, Center, Flex, Group, Loader, Stack, Text } from "@mantine/core";
+import { Box, Card, Center, Flex, Group, Skeleton } from "@mantine/core";
 import { useNavigate, useNavigation } from "@remix-run/react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import InfoView from "~/components/base/InfoView";
@@ -9,20 +9,32 @@ import { useDesktopOnly } from "~/lib/hooks";
 import {
     getPeople,
     getPeopleWithInvalidItems,
-    getPeopleRoleCounts as getRoleCount,
+    getPersonRoleCount as getRoleCount,
 } from "~/lib/people.server";
 import { prisma } from "~/lib/prisma.server";
-import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
+import { formatFullName } from "~/utils/utils";
 
 export const loader = async () => {
     const roleCount = await getRoleCount();
 
-    const peopleWithInvalidItems = await getPeopleWithInvalidItems();
+    const invalidItemsResult = await getPeopleWithInvalidItems();
+    const outstandingLoansResult = await getPeople({ outstanding: true });
 
     return typedjson({
-        roleLoans: roleCount.roleCounts ?? [],
-        peopleWithInvalidItems: peopleWithInvalidItems.peopleWithInvalidItems ?? [],
-        peopleWithOutstandingLoans: (await getPeople({ outstanding: true })).people ?? [],
+        roleLoans: roleCount.data ?? [],
+        peopleWithLostItemsCount: invalidItemsResult.data?.length ?? 0,
+        peopleWithOutstandingLoans:
+            outstandingLoansResult.data?.sort((a, b) => {
+                if (a.lostItemsCount && !b.lostItemsCount) {
+                    return -1;
+                } else if (!a.lostItemsCount && b.lostItemsCount) {
+                    return 1;
+                } else if (a.lostItemsCount && b.lostItemsCount) {
+                    return a.lostItemsCount - b.lostItemsCount;
+                } else {
+                    return formatFullName(a).localeCompare(formatFullName(b));
+                }
+            }) ?? [],
         totalPeople: await prisma.person.count(),
     });
 };
@@ -36,16 +48,26 @@ export default function Page() {
 
     return (
         <>
-            {desktopOnly === undefined ? (
-                <Stack w="100%" h="100%" justify="center" align="center">
-                    <Loader />
-                    <Text className="loading-text">Loading</Text>
-                </Stack>
+            {desktopOnly === undefined || data === undefined ? (
+                <Box w="100%" h="100%" pos="relative" p="sm">
+                    <Skeleton w="100%" h="100%" />
+                </Box>
             ) : desktopOnly ? (
                 //#region Desktop
-                <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="sm" visibleFrom="md">
-                    <Stack w={{ md: "60%", lg: "65%" }} h="100%">
-                        <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
+                <Flex
+                    w="100%"
+                    h="100%"
+                    direction="row"
+                    wrap="nowrap"
+                    gap="sm"
+                    visibleFrom="md"
+                    pos="relative"
+                    p="sm"
+                    align="stretch"
+                    justify="stretch"
+                >
+                    <Flex direction="column" pos="relative" w={{ md: "60%", lg: "65%" }} gap="sm">
+                        <Group align="stretch" grow style={{ flexWrap: "nowrap" }}>
                             <Card withBorder>
                                 <StatView label="People" value={data.totalPeople} />
                             </Card>
@@ -53,13 +75,13 @@ export default function Page() {
                                 <StatView
                                     label="People with Outstanding Loans"
                                     value={data.peopleWithOutstandingLoans.length}
-                                    color={OUT_COLOR}
+                                    color="red"
                                 />
                             </Card>
                             <Card w={150} withBorder>
                                 <StatView
-                                    label="People with Invalid Items"
-                                    value={data.peopleWithInvalidItems.length}
+                                    label="People with Lost Items"
+                                    value={data.peopleWithLostItemsCount}
                                     color="red"
                                 />
                             </Card>
@@ -68,7 +90,7 @@ export default function Page() {
                             {data.roleLoans && data.roleLoans.length > 0 ? (
                                 <BarChart
                                     w="100%"
-                                    h="calc(100% - 20px)"
+                                    h="100%"
                                     p="sm"
                                     orientation="vertical"
                                     data={data.roleLoans.map(({ role, loanCount, returnCount }) => {
@@ -95,31 +117,15 @@ export default function Page() {
                                     xAxisProps={{ allowDecimals: false, tickCount: 10 }}
                                     yAxisProps={{ width: 80, interval: 0, axisLine: true }}
                                     series={[
-                                        { name: "loaned", label: "Loans", color: OUT_COLOR },
-                                        { name: "returned", label: "Returns", color: IN_COLOR },
+                                        { name: "loaned", label: "Loans", color: "red" },
+                                        { name: "returned", label: "Returns", color: "green" },
                                     ]}
                                 />
                             ) : (
                                 <Center h={200}>No data</Center>
                             )}
                         </InfoView>
-                        {/* <InfoView cardProps={{ h: 300 }}>
-                            <PeopleList
-                                data={data.peopleWithInvalidItems.map((person) => ({
-                                    ...person,
-                                    tags: undefined,
-                                }))}
-                                totalCount={data.peopleWithInvalidItems.length}
-                                orientation="horizontal"
-                                withOffset={true}
-                                initialItemsPerPage={20}
-                                emptyText="No people found"
-                                showPagination={false}
-                                withSearch={false}
-                                hideRole={true}
-                            />
-                        </InfoView> */}
-                    </Stack>
+                    </Flex>
                     <InfoView
                         title={`People with Outstanding Loans`}
                         cardProps={{
@@ -135,6 +141,9 @@ export default function Page() {
                             showPagination={false}
                             withSearch={false}
                             withOffset={false}
+                            withinParent
+                            w="100%"
+                            h="100%"
                         />
                     </InfoView>
                 </Flex>
@@ -143,14 +152,14 @@ export default function Page() {
                 //#region Mobile
                 <Flex
                     w="100%"
-                    h="100%"
                     align="center"
                     direction="column"
                     wrap="nowrap"
                     gap="sm"
                     hiddenFrom="md"
+                    p="sm"
                 >
-                    <Group w="100%" h={100} align="stretch" grow style={{ flexWrap: "nowrap" }}>
+                    <Group w="100%" h={120} align="stretch" grow style={{ flexWrap: "nowrap" }}>
                         <Card withBorder>
                             <StatView label="People" value={data.totalPeople} />
                         </Card>
@@ -158,30 +167,28 @@ export default function Page() {
                             <StatView
                                 label="People with Outstanding Loans"
                                 value={data.peopleWithOutstandingLoans.length}
-                                color={OUT_COLOR}
+                                color="red"
                             />
                         </Card>
                         <Card w={150} withBorder>
                             <StatView
-                                label="People with Invalid Items"
-                                value={data.peopleWithInvalidItems.length}
+                                label="People with Lost Items"
+                                value={data.peopleWithLostItemsCount}
                                 color="red"
                             />
                         </Card>
                     </Group>
 
                     <InfoView title={`People with Outstanding Loans`}>
-                        <Card.Section h="calc(100% - 20px)">
-                            <PeopleList
-                                data={data.peopleWithOutstandingLoans}
-                                totalCount={data.peopleWithOutstandingLoans.length}
-                                initialItemsPerPage={20}
-                                emptyText="No people found"
-                                showPagination={false}
-                                withSearch={false}
-                                withOffset={false}
-                            />
-                        </Card.Section>
+                        <PeopleList
+                            data={data.peopleWithOutstandingLoans}
+                            totalCount={data.peopleWithOutstandingLoans.length}
+                            initialItemsPerPage={20}
+                            emptyText="No people found"
+                            showPagination={false}
+                            withSearch={false}
+                            withOffset={false}
+                        />
                     </InfoView>
                 </Flex>
                 //#endregion

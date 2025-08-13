@@ -19,8 +19,8 @@ export default function Page() {
                 hidden: data.tag.hidden,
             }}
             onResult={(result) => {
-                if (result.tag) {
-                    navigate(`/tags/${result.tag?.id}`);
+                if (result.data) {
+                    navigate(`/tags/${result.data?.id}`);
                 } else {
                     navigate("/tags");
                 }

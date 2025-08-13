@@ -18,13 +18,13 @@ model Person {
   firstName String
   lastName  String
   nickname  String?
-  role      PersonRole @relation(fields: [roleId], references: [id])
-  tags      Tag[]
+  role      PersonRole @relation(fields: [roleId], references: [id], onDelete: Restrict)
   notes     String     @default("") @db.VarChar(200)
-  studentId String? 
+  schoolId String?   @unique
 
   loans         Loan[]
   returnedItems LoanedItem[]
+  tags          Tag[]
 
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
@@ -41,28 +41,55 @@ model PersonRole {
   color       String @default("#000000") @db.VarChar(7)
 
   people Person[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @updatedAt
 }
 
 model Item {
   id          Int     @id @default(autoincrement())
-  qrCode      String?
+  uuid        String  @unique
   name        String  @unique
-  description String  @default("") @db.VarChar(50)
-  notes       String  @default("") @db.VarChar(200)
+  description String? @db.VarChar(50)
+  notes       String? @db.VarChar(200)
 
-  tags Tag[]
+  location Location    @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  type     ItemType    @relation(fields: [typeId], references: [id], onDelete: Restrict)
 
+  tags  Tag[]
   loans LoanedItem[]
 
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
 
   locationId Int
+  typeId     Int
+}
+
+model ItemType {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String @default("") @db.VarChar(50)
+
+  items Item[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @updatedAt
+}
+
+model Location {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  items Item[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @updatedAt
 }
 
 model Loan {
   id     Int          @id @default(autoincrement())
-  person Person       @relation(fields: [personId], references: [id])
+  person Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
   items  LoanedItem[]
   notes  String       @default("") @db.VarChar(200)
   tags   Tag[]
@@ -74,12 +101,13 @@ model Loan {
 }
 
 model LoanedItem {
-  loan         Loan      @relation(fields: [loanId], references: [id])
-  item         Item      @relation(fields: [itemId], references: [id])
+  loan         Loan      @relation(fields: [loanId], references: [id], onDelete: Cascade)
+  item         Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
   dateLoaned   DateTime  @default(now())
   dateReturned DateTime?
+  status   String     @default("out") @db.VarChar(50)
 
-  returnedBy Person? @relation(fields: [returnedById], references: [id])
+  returnedBy Person? @relation(fields: [returnedById], references: [id], onDelete: SetNull)
 
   createdDate DateTime @default(now())
   updatedDate DateTime @updatedAt
@@ -92,16 +120,22 @@ model LoanedItem {
 }
 
 model Tag {
-  id       Int     @id @default(autoincrement())
-  name     String
-  color    String
-  priority Int     @default(0)
-  category String
-  hidden   Boolean @default(false)
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String? @db.VarChar(50)
+  color       String
+  priority    Int     @default(0)
+  category    String
+  // TODO - add a way to restrict tags to certain models
+  //   allowedEntries  String @default("all")
+  hidden      Boolean @default(false)
 
   loans  Loan[]
   items  Item[]
   people Person[]
+
+  createdDate DateTime @default(now())
+  updatedDate DateTime @updatedAt
 
   @@unique([name, category])
 }

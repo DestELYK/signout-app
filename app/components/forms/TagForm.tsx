@@ -1,6 +1,6 @@
 import { zodResolver } from "@mantine/form";
-import { Tag } from "@prisma/client";
-import { TagFormSchema } from "~/lib/schemas";
+import { TagFormSchema, TagFormType } from "~/lib/schemas";
+import { TagData } from "~/utils/types.server";
 import FormView, { FormViewProps } from "../base/FormView";
 import TagPreview from "../tags/TagPreview";
 
@@ -9,7 +9,7 @@ export type TagFormProps = {
     lockCategory?: boolean;
     type?: "create" | "edit";
 } & Omit<
-    FormViewProps<Tag, { tag?: Tag; error?: undefined }>,
+    FormViewProps<TagFormType, TagData>,
     "fetcher" | "method" | "action" | "inputData" | "submitLabel"
 >;
 

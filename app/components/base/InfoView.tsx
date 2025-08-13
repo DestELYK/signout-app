@@ -54,16 +54,17 @@ export default function InfoView({
                     >
                         <Flex direction="row" align="center" gap="xs" wrap="nowrap" justify="start">
                             {leftSection}
-                            {/* @ts-ignore */}
-                            <Text
-                                fw="bold"
-                                size="md"
-                                aria-label={title}
-                                {...(href && { component: Link, to: href })}
-                                {...titleProps}
-                            >
-                                {title}
-                            </Text>
+                            {href ? (
+                                <Link to={href}>
+                                    <Text fw="bold" size="md" aria-label={title} {...titleProps}>
+                                        {title}
+                                    </Text>
+                                </Link>
+                            ) : (
+                                <Text fw="bold" size="md" aria-label={title} {...titleProps}>
+                                    {title}
+                                </Text>
+                            )}
                         </Flex>
                         <Flex direction="row" align="center" gap="xs" wrap="nowrap" justify="end">
                             {rightSection}

@@ -1,28 +1,43 @@
-import { Flex, Skeleton } from "@mantine/core";
-import { LoaderFunctionArgs } from "@remix-run/node";
-import { useTypedLoaderData } from "remix-typedjson";
-import invariant from "tiny-invariant";
-
-export const loader = async ({ params }: LoaderFunctionArgs) => {
-  invariant(params.loanId, "Expected params.loanId");
-
-  const loanId = parseInt(params.loanId);
-
-  if (loanId === undefined) {
-    throw new Response(null, {
-      status: 404,
-    });
-  }
-
-  return null;
-};
+import { Box, Divider, Text } from "@mantine/core";
+import { useNavigate } from "@remix-run/react";
+import { useTypedRouteLoaderData } from "remix-typedjson";
+import LoanForm from "~/components/forms/LoanForm";
+import { loader } from "./loans_.$loanId";
 
 export default function Page() {
-  const data = useTypedLoaderData<typeof loader>();
+    const loanData = useTypedRouteLoaderData<typeof loader>("routes/loans_.$loanId");
+    const navigate = useNavigate();
 
-  return (
-    <Flex direction="column" w="100%" h="100%" gap="md">
-      {data ? <></> : <Skeleton h={200} />}
-    </Flex>
-  );
+    return (
+        <>
+            <Text fw="bold" visibleFrom="md" p="xs">
+                Edit Loan
+            </Text>
+            <Divider w="100%" visibleFrom="md" />
+            <Box p="sm">
+                {loanData?.data ? (
+                    <LoanForm
+                        id={loanData?.data?.id}
+                        initialValues={{
+                            person: loanData?.data?.person ?? undefined,
+                            items:
+                                loanData?.data?.items.map((i) => ({
+                                    id: i.itemId,
+                                    name: i.name,
+                                    description: i.description,
+                                })) ?? [],
+                            tags: loanData?.data?.tags ?? [],
+                        }}
+                        onResult={(itemData) => {
+                            if (itemData.data) {
+                                navigate(-1);
+                            }
+                        }}
+                    />
+                ) : (
+                    <Text c="error">Loan not found</Text>
+                )}
+            </Box>
+        </>
+    );
 }

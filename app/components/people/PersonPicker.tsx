@@ -1,131 +1,145 @@
 import {
     ActionIcon,
     Button,
-    Card,
     Group,
     LoadingOverlay,
-    MantineSpacing,
     Modal,
     Stack,
-    StyleProp,
     Text,
+    Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconEdit } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { useTypedFetcher } from "remix-typedjson";
-import { loader } from "~/routes/loans.list";
-import { PersonWithTags } from "~/utils/types.server";
+import { loader as itemsLoader } from "~/routes/items.list";
+import { loader as peopleLoader } from "~/routes/people.list";
+import { ItemData, PersonData } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
-import LoanSimpleView, { LoanSimpleViewProps } from "../loans/LoanSimpleView";
-import PersonCard from "./PersonCard";
-import PersonSearchCombobox from "./PersonSearchCombobox";
+import FetcherField from "../base/FetcherField";
+import { QRInputFieldProps } from "../base/QRInputField";
+import ComboView from "../ComboView";
+import PersonForm from "../forms/PersonForm";
+import HoverBadge from "../HoverBadge";
 
-type PersonPickerType = Omit<
-    PersonWithTags,
-    "_count" | "createdDate" | "updatedDate" | "loans" | "roleId"
->;
-
-export interface PersonPickerProps {
-    value?: PersonPickerType;
+export interface PersonPickerProps
+    extends Pick<QRInputFieldProps<PersonData>, "error" | "withQRCode"> {
+    value?: PersonData;
     promptOutstanding?: boolean;
-    withBorder?: boolean;
-    p?: StyleProp<MantineSpacing>;
-    onChanged?: (person?: PersonWithTags) => void;
+    onChange?: (person?: PersonData) => void;
 }
 
 export default function PersonPicker({
     value,
     promptOutstanding = true,
-    withBorder = false,
-    p = 0,
-    onChanged,
+    withQRCode,
+    error,
+    onChange,
 }: PersonPickerProps) {
-    const fetcher = useTypedFetcher<typeof loader>();
-    const [person, setPerson] = useState<PersonPickerType | undefined>(value || undefined);
-    const [outstandingPerson, setOutstandingPerson] = useState<PersonWithTags | undefined>();
-    const [outstandingLoans, setOutstandingLoans] = useState<LoanSimpleViewProps[]>();
+    const outstandingItemsFetcher = useTypedFetcher<typeof itemsLoader>();
+    const personFetcher = useTypedFetcher<typeof peopleLoader>();
+
+    const [search, setSearch] = useState<string>("");
+
+    const [outstandingPerson, setOutstandingPerson] = useState<PersonData | undefined>();
+    const [outstandingItems, setOutstandingItems] = useState<ItemData[]>();
 
     const [opened, { open, close }] = useDisclosure();
 
     useEffect(() => {
-        if (fetcher.data) {
-            console.log(fetcher.data);
-            setOutstandingLoans(
-                fetcher.data.loans?.map((li) => ({
-                    id: li.id,
-                    dateLoaned: li.createdDate,
-                    itemCount: li.items.length,
-                })) ?? []
-            );
+        if (outstandingItemsFetcher.data) {
+            setOutstandingItems(outstandingItemsFetcher.data.items ?? []);
         }
-    }, [fetcher.data, fetcher.state]);
+    }, [outstandingItemsFetcher.data, outstandingItemsFetcher.state]);
 
-    useEffect(() => {
-        setPerson(value);
-    }, [value]);
+    function confirmOutstanding(person: PersonData) {
+        const hasOutstandingItems =
+            (person.outstandingItemsCount && person.outstandingItemsCount > 0) ||
+            (person.lostItemsCount && person.lostItemsCount > 0);
 
-    function updatePerson(value?: PersonWithTags) {
-        setPerson(value);
-        onChanged?.(value);
-    }
-
-    function confirmOutstanding(person: PersonWithTags) {
-        const outstandingLoans = person._count.loans;
-
-        if (outstandingLoans > 0 && promptOutstanding) {
+        if (hasOutstandingItems && promptOutstanding) {
             setOutstandingPerson(person);
             open();
         } else {
             setOutstandingPerson(undefined);
             close();
 
-            updatePerson(person);
+            onChange?.(person);
         }
     }
 
     return (
         <>
             {outstandingPerson && (
-                <Modal title="Outstanding Loans" opened={opened} onClose={close}>
-                    <LoadingOverlay visible={fetcher.state !== "idle"} zIndex={1000} />
+                <Modal
+                    title="Warning"
+                    opened={opened}
+                    centered
+                    onClose={() => {
+                        close();
+                        setOutstandingItems([]);
+                        setOutstandingPerson(undefined);
+                    }}
+                >
+                    <LoadingOverlay
+                        visible={outstandingItemsFetcher.state !== "idle"}
+                        zIndex={1000}
+                    />
 
                     <Stack>
-                        <Text c="red">
-                            {formatFullName(outstandingPerson)} already has{" "}
-                            {outstandingPerson._count.loans} loans out!
+                        <Text>
+                            Are you sure you want to create a new loan for{" "}
+                            <b>{outstandingPerson.firstName}?</b>
                         </Text>
-                        {outstandingLoans && outstandingLoans.length > 0 ? (
-                            <Card>
-                                {outstandingLoans.map((loan) => (
-                                    <Card.Section key={loan.id} withBorder py="xs">
-                                        <LoanSimpleView {...loan} />
-                                    </Card.Section>
+                        <Text>
+                            They have{" "}
+                            <Text span c="red">
+                                {outstandingPerson.outstandingItemsCount}
+                            </Text>{" "}
+                            outstanding items and{" "}
+                            <Text span c="red">
+                                {outstandingPerson.lostItemsCount}
+                            </Text>{" "}
+                            lost items
+                        </Text>
+                        {/* {outstandingItems && outstandingItems.length > 0 && (
+                            <Paper withBorder p="sm">
+                                {outstandingItems.map((item) => (
+                                    <Group justify="space-between">
+                                        <Stack gap={0}>
+                                            <Text key={item.id}>{item.name}</Text>
+                                            <HoverBadge
+                                                name={item.type?.name ?? "Unknown"}
+                                                description={item.type?.description}
+                                            />
+                                        </Stack>
+                                        <Text c={item.status?.color}>{item.status?.name}</Text>
+                                    </Group>
                                 ))}
-                            </Card>
-                        ) : (
-                            <Button
+                            </Paper>
+                        )} */}
+                        <Group justify="end">
+                            <Button color="gray" variant="outline" onClick={close}>
+                                Cancel
+                            </Button>
+                            {/* <Button
+                                color="blue"
                                 variant="outline"
-                                onClick={(event) => {
-                                    fetcher.load(
-                                        `/loans/list?status=outstanding&personId=${outstandingPerson.id}`
+                                onClick={() => {
+                                    outstandingItemsFetcher.load(
+                                        `/items/list?status=out&status=lost&personId=${outstandingPerson.id}`
                                     );
                                 }}
                             >
-                                View Outstanding Loans
-                            </Button>
-                        )}
-                        <Text>
-                            Are you sure you want to create a new loan for{" "}
-                            {outstandingPerson.firstName}?
-                        </Text>
-                        <Group justify="end">
-                            <Button color="red" onClick={close}>
-                                Cancel
-                            </Button>
+                                View Items
+                            </Button> */}
                             <Button
+                                color="red"
                                 onClick={() => {
-                                    updatePerson(outstandingPerson);
+                                    onChange?.(outstandingPerson);
+
+                                    setOutstandingItems([]);
+                                    setOutstandingPerson(undefined);
                                     close();
                                 }}
                             >
@@ -135,40 +149,92 @@ export default function PersonPicker({
                     </Stack>
                 </Modal>
             )}
-
-            {person ? (
-                <PersonCard
-                    studentId={person.studentId}
-                    firstName={person.firstName}
-                    lastName={person.lastName}
-                    nickname={person.nickname}
-                    role={person.role}
-                    notes={person.notes}
-                    tags={person.tags}
-                    rightSection={
+            {value ? (
+                <Group justify="space-between">
+                    <Stack gap={0}>
+                        <Text size="lg" fw="bold">
+                            {formatFullName(value)}
+                        </Text>
+                        <HoverBadge
+                            name={value.role?.name ?? "Unknown"}
+                            description={value.role?.description}
+                        />
+                    </Stack>
+                    <Tooltip label="Modify Person">
                         <ActionIcon
                             style={{ justifySelf: "end" }}
                             size="input-sm"
                             variant="outline"
                             color="red"
                             onClick={() => {
-                                updatePerson(undefined);
+                                onChange?.(undefined);
                             }}
                         >
                             <IconEdit />
                         </ActionIcon>
-                    }
-                    withBorder={withBorder}
-                    withDetails={false}
-                    p={p}
-                />
+                    </Tooltip>
+                </Group>
             ) : (
-                <PersonSearchCombobox
-                    onSubmit={(value) => {
-                        value && confirmOutstanding(value);
+                <FetcherField
+                    label="Person"
+                    description="Search for person by name"
+                    placeholder="Search for person..."
+                    fetchPath="/people/list"
+                    createTitle="Create New Person"
+                    fetcher={personFetcher}
+                    required
+                    error={error}
+                    onFetched={(fetchData) => fetchData?.data ?? []}
+                    withQRCode={withQRCode}
+                    onChange={setSearch}
+                    value={search}
+                    onClear={() => setSearch("")}
+                    onBlur={() => {
+                        setSearch("");
+                        return true;
+                    }}
+                    onFocus={() => {
+                        setSearch("");
                         return false;
                     }}
-                />
+                    onSelect={(selected, value) => {
+                        if (value) {
+                            confirmOutstanding(value);
+
+                            return true;
+                        }
+                    }}
+                    handleCreateForm={(close) => {
+                        return (
+                            <PersonForm
+                                initialValues={{
+                                    firstName: search.split(" ")[0],
+                                    lastName: search.split(" ")[1],
+                                    nickname: "",
+                                }}
+                                onResult={(result) => {
+                                    if (result.data) {
+                                        onChange?.(result.data);
+                                        close();
+                                    }
+                                }}
+                            />
+                        );
+                    }}
+                >
+                    {(value, query) => (
+                        <ComboView
+                            title={formatFullName(value)}
+                            caption={
+                                (value.outstandingItemsCount && value.outstandingItemsCount > 0) ||
+                                (value.lostItemsCount && value.lostItemsCount > 0)
+                                    ? "Has outstanding items"
+                                    : undefined
+                            }
+                            highlight={query ?? ""}
+                        />
+                    )}
+                </FetcherField>
             )}
         </>
     );

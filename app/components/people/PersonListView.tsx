@@ -1,95 +1,114 @@
 import { Badge, Flex, Group, Highlight, Space, Text, Title, UnstyledButton } from "@mantine/core";
-import { PersonRole, Tag } from "@prisma/client";
 import { useNavigate } from "@remix-run/react";
 import { IconChevronRight, IconInfoCircle } from "@tabler/icons-react";
+import { PersonData } from "~/utils/types.server";
 import { formatFullName } from "~/utils/utils";
 
 export interface PersonListViewProps {
-    id: number;
-    firstName: string;
-    lastName: string;
-    nickname?: string | null;
-    role?: PersonRole;
-    tags?: Tag[];
-    totalLoans?: number;
-    outstandingLoans?: number;
-    query?: string;
-    qrCode?: string;
+    person: PersonData;
     showChevron?: boolean;
-    invalidItems?: {
-        id: number;
-        name: string;
-        status: Tag;
-    }[];
+    query?: string;
+    personId?: string;
+    returned?: boolean;
 }
 
 export default function PersonListView({
-    id,
-    firstName,
-    lastName,
-    nickname,
-    role,
-    tags = [],
-    totalLoans,
-    outstandingLoans,
+    person,
     query,
-    qrCode,
+    personId,
     showChevron = true,
-    invalidItems,
+    returned,
 }: PersonListViewProps) {
     const navigate = useNavigate();
-    const fullName = formatFullName({
-        firstName: firstName,
-        lastName: lastName,
-        nickname: nickname,
-    });
+    const fullName = formatFullName(person);
 
     return (
         <UnstyledButton
             className="list-item"
-            w="100%"
-            h="100%"
-            onClick={() => navigate(`/people/${id}`)}
+            miw={200}
+            onClick={() => navigate(`/people/${person.id}`)}
         >
-            <Flex p="xs" direction="row" align="center" justify="space-between">
+            <Flex p="xs" direction="row" align="center">
                 <Flex w="100%" direction="column" mr="lg">
-                    <Group w="100%">
-                        {invalidItems && invalidItems.length > 0 && <IconInfoCircle color="red" />}
-                        <Highlight
-                            component={Title}
-                            order={4}
-                            c={invalidItems && invalidItems.length > 0 ? "red" : undefined}
-                            highlight={qrCode ? fullName : query ? query.split(" ") : ""}
-                        >
-                            {fullName}
-                        </Highlight>
+                    <Group align="center" justify="space-between" gap={2}>
+                        <Flex direction="row" align="center" wrap="nowrap" justify="start" gap="sm">
+                            {person.lostItems !== undefined && person.lostItems.length > 0 && (
+                                <IconInfoCircle color="red" />
+                            )}
+                            <Highlight
+                                component={Title}
+                                order={4}
+                                highlight={
+                                    personId
+                                        ? personId === person.schoolId
+                                            ? fullName
+                                            : ""
+                                        : query
+                                        ? query.split(" ")
+                                        : ""
+                                }
+                            >
+                                {fullName}
+                            </Highlight>
+                        </Flex>
+
+                        {person.role !== undefined && (
+                            <Badge miw={100} color={person.role.color} variant="dot" autoContrast>
+                                {person.role.name}
+                            </Badge>
+                        )}
                     </Group>
-                    {role && (
-                        <Badge color={role.color} variant="dot" autoContrast>
-                            {role.name}
-                        </Badge>
-                    )}
                     <Space h="xs" />
 
                     <Text size="xs">
-                        {totalLoans} Total Loans{" "}
-                        {outstandingLoans ? (
+                        {person.loansCount ?? 0} Total Loans{" "}
+                        {person.outstandingItemsCount ? (
                             <>
                                 <Text span inherit c="red" fw="bold">
-                                    ({outstandingLoans} Outstanding)
+                                    ({person.outstandingItemsCount} Outstanding)
                                 </Text>
                             </>
                         ) : undefined}
                     </Text>
-                    {invalidItems && invalidItems.length > 0 && (
-                        <>
-                            <Space h="xs" />
-                            {invalidItems.map((item) => (
-                                <Text key={item.id} size="xs">
-                                    {item.name} - {item.status.name}
-                                </Text>
-                            ))}
-                        </>
+                    {person.lostItemsCount !== undefined && person.lostItemsCount > 0 && (
+                        <Text mt="sm" fw="bold" size="xs" c="red">
+                            {person.lostItemsCount} Lost Item
+                            {person.lostItemsCount > 1 ? "s" : ""}
+                        </Text>
+                    )}
+                    {person.lostItems?.slice(0, 2).map((i) => (
+                        <Group key={i.id}>
+                            <Highlight
+                                size="xs"
+                                c={
+                                    i.status && i.status.id === "returned"
+                                        ? i.status.color
+                                        : i.status
+                                        ? i.status.color
+                                        : "dimmed"
+                                }
+                                highlight={query ? query.split(" ") : ""}
+                            >
+                                {i.name}
+                            </Highlight>
+                            <Text size="xs" c="dimmed">
+                                {i.status && i.status.id === "returned"
+                                    ? `(${i.status.name})`
+                                    : i.status
+                                    ? ` (${i.status.name})`
+                                    : "Unknown Status"}
+                            </Text>
+                        </Group>
+                    ))}
+                    {person.lostItems !== undefined && person.lostItems.length > 2 && (
+                        <Text fs="italic" size="xs">
+                            ...and {person.lostItems.length - 2} other items
+                        </Text>
+                    )}
+                    {returned && (
+                        <Text mt="sm" size="xs" c="red">
+                            Person did not return all of their items
+                        </Text>
                     )}
                 </Flex>
                 {showChevron && <IconChevronRight />}

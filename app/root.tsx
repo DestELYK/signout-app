@@ -25,15 +25,13 @@ import { NavigationProgress, nprogress } from "@mantine/nprogress";
 import {
     AppShell,
     Burger,
-    Collapse,
     ColorSchemeScript,
+    Divider,
     Group,
     Image,
     MantineProvider,
     NavLink,
     Stack,
-    Text,
-    Title,
     createTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
@@ -44,10 +42,11 @@ import {
     IconClipboard,
     IconDeviceImac,
     IconHome,
+    IconMapPin,
     IconTag,
     IconUser,
 } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { ClientOnly } from "remix-utils/client-only";
 import ErrorPage from "./components/ErrorPage";
 import { ToggleSchemeButton } from "./components/ToggleSchemeButton.client";
@@ -56,16 +55,40 @@ import "./tailwind.css";
 const theme = createTheme({
     colors: {
         blue: [
-            "#ecf6fe",
-            "#d8e9f7",
-            "#abd2f0",
-            "#7dbaec",
-            "#59a5e7",
-            "#4598e5",
-            "#3a92e5",
-            "#2e7fcc",
-            "#2471b7",
-            "#0c61a2",
+            "#e1f9ff",
+            "#ccedff",
+            "#9ad7ff",
+            "#64c1ff",
+            "#3baefe",
+            "#20a2fe",
+            "#099cff",
+            "#0088e4",
+            "#0078cd",
+            "#0069b6",
+        ],
+        red: [
+            "#ffe9e9",
+            "#ffd1d1",
+            "#fba0a1",
+            "#f76d6d",
+            "#f34141",
+            "#f22625",
+            "#f21616",
+            "#d8070b",
+            "#c10008",
+            "#a90003",
+        ],
+        green: [
+            "#e5feee",
+            "#d2f9e0",
+            "#a8f1c0",
+            "#7aea9f",
+            "#53e383",
+            "#3bdf70",
+            "#2bdd66",
+            "#1ac455",
+            "#0caf49",
+            "#00963c",
         ],
     },
     primaryColor: "blue",
@@ -76,13 +99,12 @@ export const meta: MetaFunction = () => {
     return [{ name: "theme-color", content: "#ffffff" }];
 };
 
-function Root({ offline = false, children }: { offline?: boolean; children: React.ReactNode }) {
+function Root({ children }: { children: React.ReactNode }) {
     const navigation = useNavigation();
     const location = useLocation();
     // const navigate = useNavigate();
     // const revalidator = useRevalidator();
     const [opened, { open, close, toggle }] = useDisclosure();
-    const [_offline, setOffline] = useState<boolean | undefined>(offline ? true : undefined);
 
     // Start and stop nprogress depending on navigation state
     useEffect(() => {
@@ -97,41 +119,6 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
         };
     }, [navigation.state]);
 
-    // // Check if the user is offline
-    // useEffect(() => {
-    //   const timer = setInterval(async () => {
-    //     try {
-    //       const response = await fetch("/api/health-check");
-
-    //       if (offline && response.status === 200) {
-    //         setOffline(false);
-    //         setTimeout(() => {
-    //           window.location.reload();
-    //           setOffline(undefined);
-    //         }, 2000);
-    //       } else {
-    //         setOffline(undefined);
-    //       }
-    //     } catch (error) {
-    //       setOffline(true);
-    //     }
-    //   }, 1000 * 30);
-
-    //   return () => clearInterval(timer);
-    // }, []);
-
-    useEffect(() => {
-        if (_offline && !offline) {
-            setOffline(false);
-            setTimeout(() => {
-                window.location.reload();
-                setOffline(undefined);
-            }, 2000);
-        } else {
-            setOffline(undefined);
-        }
-    }, [offline]);
-
     return (
         <html lang="en">
             <head>
@@ -139,15 +126,15 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <Meta />
                 <Links />
-                <ColorSchemeScript defaultColorScheme="light" />
+                <ColorSchemeScript defaultColorScheme="auto" />
             </head>
             <body>
-                <MantineProvider defaultColorScheme="light" theme={theme}>
+                <MantineProvider defaultColorScheme="auto" theme={theme}>
                     <ModalsProvider>
                         <Notifications />
                         <NavigationProgress />
                         <AppShell
-                            header={{ height: 60 + (offline ? 20 : 0) }}
+                            header={{ height: 60 }}
                             navbar={{
                                 width: { base: 200, md: 150 },
                                 breakpoint: "sm",
@@ -155,7 +142,7 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                             }}
                         >
                             <AppShell.Header>
-                                <Stack gap={0}>
+                                <Stack w="100%" gap={0}>
                                     <Group h="100%" px="md" justify="space-between">
                                         <Group>
                                             <Burger
@@ -164,28 +151,24 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                                                 hiddenFrom="sm"
                                                 size="sm"
                                             />
-                                            <Group gap={0} align="center">
-                                                <Link to="/">
-                                                    <Image
-                                                        src="/logo.png"
-                                                        alt="SJK"
-                                                        fit="contain"
-                                                        p={5}
-                                                        h={60}
-                                                    />
-                                                </Link>
-                                                <Title
-                                                    pt={5}
-                                                    c="#006297"
-                                                    order={1}
-                                                    fw={500}
-                                                    style={{
-                                                        fontFamily: "'Open Sans', sans-serif",
-                                                    }}
-                                                >
-                                                    Signout
-                                                </Title>
-                                            </Group>
+                                            <Link to="/">
+                                                <Image
+                                                    src="/logo.webp"
+                                                    alt="SJK"
+                                                    fit="contain"
+                                                    p={5}
+                                                    h={60}
+                                                    visibleFrom="sm"
+                                                />
+                                                <Image
+                                                    src="/logo-short.webp"
+                                                    alt="SJK"
+                                                    fit="contain"
+                                                    p={5}
+                                                    h={60}
+                                                    hiddenFrom="sm"
+                                                />
+                                            </Link>
                                         </Group>
                                         <Group justify="end">
                                             <ClientOnly fallback={null}>
@@ -193,11 +176,6 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                                             </ClientOnly>
                                         </Group>
                                     </Group>
-                                    <Collapse h={20} in={_offline !== undefined}>
-                                        <Text ta="center" bg={_offline ? "red" : "green"} c="white">
-                                            You are {_offline ? "offline" : "online. Reloading..."}
-                                        </Text>
-                                    </Collapse>
                                 </Stack>
                             </AppShell.Header>
                             <AppShell.Navbar py="md">
@@ -230,6 +208,14 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                                     onClick={close}
                                 />
                                 <Stack mt="auto" gap={0}>
+                                    <Divider />
+                                    <NavLink
+                                        to="/locations"
+                                        component={NavLinkRemix}
+                                        label="Locations"
+                                        leftSection={<IconMapPin size={24} />}
+                                        onClick={close}
+                                    />
                                     <NavLink
                                         to="/tags"
                                         component={NavLinkRemix}
@@ -237,6 +223,7 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
                                         leftSection={<IconTag size={24} />}
                                         onClick={close}
                                     />
+                                    <Divider />
                                     <NavLink
                                         to="/report"
                                         component={NavLinkRemix}
@@ -260,19 +247,19 @@ function Root({ offline = false, children }: { offline?: boolean; children: Reac
 }
 
 export function ErrorBoundary() {
-  const error = useRouteError();
+    const error = useRouteError();
 
-  return (
-    <Root>
-      <ErrorPage error={error} />
-    </Root>
-  );
+    return (
+        <Root>
+            <ErrorPage error={error} />
+        </Root>
+    );
 }
 
 export default function App() {
-  return (
-    <Root>
-      <Outlet />
-    </Root>
-  );
+    return (
+        <Root>
+            <Outlet />
+        </Root>
+    );
 }

@@ -1,5 +1,4 @@
-import { Box, MantineStyleProps, ScrollArea, SegmentedControl, Stack, Tabs } from "@mantine/core";
-import { useElementSize } from "@mantine/hooks";
+import { Collapse, MantineStyleProps, ScrollArea, SegmentedControl, Tabs } from "@mantine/core";
 import React from "react";
 
 export interface TabbedContentViewProps {
@@ -11,7 +10,8 @@ export interface TabbedContentViewProps {
         disabled?: boolean;
     }[];
     current?: string | null;
-    children: React.ReactNode;
+    hideTabs?: boolean;
+    disabled?: boolean;
     onChange: (value: string | null) => void;
 }
 
@@ -20,49 +20,32 @@ export default function TabbedContentView({
     h = "100%",
     tabs,
     current,
-    children,
+    hideTabs = false,
+    disabled,
     onChange,
 }: TabbedContentViewProps) {
-    const { ref: tabListRef, height: tabListHeight } = useElementSize();
-
     return (
-        <Stack w={w} h={h} align="stretch" gap="sm" style={{ overflowY: "hidden" }}>
-            <div ref={tabListRef}>
-                <Tabs
+        <Collapse in={!hideTabs}>
+            <Tabs w="100%" visibleFrom="md" value={current || tabs[0].value} onChange={onChange}>
+                <ScrollArea w="100%" type="auto" scrollbars="x">
+                    <Tabs.List style={{ flexWrap: "nowrap" }}>
+                        {tabs.map((tab) => (
+                            <Tabs.Tab key={tab.value} disabled={disabled} value={tab.value}>
+                                {tab.label}
+                            </Tabs.Tab>
+                        ))}
+                    </Tabs.List>
+                </ScrollArea>
+            </Tabs>
+            <ScrollArea w="100%" mih={40} type="auto" scrollbars="x" hiddenFrom="md">
+                <SegmentedControl
                     w="100%"
-                    visibleFrom="md"
+                    disabled={disabled}
                     value={current || tabs[0].value}
                     onChange={onChange}
-                >
-                    <ScrollArea w="100%" type="auto" scrollbars="x" offsetScrollbars="x">
-                        <Tabs.List style={{ flexWrap: "nowrap" }}>
-                            {tabs.map((tab) => (
-                                <Tabs.Tab key={tab.value} value={tab.value}>
-                                    {tab.label}
-                                </Tabs.Tab>
-                            ))}
-                        </Tabs.List>
-                    </ScrollArea>
-                </Tabs>
-                <ScrollArea
-                    w="100%"
-                    mih={40}
-                    type="auto"
-                    scrollbars="x"
-                    offsetScrollbars="x"
-                    hiddenFrom="md"
-                >
-                    <SegmentedControl
-                        w="100%"
-                        value={current || tabs[0].value}
-                        onChange={onChange}
-                        data={tabs}
-                    />
-                </ScrollArea>
-            </div>
-            <Box w="100%" h={`calc(100% - ${tabListHeight + 12}px)`}>
-                {children}
-            </Box>
-        </Stack>
+                    data={tabs}
+                />
+            </ScrollArea>
+        </Collapse>
     );
 }

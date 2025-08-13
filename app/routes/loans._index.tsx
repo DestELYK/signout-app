@@ -1,5 +1,16 @@
 import { AreaChart, Sparkline } from "@mantine/charts";
-import { Button, Card, Center, Flex, Group, Loader, Stack, Switch, Text } from "@mantine/core";
+import {
+    Box,
+    Button,
+    Card,
+    Center,
+    Flex,
+    Group,
+    Skeleton,
+    Stack,
+    Switch,
+    Text,
+} from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { Link, useSearchParams } from "@remix-run/react";
 import dayjs from "dayjs";
@@ -10,35 +21,44 @@ import StatView from "~/components/StatView";
 import InfoView from "~/components/base/InfoView";
 import { LoanList } from "~/components/loans/LoanList";
 import { useDesktopOnly } from "~/lib/hooks";
-import { getLoanByMonth } from "~/lib/loans.server";
+import { getLoans, groupLoansByMonth } from "~/lib/loans.server";
 import { prisma } from "~/lib/prisma.server";
-import { IN_COLOR, MAX_RECENT_ITEMS, OUT_COLOR } from "~/utils/consts";
-import { loanWithTagsAndItems } from "~/utils/types.server";
+import { MAX_RECENT_ITEMS } from "~/utils/consts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
     const searchParams = new URL(request.url).searchParams;
 
     //#region Loans by Month
-    const loansByMonth = (await getLoanByMonth()).loansByMonth;
+    const loansByMonth = (await groupLoansByMonth()).data;
     //#endregion
 
     //#region Recent Loans
 
-    const recentLoans = await prisma.loan.findMany({
-        include: loanWithTagsAndItems.include,
-        take: MAX_RECENT_ITEMS,
-        orderBy: { createdDate: "desc" },
-        ...(searchParams.has("recent") && {
-            where: {
-                items:
-                    searchParams.get("recent") === "outstanding"
-                        ? {
-                              some: { dateReturned: null },
-                          }
-                        : undefined,
-            },
-        }),
-    });
+    const recentLoans = await getLoans(
+        {
+            statuses: searchParams.get("recent") === "outstanding" ? ["out"] : undefined,
+        },
+        {
+            createdDate: "desc",
+        },
+        MAX_RECENT_ITEMS
+    );
+
+    // const recentLoans = await prisma.loan.findMany({
+    //     include: loanWithTagsAndItems.include,
+    //     take: MAX_RECENT_ITEMS,
+    //     orderBy: { createdDate: "desc" },
+    //     ...(searchParams.has("recent") && {
+    //         where: {
+    //             items:
+    //                 searchParams.get("recent") === "outstanding"
+    //                     ? {
+    //                           some: { dateReturned: null },
+    //                       }
+    //                     : undefined,
+    //         },
+    //     }),
+    // });
     //#endregion
 
     return typedjson({
@@ -46,13 +66,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         recentLoans: recentLoans,
         totalLoans: await prisma.loan.count(),
         totalOutstandingLoans: await prisma.loan.count({
-            where: { items: { some: { dateReturned: null } } },
+            where: { items: { some: { status: "out" } } },
         }),
         totalReturnedLoans: await prisma.loan.count({
-            where: { items: { none: { dateReturned: null } } },
+            where: { items: { every: { status: "returned" } } },
         }),
         totalOutstandingItems: await prisma.item.count({
-            where: { loans: { some: { dateReturned: null } } },
+            where: { loans: { some: { status: "out" } } },
         }),
     });
 };
@@ -81,17 +101,27 @@ export default function Page() {
 
     const months = data.loansByMonth?.map((month) => month.month);
 
+    const today = loansInCurrentMonth?.days[dayjs().date() - 1];
+
     return (
         <>
-            {desktopOnly === undefined ? (
-                <Stack w="100%" h="100%" justify="center" align="center">
-                    <Loader />
-                    <Text className="loading-text">Loading</Text>
-                </Stack>
+            {desktopOnly === undefined || data === undefined ? (
+                <Box w="100%" h="100%" pos="relative" p="sm">
+                    <Skeleton w="100%" h="100%" />
+                </Box>
             ) : desktopOnly ? (
                 //#region Desktop
-                <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="sm" visibleFrom="md">
-                    <Stack miw={200} w="100%" h="100%">
+                <Flex
+                    w="100%"
+                    h="100%"
+                    direction="row"
+                    wrap="nowrap"
+                    gap="sm"
+                    visibleFrom="md"
+                    pos="relative"
+                    p="sm"
+                >
+                    <Stack w={{ md: "60%", lg: "65%" }} h="100%">
                         <Group w="100%" align="stretch" grow style={{ flexWrap: "nowrap" }}>
                             <Card withBorder>
                                 <StatView label="Total Loans" value={data.totalLoans} />
@@ -100,7 +130,7 @@ export default function Page() {
                                 <StatView
                                     label="Total Outstanding Loans"
                                     value={data.totalOutstandingItems}
-                                    color={OUT_COLOR}
+                                    color="red"
                                 />
                             </Card>
                         </Group>
@@ -189,12 +219,12 @@ export default function Page() {
                                             {
                                                 name: "loaned",
                                                 label: "Loans",
-                                                color: OUT_COLOR,
+                                                color: "red",
                                             },
                                             {
                                                 name: "returned",
                                                 label: "Returns",
-                                                color: IN_COLOR,
+                                                color: "green",
                                             },
                                         ]}
                                         withLegend
@@ -208,6 +238,22 @@ export default function Page() {
                                 <Center h="100%">No data for this month</Center>
                             )}
                         </InfoView>
+                        <Group grow align="stretch" style={{ flexWrap: "nowrap" }}>
+                            <Card withBorder>
+                                <StatView
+                                    label="Loans Today"
+                                    value={today?.loanCount ?? 0}
+                                    color="red"
+                                />
+                            </Card>
+                            <Card withBorder>
+                                <StatView
+                                    label="Returns Today"
+                                    value={today?.returnCount ?? 0}
+                                    color="green"
+                                />
+                            </Card>
+                        </Group>
                     </Stack>
                     {
                         //#region Recent Loans
@@ -215,15 +261,15 @@ export default function Page() {
                     <InfoView
                         title={`Recent Loans`}
                         cardProps={{
-                            w: "auto",
-                            miw: { md: 300, lg: 350, xl: 400 },
+                            w: { md: "40%", lg: "35%" },
+                            padding: 0,
                         }}
                         bottomSection={
                             <Stack gap="xs" mih={80}>
                                 <Text ta="center">
                                     {data.totalOutstandingLoans} outstanding loans
                                 </Text>
-                                <Button component={Link} to="/loans/list?status=outstanding">
+                                <Button component={Link} to="/loans/list?status=out">
                                     View All Outstanding Loans
                                 </Button>
                             </Stack>
@@ -231,7 +277,7 @@ export default function Page() {
                         rightSection={
                             <Switch
                                 label="Outstanding"
-                                color={OUT_COLOR}
+                                color="red"
                                 labelPosition="left"
                                 checked={viewOutstanding}
                                 onChange={(value) => {
@@ -251,13 +297,22 @@ export default function Page() {
                             />
                         }
                     >
-                        <LoanList
-                            data={data.recentLoans}
-                            totalCount={data.recentLoans.length}
-                            withDetails={false}
-                            withSearch={false}
-                            initialItemsPerPage={MAX_RECENT_ITEMS}
-                        />
+                        {data.recentLoans.error ? (
+                            <Center h="100%">
+                                <Text c="error">{data.recentLoans.error}</Text>
+                            </Center>
+                        ) : (
+                            <LoanList
+                                data={data.recentLoans.data ?? []}
+                                totalCount={data.recentLoans.data?.length ?? 0}
+                                withDetails={false}
+                                withSearch={false}
+                                initialItemsPerPage={MAX_RECENT_ITEMS}
+                                w="100%"
+                                h="100%"
+                                withinParent
+                            />
+                        )}
                     </InfoView>
                     {
                         //#endregion
@@ -268,13 +323,13 @@ export default function Page() {
                 //#region Mobile
                 <Flex
                     w="100%"
-                    mih={400}
                     h="100%"
-                    pos="relative"
+                    align="center"
                     direction="column"
                     wrap="nowrap"
                     gap="sm"
                     hiddenFrom="md"
+                    p="sm"
                 >
                     <Group w="100%" h={100} align="stretch" grow style={{ flexWrap: "nowrap" }}>
                         <Card withBorder>
@@ -284,7 +339,7 @@ export default function Page() {
                             <StatView
                                 label="Total Outstanding Loans"
                                 value={data.totalOutstandingItems}
-                                color={OUT_COLOR}
+                                color="red"
                             />
                         </Card>
                     </Group>
@@ -320,7 +375,7 @@ export default function Page() {
                                     <Sparkline
                                         w={100}
                                         h={50}
-                                        color={OUT_COLOR}
+                                        color="red"
                                         data={loansInCurrentMonth.days.map((day) => day.loanCount)}
                                     />
                                     <StatView
@@ -333,7 +388,7 @@ export default function Page() {
                                     <Sparkline
                                         w={100}
                                         h={50}
-                                        color={IN_COLOR}
+                                        color="green"
                                         data={loansInCurrentMonth.days.map(
                                             (day) => day.returnCount
                                         )}
@@ -354,7 +409,7 @@ export default function Page() {
 
                     <Stack gap="xs" mih={80} mt="auto">
                         <Text ta="center">{data.totalOutstandingLoans} outstanding loans</Text>
-                        <Button component={Link} to="/loans/list?status=outstanding">
+                        <Button component={Link} to="/loans/list?status=out">
                             View All Outstanding Loans
                         </Button>
                     </Stack>

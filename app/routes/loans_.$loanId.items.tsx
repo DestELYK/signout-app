@@ -1,98 +1,131 @@
-import { Accordion, Skeleton, Text } from "@mantine/core";
-import { LoaderFunctionArgs } from "@remix-run/node";
-import {
-  Outlet,
-  useNavigate,
-  useNavigation,
-  useParams,
-} from "@remix-run/react";
-import { typedjson, useTypedLoaderData } from "remix-typedjson";
-import invariant from "tiny-invariant";
-import OutstandingBadge from "~/components/OutstandingBadge";
-import { prisma } from "~/lib/prisma.server";
-
-export const loader = async ({ params }: LoaderFunctionArgs) => {
-  invariant(params.loanId, "Expected params.loanId");
-
-  const loanId = parseInt(params.loanId);
-
-  if (loanId === undefined) {
-    throw new Response(null, {
-      status: 404,
-    });
-  }
-
-  return typedjson({
-    items: await prisma.loanedItem.findMany({
-      where: { loanId: loanId },
-      select: {
-        item: {
-          select: {
-            name: true,
-            description: true,
-            tags: true,
-          },
-        },
-        itemId: true,
-        dateLoaned: true,
-        dateReturned: true,
-      },
-      orderBy: {
-        dateReturned: {
-          sort: "asc",
-          nulls: "first",
-        },
-      },
-    }),
-    error: undefined,
-  });
-};
+import { Accordion, Button, Flex, Group, Stack, Text } from "@mantine/core";
+import { Link, useNavigation, useParams, useSearchParams } from "@remix-run/react";
+import { IconArrowRight } from "@tabler/icons-react";
+import dayjs from "dayjs";
+import { useTypedRouteLoaderData } from "remix-typedjson";
+import { QRCodeWithComponent } from "~/components/qrCode/QRCodeWithComponent";
+import StatusBadge from "~/components/StatusBadge";
+import TagGroup from "~/components/tags/TagGroup";
+import { loader } from "~/routes/loans_.$loanId";
+import { LoanedItemData } from "~/utils/types.server";
+import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 
 export default function Page() {
-  const navigate = useNavigate();
-  const navigation = useNavigation();
-  const params = useParams();
-  const data = useTypedLoaderData<typeof loader>();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const navigation = useNavigation();
+    const params = useParams();
+    const loanData = useTypedRouteLoaderData<typeof loader>("routes/loans_.$loanId");
 
-  const loanId = params.loanId;
-  const itemId = params.itemId;
+    const loanId = params.loanId;
+    const itemId = searchParams.get("id");
 
-  return (
-    <>
-      {data &&
-      (!navigation.location ||
-        !navigation.location.pathname.endsWith("items")) ? (
-        <>
-          <Accordion
-            onChange={(value) => {
-              if (!value) {
-                navigate(`/loans/${loanId}/items`, { replace: true });
-              } else {
-                navigate(`/loans/${loanId}/items/${value}`, { replace: true });
-              }
-            }}
-            value={itemId || null}
-          >
-            {data.items.map((item) => (
-              <Accordion.Item key={item.itemId} value={item.itemId.toString()}>
-                <Accordion.Control
-                  icon={<OutstandingBadge out={item.dateReturned === null} />}
+    const loanedItem = (loanedItem: LoanedItemData) => (
+        <Stack gap="xs">
+            <QRCodeWithComponent qrCode={loanedItem.uuid} scale={2.5}>
+                <Flex w="100%" direction="column" gap="xs">
+                    {loanedItem.dateLoaned && (
+                        <Text size="xs">
+                            Date Loaned: {formatDate(loanedItem.dateLoaned)}
+                            <br />
+                            <span style={{ fontWeight: "bold" }}>
+                                ({dateDiff({ date: loanedItem.dateLoaned })})
+                            </span>
+                        </Text>
+                    )}
+                    {loanedItem.dateReturned && (
+                        <Text size="xs">
+                            Date Returned: {formatDate(loanedItem.dateReturned)}
+                            <br />
+                            <span style={{ fontWeight: "bold" }}>
+                                (Took{" "}
+                                {dayjs(loanedItem.dateReturned).from(loanedItem.dateLoaned, true)}{" "}
+                                to return)
+                            </span>
+                        </Text>
+                    )}
+                    {loanedItem.returnedBy && (
+                        <Text size="xs">
+                            Returned By:{" "}
+                            <span
+                                style={{
+                                    fontWeight: "bold",
+                                    color:
+                                        loanData?.data?.person.id !== loanedItem.returnedBy.id
+                                            ? "red"
+                                            : undefined,
+                                }}
+                            >
+                                {formatFullName(loanedItem.returnedBy)}
+                            </span>
+                        </Text>
+                    )}
+                </Flex>
+            </QRCodeWithComponent>
+            <TagGroup
+                tags={loanedItem.tags}
+                categories={["Item Type"]}
+                blacklist
+                groupProps={{ justify: "end" }}
+            />
+            <Group justify="end" mt="sm">
+                <Button
+                    variant="outline"
+                    rightSection={<IconArrowRight />}
+                    component={Link}
+                    to={`/items/${itemId}`}
                 >
-                  <Text>{item.item.name}</Text>
-                  <Text size="xs" fs="italic">
-                    {item.item.description || "No description"}
-                  </Text>
-                </Accordion.Control>
-                <Accordion.Panel>
-                  <Outlet />
-                </Accordion.Panel>
-              </Accordion.Item>
-            ))}
-          </Accordion>
+                    View
+                </Button>
+            </Group>
+        </Stack>
+    );
+
+    return (
+        <>
+            {loanData &&
+                (loanData.error ? (
+                    <Text ta="center" c="red">
+                        {loanData.error}
+                    </Text>
+                ) : (
+                    loanData.data && (
+                        <>
+                            <Accordion
+                                onChange={(value) => {
+                                    if (!value) {
+                                        setSearchParams(
+                                            (prev) => {
+                                                prev.delete("id");
+                                                return prev;
+                                            },
+                                            { replace: true }
+                                        );
+                                    } else {
+                                        setSearchParams({ id: value }, { replace: true });
+                                    }
+                                }}
+                                value={itemId || null}
+                            >
+                                {loanData.data.items.map((item) => (
+                                    <Accordion.Item
+                                        key={item.itemId}
+                                        value={item.itemId.toString()}
+                                    >
+                                        <Accordion.Control
+                                            icon={<StatusBadge status={item.status} />}
+                                        >
+                                            <Text>{item.name}</Text>
+                                            <Text size="xs" fs="italic">
+                                                {item.description || "No description"}
+                                            </Text>
+                                        </Accordion.Control>
+                                        <Accordion.Panel>{loanedItem(item)}</Accordion.Panel>
+                                    </Accordion.Item>
+                                ))}
+                            </Accordion>
+                        </>
+                    )
+                ))}
         </>
-      ) : (
-        <Skeleton h={200} />
-      )}
-    </>
-  );
+    );
 }

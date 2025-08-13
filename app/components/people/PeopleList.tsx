@@ -1,7 +1,5 @@
-import { PersonRole, Tag } from "@prisma/client";
 import { useNavigation } from "@remix-run/react";
-import { PersonWithTags } from "~/utils/types.server";
-import { filterTags } from "~/utils/utils";
+import { PersonData } from "~/utils/types.server";
 import ListView, { ListViewProps } from "../base/ListView";
 import PersonListView from "./PersonListView";
 
@@ -21,33 +19,9 @@ export default function PeopleList({
     showPagination,
     withSearch,
     withOffset,
-}: PeopleListProps &
-    Omit<
-        ListViewProps<
-            Partial<PersonWithTags> & {
-                id: number;
-                firstName: string;
-                lastName: string;
-                nickname?: string | null;
-                role: PersonRole;
-                lastLoan?: {
-                    id: number;
-                    items: {
-                        id: number;
-                        name: string;
-                        loanedDate: Date;
-                        returnedDate?: Date;
-                    };
-                };
-                invalidItems?: {
-                    id: number;
-                    name: string;
-                    status: Tag;
-                }[];
-            }
-        >,
-        "children" | "loading"
-    >) {
+    withQRCode,
+    withinParent,
+}: PeopleListProps & Omit<ListViewProps<PersonData>, "children" | "loading">) {
     const navigation = useNavigation();
 
     return (
@@ -62,28 +36,16 @@ export default function PeopleList({
             initialItemsPerPage={initialItemsPerPage}
             showPagination={showPagination}
             withOffset={withOffset}
+            withQRCode={withQRCode}
+            withinParent={withinParent}
             loading={navigation.state === "loading"}
         >
             {(person, query, qrCode) => (
                 <PersonListView
-                    id={person.id}
-                    firstName={person.firstName}
-                    lastName={person.lastName}
-                    nickname={person.nickname}
-                    role={hideRole ? undefined : person.role}
-                    tags={person.tags}
-                    totalLoans={person.loans && person.loans.length}
-                    outstandingLoans={person._count && person._count.loans}
+                    person={person}
                     query={query}
-                    qrCode={qrCode}
-                    showChevron={orientation === "vertical"}
-                    invalidItems={person.loans?.flatMap((loan) =>
-                        loan.items.map((item) => ({
-                            id: item.itemId,
-                            name: item.item.name,
-                            status: filterTags(item.item.tags, "Item Status")[0],
-                        }))
-                    )}
+                    personId={qrCode}
+                    showChevron={orientation !== "horizontal"}
                 />
             )}
         </ListView>

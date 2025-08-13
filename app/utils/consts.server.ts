@@ -1,17 +1,4 @@
-import { PersonRole, Tag } from "@prisma/client";
-
-export const DEFAULT_ROLES = [
-    { id: 0, name: "Grade 4", color: "#ff0000" },
-    { id: 1, name: "Grade 5", color: "#ff0000" },
-    { id: 2, name: "Grade 6", color: "#ff0000" },
-    { id: 3, name: "Grade 7", color: "#ffff00" },
-    { id: 4, name: "Grade 8", color: "#ffff00" },
-    { id: 5, name: "Grade 9", color: "#0000ff" },
-    { id: 6, name: "Grade 10", color: "#0000ff" },
-    { id: 7, name: "Grade 11", color: "#0000ff" },
-    { id: 8, name: "Grade 12", color: "#0000ff" },
-    { id: 9, name: "Staff", color: "#800080" },
-] satisfies Partial<PersonRole>[];
+import { TagData } from "./types.server";
 
 export const DEFAULT_TAGS = [
     //#region  Item Status
@@ -182,4 +169,4 @@ export const DEFAULT_TAGS = [
     //#region Locations
     { name: "Helpdesk", color: "green", category: "Location" },
     //#endregion
-] satisfies Partial<Tag>[];
+] as TagData[];

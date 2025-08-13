@@ -4,61 +4,21 @@ import { useNavigate } from "@remix-run/react";
 import { typedjson } from "remix-typedjson";
 import DataPage from "~/DataPage";
 import PersonForm from "~/components/forms/PersonForm";
-import { handleError } from "~/lib/db.server";
 import { useCreateModal } from "~/lib/hooks";
-import { prisma } from "~/lib/prisma.server";
-import { PersonFormSchema } from "~/lib/schemas";
-import { personWithTags } from "~/utils/types.server";
+import { createPerson } from "~/lib/people.server";
 
 export const meta: MetaFunction = () => {
     return [{ title: "People | SJK Sign-Out" }];
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-    try {
-        switch (request.method) {
-            case "POST":
-                const person = PersonFormSchema.parse(await request.json());
-
-                return typedjson({
-                    person: await prisma.person.create({
-                        data: {
-                            firstName: person.firstName,
-                            lastName: person.lastName,
-                            nickname: person.nickname,
-                            studentId: person.studentId,
-                            role: {
-                                connect: {
-                                    id: person.role,
-                                },
-                            },
-                            tags: person.tags
-                                ? {
-                                      connect: person.tags.map((tag) => ({
-                                          id: tag,
-                                      })),
-                                  }
-                                : undefined,
-                        },
-                        include: personWithTags.include,
-                    }),
-                    error: undefined,
-                });
-            default:
-                throw new Response(null, {
-                    status: 405,
-                });
-        }
-    } catch (e) {
-        const error = handleError(e, "no item was created");
-
-        if (error) {
-            return typedjson({ error: error, person: undefined });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
+    switch (request.method) {
+        case "POST":
+            return typedjson(await createPerson(await request.json()));
+        default:
+            throw new Response(null, {
+                status: 405,
             });
-        }
     }
 }
 
@@ -74,13 +34,13 @@ export default function Page() {
                     initialValues={{
                         firstName: "",
                         lastName: "",
-                        studentId: "",
+                        schoolId: "",
                     }}
-                    onResult={(data) => {
-                        if (data.person) {
+                    onResult={(personData) => {
+                        if (personData.data) {
                             close();
 
-                            navigate(`/people/${data.person.id}`);
+                            navigate(`/people/${personData.data.id}`);
                         }
                     }}
                 />

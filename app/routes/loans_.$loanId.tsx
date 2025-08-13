@@ -1,238 +1,125 @@
-import { Card, Center, Loader, Stack, Text } from "@mantine/core";
+import { Box, Center, Loader, Stack, Text } from "@mantine/core";
+import { modals } from "@mantine/modals";
+import { notifications } from "@mantine/notifications";
 import { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
-import { useRouteError } from "@remix-run/react";
+import { useNavigate } from "@remix-run/react";
 import { IconDeviceImac, IconInfoCircle, IconListCheck } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
-import invariant from "tiny-invariant";
 import InfoView from "~/components/base/InfoView";
 import EditableNotes from "~/components/EditableNotes";
-import ErrorPage from "~/components/ErrorPage";
-import OutstandingBadge from "~/components/OutstandingBadge";
 import PersonCard from "~/components/people/PersonCard";
+import StatusBadge from "~/components/StatusBadge";
 import DetailsPage from "~/DetailsPage";
-import { handleError } from "~/lib/db.server";
-import { prisma } from "~/lib/prisma.server";
-import { PatchLoanFormData } from "~/utils/types.server";
-import { isNumeric } from "~/utils/utils";
+import { useFetcherWithErrorHandler } from "~/lib/hooks";
+import { deleteLoan, getLoanById, updateLoan } from "~/lib/loans.server";
 
 export const meta: MetaFunction = ({ params }) => {
     return [{ title: `Loan #${params.loanId}` }];
 };
 
 export const loader = async ({ params }: LoaderFunctionArgs) => {
-    invariant(params.loanId, "Expected params.loanId");
-
-    if (!isNumeric(params.loanId)) {
-        throw new Response(null, { status: 404 });
-    }
-
-    try {
-        const loanId = Number(params.loanId);
-
-        return typedjson({
-            loan: await prisma.loan.findFirstOrThrow({
-                where: { id: loanId },
-                select: {
-                    id: true,
-                    createdDate: true,
-                    updatedDate: true,
-                    notes: true,
-                    tags: true,
-                    person: {
-                        select: {
-                            id: true,
-                            studentId: true,
-                            firstName: true,
-                            lastName: true,
-                            nickname: true,
-                            role: true,
-                            tags: true,
-                            notes: true,
-                        },
-                    },
-                    _count: {
-                        select: {
-                            items: true,
-                        },
-                    },
-                },
-            }),
-            outstandingItems: await prisma.loanedItem.count({
-                where: {
-                    loanId: loanId,
-                    dateReturned: null,
-                },
-            }),
-            error: undefined,
-        });
-    } catch (e) {
-        const error = handleError(e, "no loan returned");
-
-        if (error) {
-            return typedjson({ error: error, outstandingItems: 0, loan: undefined });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
-    }
+    return typedjson(await getLoanById(params.loanId));
 };
 
 export const action = async ({ params, request }: ActionFunctionArgs) => {
-    const formData: PatchLoanFormData = await request.json();
-
-    invariant(params.loanId, "No loanId provided");
-
-    const loanId = params.loanId;
-
-    try {
-        switch (request.method) {
-            case "PATCH":
-                let personId = formData.personId;
-
-                if (formData.itemIds && formData.itemIds.length == 0) {
-                    throw Error("Loan requires at least one item");
-                }
-
-                const itemIds = formData.itemIds;
-
-                const notes = formData.notes;
-
-                const tagIds = formData.tagIds;
-
-                const updatedDate =
-                    personId || itemIds || notes
-                        ? (formData.dateReturned && new Date(formData.dateReturned)) || new Date()
-                        : undefined;
-
-                if (!personId) {
-                    personId = (
-                        await prisma.loan.findFirstOrThrow({
-                            where: { id: parseInt(loanId) },
-                        })
-                    ).personId;
-                }
-
-                // TODO - validate against previous loan dates
-
-                const updatedLoan = await prisma.loan.update({
-                    where: { id: parseInt(loanId) },
-                    data: {
-                        ...(personId && { personId: personId }),
-                        ...(notes != undefined && { notes: notes }),
-                        ...(updatedDate != undefined && { updatedDate: updatedDate }),
-                        ...(itemIds != undefined && {
-                            items: {
-                                updateMany: itemIds.map((i) => {
-                                    let data: {
-                                        returnedById?: number;
-                                        dateReturned?: Date;
-                                        itemId?: number;
-                                    };
-
-                                    if (i.newId !== undefined) {
-                                        data = {
-                                            itemId: i.newId,
-                                            dateReturned: formData.dateReturned
-                                                ? new Date(formData.dateReturned)
-                                                : undefined,
-                                        };
-                                    } else if (i.returnedById !== undefined) {
-                                        data = {
-                                            returnedById: i.returnedById,
-                                            dateReturned: formData.dateReturned
-                                                ? new Date(formData.dateReturned)
-                                                : updatedDate,
-                                        };
-                                    } else {
-                                        data = {
-                                            returnedById: personId,
-                                            dateReturned: formData.dateReturned
-                                                ? new Date(formData.dateReturned)
-                                                : updatedDate,
-                                        };
-                                    }
-
-                                    return {
-                                        where: {
-                                            AND: [
-                                                { itemId: i.id },
-                                                ...(i.returnedById ? [{ dateReturned: null }] : []),
-                                            ],
-                                        },
-                                        data: data,
-                                    };
-                                }),
-                            },
-                        }),
-                        ...(tagIds != undefined && {
-                            tags: {
-                                set: tagIds.map((t) => {
-                                    return {
-                                        id: t.id,
-                                    };
-                                }),
-                            },
-                        }),
-                    },
-                });
-
-                console.log("Loan #%i updated", loanId);
-
-                return typedjson({ loan: updatedLoan, error: undefined });
-            default:
-                throw new Response(null, {
-                    status: 405,
-                });
-        }
-    } catch (e) {
-        const error = handleError(e, "no loan was updated");
-
-        if (error) {
-            return typedjson({ error: error, loan: undefined });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
+    switch (request.method) {
+        case "PATCH":
+            return typedjson(await updateLoan(params.loanId, await request.json()));
+        case "DELETE":
+            return typedjson(await deleteLoan(params.loanId));
+        default:
+            throw new Response("Method Not Allowed", { status: 405 });
     }
 };
 
-export function ErrorBoundary() {
-    const error = useRouteError();
-
-    return (
-        <Card padding="sm" radius="sm" withBorder w="100%" h="100%">
-            <ErrorPage error={error} />
-        </Card>
-    );
-}
-
 export default function Page() {
-    const data = useTypedLoaderData<typeof loader>();
+    const loanData = useTypedLoaderData<typeof loader>();
+    const navigate = useNavigate();
 
-    console.log(data);
+    const notificationId = "loan-delete";
 
-    const infoView = data.error ? (
+    const deleteFetcher = useFetcherWithErrorHandler<typeof action>(
+        (loanData) => {
+            if (loanData?.data) {
+                notifications.update({
+                    id: notificationId,
+                    message: "Successfully deleted loan #" + loanData.data.id,
+                    loading: false,
+                    autoClose: 5000,
+                    withCloseButton: true,
+                });
+
+                navigate("/loans", { replace: true });
+            }
+        },
+        (error) => {
+            notifications.update({
+                id: notificationId,
+                message: error,
+                color: "red",
+                loading: false,
+                autoClose: 5000,
+                withCloseButton: true,
+            });
+        }
+    );
+
+    const handleDelete = () => {
+        modals.openConfirmModal({
+            title: "Delete Loan",
+            children: `Are you sure you want to delete loan #${loanData.data?.id}?`,
+            onConfirm: () => {
+                notifications.show({
+                    id: notificationId,
+                    message: "Deleting loan #" + loanData.data?.id,
+                    loading: true,
+                    autoClose: false,
+                    withCloseButton: true,
+                });
+
+                deleteFetcher.submit(null, { method: "DELETE" });
+            },
+            labels: {
+                cancel: "Cancel",
+                confirm: "Delete",
+            },
+        });
+    };
+    const infoView = loanData.error ? (
         <Center w="100%" h="100%">
-            <Text c="error">{data.error}</Text>
+            <Text c="error">{loanData.error}</Text>
         </Center>
-    ) : data.loan === undefined ? (
+    ) : loanData.data === undefined ? (
         <Center w="100%" h="100%">
             <Loader />
         </Center>
     ) : (
         <Stack w="100%">
-            <PersonCard {...data.loan.person} />
-            <InfoView title="Notes" cardProps={{ h: undefined }}>
-                <EditableNotes action={`/loans/${data.loan.id}`} value={data.loan.notes} editable />
+            <PersonCard
+                person={loanData.data?.person}
+                returned={
+                    !loanData.data.items.every(
+                        (item) =>
+                            item.dateReturned !== undefined &&
+                            item.returnedBy?.id === loanData.data?.person.id
+                    )
+                }
+            />
+            <InfoView title="Notes" cardProps={{ h: undefined, padding: 0 }}>
+                <Box p="sm">
+                    <EditableNotes
+                        action={`/loans/${loanData.data.id}`}
+                        value={loanData.data.notes}
+                        editable
+                    />
+                </Box>
             </InfoView>
         </Stack>
     );
 
-    return data.error != undefined ? (
+    return loanData.error != undefined ? (
         <Center h="100%">
-            <Text c="error">{data.error}</Text>
+            <Text c="error">{loanData.error}</Text>
         </Center>
     ) : (
         <DetailsPage
@@ -244,20 +131,18 @@ export default function Page() {
                 items: {
                     icon: <IconDeviceImac size={24} />,
                     label: "Items",
+                    count: loanData.data?.itemsCount,
                 },
                 signin: {
                     icon: <IconListCheck size={24} />,
                     label: "Sign-In",
                 },
             }}
-            topSection={
-                <OutstandingBadge
-                    out={data.outstandingItems > 0}
-                    badgeProps={{ variant: "outline" }}
-                />
-            }
-            tags={data.loan.tags}
-            title={`Loan #${data.loan.id}`}
+            topSection={<StatusBadge status={loanData.data?.status} />}
+            handleDelete={handleDelete}
+            tags={loanData.data?.tags}
+            disabled={loanData.error != undefined}
+            title={`Loan #${loanData.data?.id}`}
             desktopComponent={infoView}
         />
     );

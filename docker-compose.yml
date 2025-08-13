@@ -3,6 +3,8 @@ services:
     container_name: mariadb
     image: mariadb
     restart: always
+    ports:
+      - "127.0.0.1:3306:3306"
     environment:
       - MARIADB_RANDOM_ROOT_PASSWORD=1
       - MYSQL_DATABASE=app
@@ -30,8 +32,10 @@ services:
         required: true
     environment:
       - DATABASE_URL=mysql://signout-app:mypassword@mariadb:3306/app
+      - PROFILE_URL="https://sjkschool.myschoolapp.com/app/faculty#profile/"
+      - REPORT_URL="https://docs.google.com/forms/d/e/1FAIpQLSdlh_Jkl2na-ZYe0uSICr4klv3rTM4OhrX-TK59AzTiCi_E2w/viewform?embedded=true"
       - TZ=America/Toronto
-    command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]        
+    command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]
     healthcheck:
       test: curl --fail http://localhost:3000/api/health-check || exit 1
       interval: 60s

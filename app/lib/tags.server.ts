@@ -1,10 +1,138 @@
+import { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
-import { prisma } from "./prisma.server";
-import { TagFormSchema } from "./schemas";
+import { TagData } from "~/utils/types.server";
+import { handleError } from "./db.server";
+import { TagFormSchema, TagFormType, TagQueryType } from "./schemas";
 
-export async function updateTag(tagId: string, data: z.infer<typeof TagFormSchema>) {
+const prisma = new PrismaClient();
+
+export const getTags = async (
+    filters: TagQueryType,
+    limit?: number,
+    offset?: number
+): Promise<{
+    tags?: TagData[];
+    totalCount?: number;
+    error?: string;
+}> => {
     try {
-        const id = z.coerce.number().parse(tagId);
+        const filter = {
+            AND: [
+                filters.query
+                    ? {
+                          OR: [
+                              {
+                                  name: {
+                                      contains: filters.query,
+                                  },
+                              },
+                              {
+                                  category: {
+                                      contains: filters.query,
+                                  },
+                              },
+                          ],
+                      }
+                    : {},
+                filters.category
+                    ? {
+                          category: filters.category,
+                      }
+                    : {},
+                filters.hidden !== undefined
+                    ? {
+                          hidden: filters.hidden,
+                      }
+                    : {},
+            ],
+        } satisfies Prisma.TagWhereInput;
+
+        const result = await prisma.tag.findMany({
+            where: filter,
+            orderBy: {
+                priority: "desc",
+            },
+            take: limit,
+            skip: offset,
+        });
+
+        return {
+            tags: result.map((tag) => ({
+                ...tag,
+                description: tag.description ?? undefined,
+            })),
+            totalCount: await prisma.tag.count({ where: filter }),
+        };
+    } catch (e) {
+        return { error: handleError(e, "getting tags") };
+    }
+};
+
+export const getTagById = async (
+    tagId: string
+): Promise<{
+    tag?: TagData;
+    error?: string;
+}> => {
+    try {
+        const id = z.coerce.number({ message: "Invalid Tag ID" }).parse(tagId);
+
+        const result = await prisma.tag.findUniqueOrThrow({
+            where: {
+                id: id,
+            },
+        });
+
+        return {
+            tag: {
+                ...result,
+                description: result.description ?? undefined,
+            },
+        };
+    } catch (e) {
+        return { error: handleError(e, "getting tag by ID") };
+    }
+};
+
+export const createTag = async (
+    data: TagFormType
+): Promise<{
+    tag?: TagData;
+    error?: string;
+}> => {
+    try {
+        const newTag = TagFormSchema.parse(data);
+
+        const result = await prisma.tag.create({
+            data: {
+                name: newTag.name,
+                category: newTag.category,
+                color: newTag.color,
+                priority: newTag.priority,
+                hidden: newTag.hidden,
+            },
+        });
+
+        return {
+            tag: {
+                ...result,
+                description: result.description ?? undefined,
+            },
+        };
+    } catch (e) {
+        return { error: handleError(e, "creating tag") };
+    }
+};
+
+export const updateTag = async (
+    tagId: string,
+    data: TagFormType
+): Promise<{
+    tag?: TagData;
+    error?: string;
+}> => {
+    try {
+        const id = z.coerce.number({ message: "Invalid tag ID" }).parse(tagId);
 
         const newTag = TagFormSchema.parse(data);
 
@@ -21,18 +149,23 @@ export async function updateTag(tagId: string, data: z.infer<typeof TagFormSchem
             },
         });
 
-        return { tag: result };
+        return {
+            tag: {
+                ...result,
+                description: result.description ?? undefined,
+            },
+        };
     } catch (e) {
-        console.error(`Failed to update tag`, e);
-
-        let message = "Unknown Error";
-        if (e instanceof Error) message = e.message;
-
-        return { error: message };
+        return { error: handleError(e, "updating tag") };
     }
-}
+};
 
-export async function deleteTag(tagId: string) {
+export const deleteTag = async (
+    tagId: string
+): Promise<{
+    tag?: TagData;
+    error?: string;
+}> => {
     try {
         const id = z.coerce.number().parse(tagId);
 
@@ -42,13 +175,13 @@ export async function deleteTag(tagId: string) {
             },
         });
 
-        return { tag: result };
+        return {
+            tag: {
+                ...result,
+                description: result.description ?? undefined,
+            },
+        };
     } catch (e) {
-        console.error(`Failed to get person by id`, e);
-
-        let message = "Unknown Error";
-        if (e instanceof Error) message = e.message;
-
-        return { error: message };
+        return { error: handleError(e, "deleting tag") };
     }
-}
+};

@@ -1,20 +1,22 @@
 import {
     Badge,
+    Box,
     Button,
     Card,
+    Divider,
     Group,
     MantineStyleProps,
-    Paper,
     Space,
     Stack,
     Text,
 } from "@mantine/core";
 import { Link, useNavigate } from "@remix-run/react";
-import { IN_COLOR, OUT_COLOR } from "~/utils/consts";
+import dayjs from "dayjs";
 import { LastLoanData } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
 import ListView from "../base/ListView";
+import StatusBadge from "../StatusBadge";
 import TagGroup from "../tags/TagGroup";
 
 export interface LastLoanViewProps {
@@ -23,6 +25,7 @@ export interface LastLoanViewProps {
     data?: LastLoanData;
     showPerson?: boolean;
     showItems?: boolean;
+    prefix?: string;
 }
 
 export default function LastLoanView({
@@ -31,10 +34,9 @@ export default function LastLoanView({
     data,
     showPerson = true,
     showItems = true,
+    prefix,
 }: LastLoanViewProps) {
     const navigate = useNavigate();
-
-    const outstanding = data?.items?.some((item) => !item.dateReturned);
 
     return data === undefined ? (
         <Card withBorder>
@@ -51,112 +53,116 @@ export default function LastLoanView({
         </Card>
     ) : (
         <InfoView
-            title={`Last Loan: #${data.id}`}
+            title={`${prefix ? `${prefix} ` : ""}#${data.id}`}
             href={`/loans/${data.id}`}
-            rightSection={<TagGroup tags={data.tags} categories={["Loan Info"]} />}
-            bottomSection={
-                <TagGroup
-                    tags={data.tags}
-                    categories={["Location"]}
-                    groupProps={{ justify: "end" }}
-                />
-            }
-            cardProps={{ w, h }}
-        >
-            <Stack gap={0}>
-                <Text>
-                    <b>Current Status: </b>
-                    <Text span c={outstanding ? OUT_COLOR : IN_COLOR}>
-                        {outstanding ? "Outstanding" : "Returned"}
-                    </Text>
-                </Text>
-                {showPerson && (
+            rightSection={<StatusBadge status={data.status} />}
+            collapseOpen={showPerson}
+            collapseSection={
+                data.person && (
                     <Group justify="space-between">
                         <Text component={Link} to={`/people/${data.person.id}`}>
                             <b>Loaned by: </b>
                             {formatFullName(data.person)}
                         </Text>
-                        <Badge color={data.person.role.color} autoContrast>
-                            {data.person.role.name}
-                        </Badge>
-                    </Group>
-                )}
-                {!showItems && (
-                    <>
-                        <Text mt="sm">
-                            <b>{dateDiff({ date: data.dateLoaned, withoutSuffix: true })}</b> since
-                            loan was created
-                        </Text>
-                        <Text size="xs" c="dimmed" fs="italic">
-                            {formatDate(data.dateLoaned)}
-                        </Text>
-                        {data.dateReturned && (
-                            <>
-                                <Text mt="sm">
-                                    <b>
-                                        {dateDiff({ date: data.dateReturned, withoutSuffix: true })}
-                                    </b>{" "}
-                                    since returned
-                                </Text>
-                                <Text size="xs" c="dimmed" fs="italic">
-                                    {formatDate(data.dateReturned)}
-                                </Text>
-                            </>
+                        {data.person.role && (
+                            <Badge color={data.person.role.color} autoContrast>
+                                {data.person.role.name}
+                            </Badge>
                         )}
-                    </>
-                )}
-                <Space h="sm" />
+                    </Group>
+                )
+            }
+            bottomSection={
+                data.tags !== undefined && data.tags.length > 0 ? (
+                    <TagGroup tags={data.tags} groupProps={{ justify: "end" }} />
+                ) : undefined
+            }
+            cardProps={{ w, h, padding: 0 }}
+        >
+            <Stack gap={0} pt="sm">
+                <Box px="sm">
+                    {data.dateLoaned && (
+                        <>
+                            <Text>
+                                <b>
+                                    {dateDiff({
+                                        date: data.dateLoaned,
+                                        withoutSuffix: true,
+                                        skipToday: true,
+                                        skipYesterday: true,
+                                    })}
+                                </b>{" "}
+                                since loan was created
+                            </Text>
+                            <Text size="xs" c="dimmed" fs="italic">
+                                {formatDate(data.dateLoaned)}
+                            </Text>
+                        </>
+                    )}
+                    {data.dateAllReturned && (
+                        <>
+                            <Text mt="sm">
+                                It took{" "}
+                                <b>{dayjs(data.dateAllReturned).from(data.dateLoaned, true)}</b> for
+                                all items to be returned{" "}
+                                <b>
+                                    (
+                                    {dateDiff({ date: data.dateAllReturned, withoutSuffix: false })}
+                                    )
+                                </b>
+                            </Text>
+                            <Text size="xs" c="dimmed" fs="italic">
+                                {formatDate(data.dateAllReturned)}
+                            </Text>
+                        </>
+                    )}
+                </Box>
                 {data.items &&
                     (showItems ? (
-                        <Paper withBorder p="xs">
+                        <>
+                            <Space h="sm" />
+                            <Divider w="100%" />
                             <ListView
                                 data={data.items}
                                 orientation="horizontal"
                                 withSearch={false}
                                 showPagination={false}
+                                w="100%"
+                                h={120}
+                                withinParent
                             >
                                 {(item) => (
-                                    <Stack key={item.id} miw={300} gap={0}>
-                                        <Text fw="bold" component={Link} to={`/items/${item.id}`}>
-                                            {item.name}
-                                        </Text>
-
-                                        <Text>
-                                            <b>
-                                                {dateDiff({
-                                                    date: item.dateReturned ?? data.dateLoaned,
-                                                    withoutSuffix: true,
-                                                })}
-                                            </b>{" "}
-                                            since {item.dateReturned ? "returned" : "loaned"}
-                                        </Text>
-                                        <Text size="xs" c="dimmed" fs="italic">
-                                            {item.dateReturned
-                                                ? formatDate(item.dateReturned)
-                                                : formatDate(data.dateLoaned)}
-                                        </Text>
-                                        {item.returnedBy && (
-                                            <Text size="xs">
-                                                Returned by:{" "}
-                                                <Text
-                                                    span
-                                                    inherit
-                                                    fw="bold"
-                                                    {...(item.returnedBy.id !== data.person.id && {
-                                                        c: "error",
-                                                    })}
-                                                >
-                                                    {formatFullName(item.returnedBy)}
+                                    <Box pos="relative" miw={250} h="100%" p="xs">
+                                        <Stack h="100%" gap={0}>
+                                            <Text
+                                                component={Link}
+                                                to={`/items/${item.id}`}
+                                                fw="bold"
+                                                lineClamp={1}
+                                            >
+                                                {item.name}
+                                            </Text>
+                                            <Text fw="bold" mb="md" size="sm" lineClamp={1}>
+                                                Current Status:{" "}
+                                                <Text span c={item.status?.color ?? "gray"}>
+                                                    {item.status?.name ?? "Unknown"}
                                                 </Text>
                                             </Text>
-                                        )}
-                                    </Stack>
+                                            <Text
+                                                fs="italic"
+                                                c={item.description ? undefined : "dimmed"}
+                                                lineClamp={1}
+                                            >
+                                                {item.description || "No item description"}
+                                            </Text>
+                                        </Stack>
+                                    </Box>
                                 )}
                             </ListView>
-                        </Paper>
+                        </>
                     ) : (
-                        <Text c="dimmed">
-                            {data.items.length} item{data.items.length > 1 ? "s" : ""} loaned out
+                        <Text p="sm" c="dimmed">
+                            {data.items.length} item{data.items.length > 1 ? "s" : ""} total
                         </Text>
                     ))}
             </Stack>

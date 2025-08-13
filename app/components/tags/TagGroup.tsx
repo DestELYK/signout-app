@@ -1,33 +1,37 @@
 import { Badge, BadgeProps, Group, GroupProps } from "@mantine/core";
-import { Tag } from "@prisma/client";
+import { TagData } from "~/utils/types.server";
 import { filterTags } from "~/utils/utils";
 
 export interface TagGroupProps {
-  tags: Tag[];
-  categories?: string[];
-  blacklist?: boolean;
-  limit?: number;
-  badgeProps?: BadgeProps;
-  groupProps?: GroupProps;
+    tags?: TagData[];
+    categories?: string[];
+    blacklist?: boolean;
+    limit?: number;
+    badgeProps?: BadgeProps;
+    groupProps?: GroupProps;
 }
 
 export default function TagGroup({
-  tags,
-  categories = [],
-  blacklist = false,
-  limit = tags.length,
-  badgeProps,
-  groupProps,
+    tags,
+    categories = [],
+    blacklist = false,
+    limit = tags?.length ?? 0,
+    badgeProps,
+    groupProps,
 }: TagGroupProps) {
-  const filteredTags = filterTags(tags, categories, blacklist);
+    if (!tags) {
+        return undefined;
+    }
 
-  return filteredTags.length > 0 ? (
-    <Group justify="end" align="center" gap={2} {...groupProps}>
-      {filteredTags.slice(0, limit).map((t) => (
-        <Badge key={t.id} color={t.color} autoContrast {...badgeProps}>
-          {t.name}
-        </Badge>
-      ))}
-    </Group>
-  ) : undefined;
+    const filteredTags = filterTags(tags, categories, blacklist);
+
+    return filteredTags.length > 0 ? (
+        <Group justify="end" align="center" gap={2} {...groupProps}>
+            {filteredTags.slice(0, limit).map((t) => (
+                <Badge key={t.id} color={t.color} autoContrast {...badgeProps}>
+                    {t.name}
+                </Badge>
+            ))}
+        </Group>
+    ) : undefined;
 }

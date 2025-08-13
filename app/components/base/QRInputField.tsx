@@ -10,26 +10,33 @@ import {
     useCombobox,
 } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
-import QrButton from "./qrCode/QrButton";
+import React from "react";
+import QrButton from "../qrCode/QrButton";
+import { ScanResults } from "../qrCode/Scanner";
 
 export interface QRInputFieldProps<T> {
     label?: string;
     description?: string;
     placeholder?: string;
-    error?: string;
+    error?: React.ReactNode;
     loading?: boolean;
     withQRCode?: boolean;
     autoFocus?: boolean;
     disabled?: boolean;
+    required?: boolean;
     value?: string;
     icon?: React.ReactNode;
     items?: T[];
-    onChanged?: (value: string, qrScanned: boolean) => void;
-    onSelect?: (value?: T) => void;
-    onCreateButton?: () => boolean;
+    showCreateOption?: boolean;
+    rightSection?: React.ReactNode;
+    onSelect?: (id: string, value?: T) => boolean | void;
+    onClear?: () => void;
+    onScan?: (result: ScanResults) => void;
     disableItem?: (value: T) => boolean;
-    children?: (value: T) => React.ReactNode;
+    children?: (value: T, query?: string) => React.ReactNode;
+    onChange?: (value: string) => void;
+    onFocus?: () => boolean | void;
+    onBlur?: () => boolean | void;
 }
 
 export default function QRInputField<T extends { id: number }>({
@@ -41,62 +48,53 @@ export default function QRInputField<T extends { id: number }>({
     withQRCode = true,
     autoFocus = false,
     disabled,
-    value: initialValue,
+    required,
+    value,
     icon,
     items,
-    onChanged,
+    showCreateOption,
+    rightSection,
+    onChange,
     onSelect,
-    onCreateButton,
+    onClear,
+    onScan,
     disableItem = (item) => false,
+    onBlur,
+    onFocus,
     children,
 }: QRInputFieldProps<T>) {
-    const [value, setValue] = useState(initialValue ?? "");
-    const [scannedQRCode, setScannedQRCode] = useState<string | undefined>();
     const combobox = useCombobox();
-
-    useEffect(() => {
-        onChanged?.(value, scannedQRCode !== undefined);
-    }, [value, scannedQRCode]);
-
-    useEffect(() => {
-        setValue(initialValue ?? "");
-    }, [initialValue]);
-
-    console.log(items);
 
     return (
         <Combobox
             disabled={disabled}
             onOptionSubmit={(value) => {
-                if (value != "$create") {
-                    const selected = items?.find((v) => v.id.toString() === value);
+                const selected =
+                    value !== "$create" ? items?.find((v) => v.id.toString() === value) : undefined;
 
-                    combobox.closeDropdown();
-
-                    onSelect?.(selected);
-                }
+                onSelect?.(value, selected) && combobox.closeDropdown();
             }}
             store={combobox}
         >
             <Combobox.Target>
-                <Flex w="100%" direction="row" align="center" gap="xs">
+                <Flex w="100%" direction="row" align="start" gap="xs">
                     <TextInput
                         data-autofocus={autoFocus}
                         label={label}
                         description={description}
                         error={error}
+                        required={required}
                         w="100%"
                         leftSection={icon}
                         rightSection={
                             loading ? (
                                 <Loader size="xs" />
                             ) : (
+                                value &&
                                 value.length > 0 && (
                                     <CloseButton
                                         onClick={() => {
-                                            setValue("");
-                                            setScannedQRCode(undefined);
-                                            onChanged?.("", false);
+                                            onClear?.();
                                         }}
                                     />
                                 )
@@ -105,20 +103,22 @@ export default function QRInputField<T extends { id: number }>({
                         placeholder={placeholder}
                         value={value}
                         onFocus={() => {
-                            if (scannedQRCode !== undefined) {
-                                setValue("");
-                                setScannedQRCode(undefined);
-                                onChanged?.("", false);
+                            if (onFocus === undefined || onFocus?.()) {
+                                combobox.openDropdown();
+                            }
+                        }}
+                        onBlur={() => {
+                            console.log("QRInputField onBlur: ", onBlur === undefined);
+                            if (onBlur === undefined || onBlur?.()) {
+                                combobox.closeDropdown();
                             }
                         }}
                         onChange={(event) => {
-                            setValue(event.currentTarget.value);
-                            setScannedQRCode(undefined);
-                            onChanged?.(event.currentTarget.value, false);
+                            onChange?.(event.currentTarget.value);
 
                             if (event.currentTarget.value.length === 0) {
                                 combobox.closeDropdown();
-                            } else {
+                            } else if (document.activeElement === event.currentTarget) {
                                 combobox.openDropdown();
                             }
                         }}
@@ -126,12 +126,11 @@ export default function QRInputField<T extends { id: number }>({
                     {withQRCode && (
                         <QrButton
                             onResult={(result) => {
-                                setValue(result.data);
-                                setScannedQRCode(result.data);
-                                onChanged?.(result.data, true);
+                                onScan?.(result);
                             }}
                         />
                     )}
+                    {rightSection}
                 </Flex>
             </Combobox.Target>
             {items && (
@@ -149,19 +148,17 @@ export default function QRInputField<T extends { id: number }>({
                                 key={v.id.toString()}
                                 disabled={disableItem(v)}
                             >
-                                {children ? children(v) : <Text>{JSON.stringify(v)}</Text>}
+                                {children ? children(v, value) : <Text>{JSON.stringify(v)}</Text>}
                             </Combobox.Option>
                         ))
                     ) : (
                         <>
                             <Combobox.Empty>None Found</Combobox.Empty>
-                            {onCreateButton ? (
+                            {showCreateOption ? (
                                 <Combobox.Option
                                     value="$create"
                                     variant="subtle"
-                                    onClick={() => {
-                                        if (onCreateButton()) combobox.closeDropdown();
-                                    }}
+                                    onClick={() => combobox.closeDropdown()}
                                 >
                                     <Group justify="center">
                                         <IconPlus />
