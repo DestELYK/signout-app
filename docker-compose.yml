@@ -1,6 +1,6 @@
 services:
   mariadb:
-    container_name: mariadb
+    container_name: mariadb:11.2
     image: mariadb
     restart: always
     ports:
@@ -9,7 +9,7 @@ services:
       - MARIADB_RANDOM_ROOT_PASSWORD=1
       - MYSQL_DATABASE=app
       - MYSQL_USER=signout-app
-      - MYSQL_PASSWORD=mypassword
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - TZ=America/Toronto
     volumes:
       - mariadb_data:/var/lib/mysql
@@ -22,7 +22,7 @@ services:
     container_name: signout-app
     image: signout.app:5000/signout-app:latest
     restart: always
-    user: 110:114
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -31,9 +31,7 @@ services:
         restart: true
         required: true
     environment:
-      - DATABASE_URL=mysql://signout-app:mypassword@mariadb:3306/app
-      - PROFILE_URL="https://sjkschool.myschoolapp.com/app/faculty#profile/"
-      - REPORT_URL="https://docs.google.com/forms/d/e/1FAIpQLSdlh_Jkl2na-ZYe0uSICr4klv3rTM4OhrX-TK59AzTiCi_E2w/viewform?embedded=true"
+      - DATABASE_URL=mysql://signout-app:${MYSQL_PASSWORD}@mariadb:3306/app
       - TZ=America/Toronto
     command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]
     healthcheck:

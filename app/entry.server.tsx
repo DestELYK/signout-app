@@ -1,7 +1,15 @@
 /**
+ * Server Entry Point
+ *
+ * This file handles server-side rendering (SSR) for the Remix application.
  * By default, Remix will handle generating the HTTP Response for you.
- * You are free to delete this file if you'd like to, but if you ever want it revealed again, you can run `npx remix reveal` ✨
+ * You are free to delete this file if you'd like to, but if you ever want it
+ * revealed again, you can run `npx remix reveal` ✨
+ *
  * For more information, see https://remix.run/file-conventions/entry.server
+ *
+ *
+ * @author Kyle Dunn
  */
 
 import { PassThrough } from "node:stream";
@@ -12,8 +20,20 @@ import { RemixServer } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
 
+/** Timeout delay for aborting SSR rendering */
 const ABORT_DELAY = 5_000;
 
+/**
+ * Main request handler for server-side rendering
+ * Handles both bot and browser requests with appropriate streaming strategies
+ *
+ * @param request - The incoming HTTP request
+ * @param responseStatusCode - HTTP status code for the response
+ * @param responseHeaders - HTTP headers for the response
+ * @param remixContext - Remix context containing route data
+ * @param loadContext - Application load context (unused but kept for template)
+ * @returns Response stream
+ */
 export default function handleRequest(
   request: Request,
   responseStatusCode: number,
@@ -25,18 +45,8 @@ export default function handleRequest(
   loadContext: AppLoadContext
 ) {
   return isbot(request.headers.get("user-agent") || "")
-    ? handleBotRequest(
-        request,
-        responseStatusCode,
-        responseHeaders,
-        remixContext
-      )
-    : handleBrowserRequest(
-        request,
-        responseStatusCode,
-        responseHeaders,
-        remixContext
-      );
+    ? handleBotRequest(request, responseStatusCode, responseHeaders, remixContext)
+    : handleBrowserRequest(request, responseStatusCode, responseHeaders, remixContext);
 }
 
 function handleBotRequest(
@@ -48,11 +58,7 @@ function handleBotRequest(
   return new Promise((resolve, reject) => {
     let shellRendered = false;
     const { pipe, abort } = renderToPipeableStream(
-      <RemixServer
-        context={remixContext}
-        url={request.url}
-        abortDelay={ABORT_DELAY}
-      />,
+      <RemixServer context={remixContext} url={request.url} abortDelay={ABORT_DELAY} />,
       {
         onAllReady() {
           shellRendered = true;
@@ -98,11 +104,7 @@ function handleBrowserRequest(
   return new Promise((resolve, reject) => {
     let shellRendered = false;
     const { pipe, abort } = renderToPipeableStream(
-      <RemixServer
-        context={remixContext}
-        url={request.url}
-        abortDelay={ABORT_DELAY}
-      />,
+      <RemixServer context={remixContext} url={request.url} abortDelay={ABORT_DELAY} />,
       {
         onShellReady() {
           shellRendered = true;

@@ -1,13 +1,18 @@
+name: signout-app
+
 services:
   mariadb:
-    container_name: mariadb
+    container_name: mariadb:11.2
     image: mariadb
     restart: always
-    env_file: .env.production
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=signout_app
+      - MYSQL_USER=signout-app
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - TZ=America/Toronto
     ports:
       - "127.0.0.1:3306:3306"
-    environment:
-      - TZ=America/Toronto
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -26,7 +31,7 @@ services:
         - signout-app
         - signout-app:latest
         - signout-app:1.0.0
-    user: 110:114
+    user: "${UID:-1000}:${GID:-1000}"
     restart: "on-failure"
     ports:
       - "127.0.0.1:3100:3000"
@@ -35,8 +40,8 @@ services:
         condition: service_healthy
         restart: true
         required: true
-    env_file: .env.production
     environment:
+      - DATABASE_URL=mysql://signout-app:${MYSQL_PASSWORD}@mariadb:3306/signout_app
       - TZ=America/Toronto
     command: ["/bin/sh", "-c", "npx prisma migrate deploy && npm run start"]
     healthcheck:

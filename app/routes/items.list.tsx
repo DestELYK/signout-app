@@ -1,3 +1,22 @@
+/**
+ * Items listing route with filtering and table management
+ *
+ * This route provides item management functionality including:
+ * - search and filtering capabilities
+ * - Paginated item display with configurable page sizes
+ * - Bulk operations for item management
+ * - Responsive table/list view switching
+ * - Multi-parameter filtering (status, type, location, person)
+ *
+ * @requires ItemList component for mobile view
+ * @requires ItemTable component for desktop management
+ * @requires item filtering and search
+ *
+ * @module routes/items/list
+ *
+ * @author Kyle Dunn
+ */
+
 import { Box, Center, Loader } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
@@ -12,101 +31,110 @@ import { parseNumber } from "~/utils/utils";
 
 import { ActionFunctionArgs } from "@remix-run/node";
 
+/**
+ * Server-side loader function for items listing
+ * Fetches paginated items with comprehensive filtering and related data
+ *
+ * @param request - The incoming request with search parameters
+ * @returns JSON response with items data, types, locations, and tags
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-    const searchParams = new URL(request.url).searchParams;
+  const searchParams = new URL(request.url).searchParams;
 
-    try {
-        const pageSize = parseNumber(
-            searchParams.get("limit"),
-            INITIAL_PAGE_SIZE,
-            undefined,
-            MAX_PAGE_SIZE
-        );
+  try {
+    // Parse pagination parameters with bounds checking
+    const pageSize = parseNumber(
+      searchParams.get("limit"),
+      INITIAL_PAGE_SIZE,
+      undefined,
+      MAX_PAGE_SIZE
+    );
 
-        const offset = parseNumber(searchParams.get("page"), 0);
+    const offset = parseNumber(searchParams.get("page"), 0);
 
-        console.log("pageSize", pageSize);
-        console.log("offset", offset);
+    console.log("pageSize", pageSize);
+    console.log("offset", offset);
 
-        const itemResult = await getItems(
-            {
-                query: searchParams.get("query") || searchParams.get("q") || undefined,
-                name: searchParams.get("name") || undefined,
-                statuses: searchParams.getAll("status") ?? undefined,
-                types: searchParams.getAll("type"),
-                locations: searchParams.getAll("location"),
-                sortBy: searchParams.get("sortBy") || undefined,
-                sortOrder: searchParams.get("sortOrder") || undefined,
-                personId: searchParams.get("personId") || undefined,
-                tags: searchParams.getAll("tag") || undefined,
-            },
-            pageSize,
-            parseNumber(searchParams.get("page"), 0) * pageSize
-        );
+    // Fetch items with comprehensive filtering parameters
+    const itemResult = await getItems(
+      {
+        query: searchParams.get("query") || searchParams.get("q") || undefined,
+        name: searchParams.get("name") || undefined,
+        statuses: searchParams.getAll("status") ?? undefined,
+        types: searchParams.getAll("type"),
+        locations: searchParams.getAll("location"),
+        sortBy: searchParams.get("sortBy") || undefined,
+        sortOrder: searchParams.get("sortOrder") || undefined,
+        personId: searchParams.get("personId") || undefined,
+        tags: searchParams.getAll("tag") || undefined,
+      },
+      pageSize,
+      parseNumber(searchParams.get("page"), 0) * pageSize
+    );
 
-        const itemTypes = await getItemTypes();
+    const itemTypes = await getItemTypes();
 
-        const itemLocations = await getItemLocations();
+    const itemLocations = await getItemLocations();
 
-        const tags = await getTags({});
+    const tags = await getTags({});
 
-        console.log("itemResult", itemResult.totalCount);
+    console.log("itemResult", itemResult.totalCount);
 
-        console.log("itemCount", itemResult.data?.length);
+    console.log("itemCount", itemResult.data?.length);
 
-        return typedjson({
-            items: itemResult.data,
-            totalCount: itemResult.totalCount,
-            error: itemResult.error,
-            statuses: STATUS_OPTIONS,
-            itemTypes: itemTypes.data,
-            itemLocations: itemLocations.data,
-            tags: tags,
-        });
-    } catch (error) {
-        return typedjson({
-            items: undefined,
-            totalCount: undefined,
-            statuses: undefined,
-            itemTypes: undefined,
-            itemLocations: undefined,
-            tags: undefined,
-            error: handleError(error),
-        });
-    }
+    return typedjson({
+      items: itemResult.data,
+      totalCount: itemResult.totalCount,
+      error: itemResult.error,
+      statuses: STATUS_OPTIONS,
+      itemTypes: itemTypes.data,
+      itemLocations: itemLocations.data,
+      tags: tags,
+    });
+  } catch (error) {
+    return typedjson({
+      items: undefined,
+      totalCount: undefined,
+      statuses: undefined,
+      itemTypes: undefined,
+      itemLocations: undefined,
+      tags: undefined,
+      error: handleError(error),
+    });
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-    switch (request.method) {
-        case "DELETE":
-            return typedjson(await deleteItems(await request.json()));
-        default:
-            throw new Response("Method Not Allowed", { status: 405 });
-    }
+  switch (request.method) {
+    case "DELETE":
+      return typedjson(await deleteItems(await request.json()));
+    default:
+      throw new Response("Method Not Allowed", { status: 405 });
+  }
 };
 
 export default function Page() {
-    const desktopOnly = useDesktopOnly();
-    const data = useTypedLoaderData<typeof loader>();
+  const desktopOnly = useDesktopOnly();
+  const data = useTypedLoaderData<typeof loader>();
 
-    return desktopOnly === undefined ? (
-        <Center w="100%" h="100%">
-            <Loader />
-        </Center>
-    ) : (
-        <Box pos="relative" w="100%" h="100%" p="sm">
-            {desktopOnly ? (
-                <ItemTable
-                    data={data.items}
-                    totalCount={data.totalCount}
-                    statuses={data.statuses ?? []}
-                    types={data.itemTypes ?? []}
-                    locations={data.itemLocations ?? []}
-                    tags={data.tags?.tags ?? []}
-                />
-            ) : (
-                <ItemList data={data?.items} totalCount={data?.totalCount} />
-            )}
-        </Box>
-    );
+  return desktopOnly === undefined ? (
+    <Center w="100%" h="100%">
+      <Loader />
+    </Center>
+  ) : (
+    <Box pos="relative" w="100%" h="100%" p="sm">
+      {desktopOnly ? (
+        <ItemTable
+          data={data.items}
+          totalCount={data.totalCount}
+          statuses={data.statuses ?? []}
+          types={data.itemTypes ?? []}
+          locations={data.itemLocations ?? []}
+          tags={data.tags?.tags ?? []}
+        />
+      ) : (
+        <ItemList data={data?.items} totalCount={data?.totalCount} />
+      )}
+    </Box>
+  );
 }

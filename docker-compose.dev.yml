@@ -1,19 +1,46 @@
+name: signout-app-dev
+
 services:
   mariadb:
-    image: mariadb
-    restart: always
+    image: mariadb:11.2
     ports:
       - "127.0.0.1:3306:3306"
     environment:
-      - MYSQL_ROOT_PASSWORD=DG43s!@6fd
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD} # Change this to a secure password
+      - MYSQL_DATABASE=signout_app_dev
       - MYSQL_USER=signout-app
-      - MYSQL_PASSWORD=mypassword
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD} # Change this to a secure password
+      - TZ=America/Toronto
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  app:
+    image: node:20.12.2-bullseye-slim
+    working_dir: /app
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:5173:5173" # Vite HMR port
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://signout-app:${MYSQL_PASSWORD}@mariadb:3306/signout_app_dev
+      - PROFILE_URL=https://sjkschool.myschoolapp.com/app/faculty#profile/
+      - REPORT_URL=https://docs.google.com/forms/d/e/1FAIpQLSdlh_Jkl2na-ZYe0uSICr4klv3rTM4OhrX-TK59AzTiCi_E2w/viewform?embedded=true
+      - CHOKIDAR_USEPOLLING=true # For file watching in containers
+    volumes:
+      - .:/app # Mount current directory to /app
+      - /app/node_modules # Anonymous volume for node_modules
+    command: sh -c "yarn install --verbose && npx prisma generate && yarn run dev"
+    stdin_open: true
+    tty: true
 
 volumes:
   mariadb_data:

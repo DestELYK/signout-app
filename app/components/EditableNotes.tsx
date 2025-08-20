@@ -1,20 +1,41 @@
+/**
+ * EditableNotes Component
+ *
+ * An editable text area component for managing notes with inline editing
+ * capabilities and automatic saving functionality.
+ *
+ *
+ * @module EditableNotes
+ *
+ * @author Kyle Dunn
+ */
+
 import { ActionIcon, Box, Group, Text, Textarea } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { IconDeviceFloppy } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { useTypedFetcher } from "remix-typedjson";
 
+/**
+ * Props for the EditableNotes component
+ */
 export interface EditableNotesProps {
+  /** Form action URL for saving notes */
   action?: string;
+  /** Current notes value */
   value?: string | null;
+  /** Whether the notes are editable */
   editable?: boolean;
 }
 
-export default function EditableNotes({
-  action,
-  value,
-  editable,
-}: EditableNotesProps) {
+/**
+ * An editable text area component for inline notes editing
+ * Provides auto-save functionality and form validation
+ *
+ * @param props - The component props
+ * @returns The rendered editable notes component
+ */
+export default function EditableNotes({ action, value, editable }: EditableNotesProps) {
   const fetcher = useTypedFetcher();
 
   const form = useForm<{ notes?: string | null }>({
@@ -37,9 +58,9 @@ export default function EditableNotes({
 
     if (!form.validate().hasErrors) {
       fetcher.submit(form.values, {
-          action: action,
-          method: "PATCH",
-          encType: "application/json",
+        action: action,
+        method: "PATCH",
+        encType: "application/json",
       });
     }
   }
@@ -78,11 +99,7 @@ export default function EditableNotes({
           </Text>
         ) : (
           form.isDirty() && (
-            <Group
-              pos="absolute"
-              bottom={8 + (form.errors.notes ? 16 : 0)}
-              right={20}
-            >
+            <Group pos="absolute" bottom={8 + (form.errors.notes ? 16 : 0)} right={20}>
               <ActionIcon
                 variant="outline"
                 size="input-xs"

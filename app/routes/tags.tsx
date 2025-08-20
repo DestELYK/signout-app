@@ -1,16 +1,35 @@
+/**
+ * Tags management route with tag operations and navigation
+ *
+ * This route provides a tags management interface including:
+ * - Tag listing with pagination and search capabilities
+ * - Create tag modal with form validation
+ * - Navigation to individual tag details and editing
+ * - Responsive layout with desktop/mobile variants
+ * - Tag count statistics and usage tracking
+ *
+ * @requires TagForm component for tag creation
+ * @requires TabbedContentView for layout structure
+ * @requires ListView for tag display with search
+ *
+ * @module routes/tags
+ *
+ * @author Kyle Dunn
+ */
+
 import {
-    Box,
-    Button,
-    Card,
-    Center,
-    Flex,
-    Highlight,
-    Loader,
-    Modal,
-    NavLink,
-    Paper,
-    Stack,
-    Text,
+  Box,
+  Button,
+  Card,
+  Center,
+  Flex,
+  Highlight,
+  Loader,
+  Modal,
+  NavLink,
+  Paper,
+  Stack,
+  Text,
 } from "@mantine/core";
 import { ActionFunctionArgs, LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { NavLink as NavLinkRemix, Outlet, useNavigate, useSearchParams } from "@remix-run/react";
@@ -26,212 +45,221 @@ import { TagFormSchema, TagQuerySchema } from "~/lib/schemas";
 import { getTags } from "~/lib/tags.server";
 import { parseNumber } from "~/utils/utils";
 
+/**
+ * Meta function for document head configuration
+ * @returns Array of meta tags for the tags page
+ */
 export const meta: MetaFunction = () => {
-    return [{ title: "Tags | SJK Sign-Out" }];
+  return [{ title: "Tags | SJK Sign-Out" }];
 };
 
+/**
+ * Server-side loader function for tags data
+ * Fetches tags with pagination, search, and filtering capabilities
+ *
+ * @param request - The incoming request with search parameters
+ * @returns JSON response with paginated and filtered tags data
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-    const searchParams = new URL(request.url).searchParams;
+  const searchParams = new URL(request.url).searchParams;
 
-    const limit = parseNumber(searchParams.get("limit"), 30);
+  // Parse pagination limit with default value
+  const limit = parseNumber(searchParams.get("limit"), 30);
 
-    try {
-        const tags = await getTags(
-            TagQuerySchema.parse(searchParams.entries()),
-            limit,
-            parseNumber(searchParams.get("page"), 0)
-        );
+  try {
+    // Fetch tags using validated query parameters
+    const tags = await getTags(
+      TagQuerySchema.parse(searchParams.entries()),
+      limit,
+      parseNumber(searchParams.get("page"), 0)
+    );
 
-        const categories = await prisma.tag.groupBy({
-            by: ["category"],
-            orderBy: {
-                category: "asc",
-            },
-            _count: {
-                category: true,
-            },
-        });
+    const categories = await prisma.tag.groupBy({
+      by: ["category"],
+      orderBy: {
+        category: "asc",
+      },
+      _count: {
+        category: true,
+      },
+    });
 
-        return typedjson({
-            ...tags,
-            categories: categories,
-        });
-    } catch (e) {
-        return typedjson({
-            error: handleError(e, "getting tags"),
-            tags: undefined,
-            categories: undefined,
-            totalCount: undefined,
-        });
-    }
+    return typedjson({
+      ...tags,
+      categories: categories,
+    });
+  } catch (e) {
+    return typedjson({
+      error: handleError(e, "getting tags"),
+      tags: undefined,
+      categories: undefined,
+      totalCount: undefined,
+    });
+  }
 };
 
 export async function action({ request }: ActionFunctionArgs) {
-    try {
-        switch (request.method) {
-            case "POST":
-                const newTag = TagFormSchema.parse(await request.json());
+  try {
+    switch (request.method) {
+      case "POST":
+        const newTag = TagFormSchema.parse(await request.json());
 
-                const result = await prisma.tag.create({
-                    data: {
-                        ...newTag,
-                    },
-                });
+        const result = await prisma.tag.create({
+          data: {
+            ...newTag,
+          },
+        });
 
-                return typedjson({ tag: result });
-            default:
-                throw new Response(null, {
-                    status: 405,
-                });
-        }
-    } catch (e) {
-        const error = handleError(e, "no tag was created");
-
-        if (error) {
-            return typedjson({ error: error, tag: undefined });
-        } else {
-            throw new Response(String(e), {
-                status: 500,
-            });
-        }
+        return typedjson({ tag: result });
+      default:
+        throw new Response(null, {
+          status: 405,
+        });
     }
+  } catch (e) {
+    const error = handleError(e, "no tag was created");
+
+    if (error) {
+      return typedjson({ error: error, tag: undefined });
+    } else {
+      throw new Response(String(e), {
+        status: 500,
+      });
+    }
+  }
 }
 
 export default function Page() {
-    const data = useTypedLoaderData<typeof loader>();
-    const desktopOnly = useDesktopOnly();
-    const navigate = useNavigate();
+  const data = useTypedLoaderData<typeof loader>();
+  const desktopOnly = useDesktopOnly();
+  const navigate = useNavigate();
 
-    const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-    const [opened, { open, close }] = useCreateModal();
+  const [opened, { open, close }] = useCreateModal();
 
-    const onChange = (value: string) => {
-        setSearchParams(
-            (prev) => {
-                if (value === "all") {
-                    prev.delete("category");
-                } else {
-                    prev.set("category", value);
-                }
+  const onChange = (value: string) => {
+    setSearchParams(
+      (prev) => {
+        if (value === "all") {
+          prev.delete("category");
+        } else {
+          prev.set("category", value);
+        }
 
-                return prev;
-            },
-            { replace: true }
-        );
-    };
-
-    const rightSection = (
-        <Button onClick={() => open()} color="blue">
-            Create Tag
-        </Button>
+        return prev;
+      },
+      { replace: true }
     );
+  };
 
-    return (
-        <>
-            <Modal opened={opened} onClose={close} centered={true} title={"Create New Tag"}>
-                <TagForm
-                    initialValues={{
-                        name: "",
-                        color: "#000000",
-                        category: "",
-                        priority: 0,
-                        hidden: false,
-                    }}
-                    type="create"
-                    onResult={(data) => {
-                        close();
+  const rightSection = (
+    <Button onClick={() => open()} color="blue">
+      Create Tag
+    </Button>
+  );
 
-                        navigate(`/tags/${data.data?.id}`);
-                    }}
-                    validateInputOnBlur={false}
-                />
-            </Modal>
+  return (
+    <>
+      <Modal opened={opened} onClose={close} centered={true} title={"Create New Tag"}>
+        <TagForm
+          initialValues={{
+            name: "",
+            color: "#000000",
+            category: "",
+            priority: 0,
+            hidden: false,
+          }}
+          type="create"
+          onResult={(data) => {
+            close();
 
-            <Stack h="calc(100dvh - 60px)" gap={0}>
-                <TitlePage title="Tags" rightSection={rightSection} />
-                {data.error ? (
-                    <Center w="100%" h="100%">
-                        <Text c="error">{data.error}</Text>
-                    </Center>
-                ) : data.tags === undefined ? (
-                    <Center w="100%" h="100%">
-                        <Loader />
-                    </Center>
-                ) : desktopOnly ? (
-                    <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="md" p="md">
-                        <Card w="50%" h="100%" withBorder>
-                            <TabbedContentView
-                                h="100%"
-                                tabs={[
-                                    {
-                                        value: "all",
-                                        label: (
-                                            <>
-                                                All{" "}
-                                                <Text span h="100%" c="dimmed" size="xs">
-                                                    ({data.totalCount})
-                                                </Text>
-                                            </>
-                                        ),
-                                    },
-                                    ...data.categories.map((c) => ({
-                                        value: c.category,
-                                        label: (
-                                            <>
-                                                {c.category}{" "}
-                                                <Text span h="100%" c="dimmed" size="xs">
-                                                    ({c._count.category})
-                                                </Text>
-                                            </>
-                                        ),
-                                    })),
-                                ]}
-                                current={searchParams.get("category") ?? "all"}
-                                onChange={(value) => onChange(value ?? "all")}
-                            />
-                            <ListView
-                                initialItemsPerPage={30}
-                                data={data.tags}
-                                showPagination={false}
-                                withQRCode={false}
-                                searchPlaceholder="Search for tags..."
-                                emptyText="No tags found"
-                                w="100%"
-                                h="100%"
-                                withinParent
-                            >
-                                {(tag, query) => (
-                                    <NavLink
-                                        key={tag.id}
-                                        to={`/tags/${tag.id}?${searchParams.toString()}`}
-                                        component={NavLinkRemix}
-                                        leftSection={
-                                            <Paper
-                                                withBorder
-                                                radius={24}
-                                                w={24}
-                                                h={24}
-                                                style={{ backgroundColor: tag.color }}
-                                            />
-                                        }
-                                        label={
-                                            <Highlight highlight={query ?? ""}>
-                                                {tag.name}
-                                            </Highlight>
-                                        }
-                                    />
-                                )}
-                            </ListView>
-                        </Card>
-                        <Box w="50%" h="100%">
-                            <Outlet />
-                        </Box>
-                    </Flex>
-                ) : (
-                    <Outlet />
+            navigate(`/tags/${data.data?.id}`);
+          }}
+          validateInputOnBlur={false}
+        />
+      </Modal>
+
+      <Stack h="calc(100dvh - 60px)" gap={0}>
+        <TitlePage title="Tags" rightSection={rightSection} />
+        {data.error ? (
+          <Center w="100%" h="100%">
+            <Text c="error">{data.error}</Text>
+          </Center>
+        ) : data.tags === undefined ? (
+          <Center w="100%" h="100%">
+            <Loader />
+          </Center>
+        ) : desktopOnly ? (
+          <Flex w="100%" h="100%" direction="row" wrap="nowrap" gap="md" p="md">
+            <Card w="50%" h="100%" withBorder>
+              <TabbedContentView
+                h="100%"
+                tabs={[
+                  {
+                    value: "all",
+                    label: (
+                      <>
+                        All{" "}
+                        <Text span h="100%" c="dimmed" size="xs">
+                          ({data.totalCount})
+                        </Text>
+                      </>
+                    ),
+                  },
+                  ...data.categories.map((c) => ({
+                    value: c.category,
+                    label: (
+                      <>
+                        {c.category}{" "}
+                        <Text span h="100%" c="dimmed" size="xs">
+                          ({c._count.category})
+                        </Text>
+                      </>
+                    ),
+                  })),
+                ]}
+                current={searchParams.get("category") ?? "all"}
+                onChange={(value) => onChange(value ?? "all")}
+              />
+              <ListView
+                initialItemsPerPage={30}
+                data={data.tags}
+                showPagination={false}
+                withQRCode={false}
+                searchPlaceholder="Search for tags..."
+                emptyText="No tags found"
+                w="100%"
+                h="100%"
+                withinParent
+              >
+                {(tag, query) => (
+                  <NavLink
+                    key={tag.id}
+                    to={`/tags/${tag.id}?${searchParams.toString()}`}
+                    component={NavLinkRemix}
+                    leftSection={
+                      <Paper
+                        withBorder
+                        radius={24}
+                        w={24}
+                        h={24}
+                        style={{ backgroundColor: tag.color }}
+                      />
+                    }
+                    label={<Highlight highlight={query ?? ""}>{tag.name}</Highlight>}
+                  />
                 )}
-            </Stack>
-        </>
-    );
+              </ListView>
+            </Card>
+            <Box w="50%" h="100%">
+              <Outlet />
+            </Box>
+          </Flex>
+        ) : (
+          <Outlet />
+        )}
+      </Stack>
+    </>
+  );
 }

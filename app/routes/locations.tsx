@@ -1,3 +1,21 @@
+/**
+ * Locations management route with search, create, and navigation functionality
+ *
+ * This route provides location management including:
+ * - Location listing with search capabilities
+ * - Create location modal with form validation
+ * - Navigation to individual location details
+ * - Responsive layout with desktop/mobile variants
+ *
+ * @requires LocationForm component for location creation
+ * @requires ListView for location display
+ * @requires TitlePage for layout wrapper
+ *
+ * @module routes/locations
+ *
+ * @author Kyle Dunn
+ */
+
 import { LoaderFunctionArgs } from "@remix-run/node";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 
@@ -13,107 +31,124 @@ import { useDesktopOnly } from "~/lib/hooks";
 import { createItemLocation, getItemLocations } from "~/lib/items.server";
 import { LocationSchema } from "~/lib/schemas";
 
+/**
+ * Server-side loader function for locations data
+ * Fetches locations with optional search query filtering
+ *
+ * @param request - The incoming request with search parameters
+ * @returns JSON response with filtered locations data
+ */
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-    const search = new URL(request.url).searchParams;
+  const search = new URL(request.url).searchParams;
 
-    return typedjson(
-        await getItemLocations({
-            query: search.get("query") ?? search.get("q") ?? undefined,
-        })
-    );
+  return typedjson(
+    await getItemLocations({
+      query: search.get("query") ?? search.get("q") ?? undefined,
+    })
+  );
 };
 
+/**
+ * Server action handler for location operations
+ * Handles POST requests for creating new locations with validation
+ *
+ * @param request - The incoming request object
+ * @returns JSON response with created location data or error information
+ */
 export const action = async ({ request }: ActionFunctionArgs) => {
-    try {
-        switch (request.method) {
-            case "POST":
-                const itemLocation = LocationSchema.parse(await request.json());
-                return typedjson(await createItemLocation(itemLocation));
-            default:
-                throw new Response("Method Not Allowed", { status: 405 });
-        }
-    } catch (error) {
-        return typedjson({ error: handleError(error) });
+  try {
+    switch (request.method) {
+      case "POST":
+        // Parse and validate location data using Zod schema
+        const itemLocation = LocationSchema.parse(await request.json());
+        return typedjson(await createItemLocation(itemLocation));
+      default:
+        throw new Response("Method Not Allowed", { status: 405 });
     }
+  } catch (error) {
+    return typedjson({ error: handleError(error) });
+  }
 };
 
+/**
+ * Locations route component
+ * Renders the main locations management interface with search and create functionality
+ *
+ * @returns JSX element containing locations listing and navigation
+ */
 export default function Page() {
-    const navigate = useNavigate();
-    const desktopOnly = useDesktopOnly();
-    const locationsLoaderData = useTypedLoaderData<typeof loader>();
-    const [searchParams] = useSearchParams();
-    const [opened, { open, close }] = useDisclosure();
+  const navigate = useNavigate();
+  const desktopOnly = useDesktopOnly();
+  const locationsLoaderData = useTypedLoaderData<typeof loader>();
+  const [searchParams] = useSearchParams();
+  const [opened, { open, close }] = useDisclosure();
 
-    const rightSection = (
-        <Button onClick={() => open()} color="blue">
-            Create Location
-        </Button>
-    );
+  const rightSection = (
+    <Button onClick={() => open()} color="blue">
+      Create Location
+    </Button>
+  );
 
-    return (
-        <>
-            <Modal opened={opened} onClose={close} centered={true} title={"Create New Location"}>
-                <LocationForm
-                    initialValues={{
-                        name: "",
-                    }}
-                    type="create"
-                    onResult={(data) => {
-                        close();
+  return (
+    <>
+      <Modal opened={opened} onClose={close} centered={true} title={"Create New Location"}>
+        <LocationForm
+          initialValues={{
+            name: "",
+          }}
+          type="create"
+          onResult={(data) => {
+            close();
 
-                        navigate(`/locations/${data.data?.id}`);
-                    }}
-                    validateInputOnBlur={false}
-                />
-            </Modal>
-            <Stack h="calc(100dvh - 60px)" gap={0}>
-                <TitlePage title="Locations" rightSection={rightSection} />
+            navigate(`/locations/${data.data?.id}`);
+          }}
+          validateInputOnBlur={false}
+        />
+      </Modal>
+      <Stack h="calc(100dvh - 60px)" gap={0}>
+        <TitlePage title="Locations" rightSection={rightSection} />
 
-                {desktopOnly ? (
-                    <Flex
-                        w="100%"
-                        h="100%"
-                        direction="row"
-                        wrap="nowrap"
-                        gap="md"
-                        p="md"
-                        style={{ overflowY: "hidden" }}
-                    >
-                        <Card w="50%" h="100%" withBorder>
-                            <ListView
-                                initialItemsPerPage={30}
-                                data={locationsLoaderData.data}
-                                showPagination={false}
-                                withQRCode={false}
-                                searchPlaceholder="Search for locations..."
-                                emptyText="No locations found"
-                                error={locationsLoaderData.error}
-                                w="100%"
-                                h="100%"
-                                withinParent
-                            >
-                                {(role, query) => (
-                                    <NavLink
-                                        key={role.id}
-                                        to={`/locations/${role.id}?${searchParams.toString()}`}
-                                        component={NavLinkRemix}
-                                        label={
-                                            <Highlight highlight={query?.split(" ") ?? ""}>
-                                                {role.name}
-                                            </Highlight>
-                                        }
-                                    />
-                                )}
-                            </ListView>
-                        </Card>
-                        <Box w="50%" h="100%">
-                            <Outlet />
-                        </Box>
-                    </Flex>
-                ) : (
-                    <Outlet />
+        {desktopOnly ? (
+          <Flex
+            w="100%"
+            h="100%"
+            direction="row"
+            wrap="nowrap"
+            gap="md"
+            p="md"
+            style={{ overflowY: "hidden" }}
+          >
+            <Card w="50%" h="100%" withBorder>
+              <ListView
+                initialItemsPerPage={30}
+                data={locationsLoaderData.data}
+                showPagination={false}
+                withQRCode={false}
+                searchPlaceholder="Search for locations..."
+                emptyText="No locations found"
+                error={locationsLoaderData.error}
+                w="100%"
+                h="100%"
+                withinParent
+              >
+                {(role, query) => (
+                  <NavLink
+                    key={role.id}
+                    to={`/locations/${role.id}?${searchParams.toString()}`}
+                    component={NavLinkRemix}
+                    label={<Highlight highlight={query?.split(" ") ?? ""}>{role.name}</Highlight>}
+                  />
                 )}
-            </Stack>
-        </>
-    );
+              </ListView>
+            </Card>
+            <Box w="50%" h="100%">
+              <Outlet />
+            </Box>
+          </Flex>
+        ) : (
+          <Outlet />
+        )}
+      </Stack>
+    </>
+  );
 }
