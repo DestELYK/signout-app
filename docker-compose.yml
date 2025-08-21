@@ -1,7 +1,7 @@
 services:
   mariadb:
-    container_name: mariadb:11.2
-    image: mariadb
+    container_name: mariadb
+    image: mariadb:11.2
     restart: always
     ports:
       - "127.0.0.1:3306:3306"
@@ -20,7 +20,7 @@ services:
 
   app:
     container_name: signout-app
-    image: signout.app:5000/signout-app:latest
+    image: signout-app:latest
     restart: always
     user: "${UID:-1000}:${GID:-1000}"
     ports:

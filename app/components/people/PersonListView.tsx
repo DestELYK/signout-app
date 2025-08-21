@@ -105,7 +105,7 @@ export default function PersonListView({
           </Text>
           {person.lostItemsCount !== undefined && person.lostItemsCount > 0 && (
             <Text mt="sm" fw="bold" size="xs" c="red">
-              {person.lostItemsCount} Lost Item
+              {person.lostItemsCount} Problem Item
               {person.lostItemsCount > 1 ? "s" : ""}
             </Text>
           )}

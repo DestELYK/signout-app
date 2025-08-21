@@ -12,22 +12,22 @@
  */
 
 import {
-  ActionIcon,
-  Box,
-  Button,
-  Checkbox,
-  ColorInput,
-  Divider,
-  Group,
-  InputWrapper,
-  LoadingOverlay,
-  Modal,
-  Select,
-  Slider,
-  Switch,
-  Textarea,
-  TextInput,
-  Tooltip,
+    ActionIcon,
+    Box,
+    Button,
+    Checkbox,
+    ColorInput,
+    Divider,
+    Group,
+    InputWrapper,
+    LoadingOverlay,
+    Modal,
+    Select,
+    Slider,
+    Switch,
+    Textarea,
+    TextInput,
+    Tooltip,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { upperFirst, useDisclosure } from "@mantine/hooks";

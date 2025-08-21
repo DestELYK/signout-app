@@ -55,11 +55,8 @@ import { MantineReactTable, type MRT_ColumnDef, useMantineReactTable } from "man
 import { useEffect, useMemo, useState } from "react";
 import { ClientOnly } from "remix-utils/client-only";
 import { formatDate } from "~/utils/utils";
+import DateDisplay from "../DateDisplay";
 
-/**
- * Sample data structure for students
- * TODO: Replace with actual data fetching
- */
 interface Student {
   id: string;
   firstName: string;
@@ -985,16 +982,17 @@ export default function MigrationTab() {
                 color={loaderData.lastMigration.status === "completed" ? "blue" : "gray"}
               >
                 <Text size="sm">
-                  <strong>Last Migration:</strong>{" "}
-                  <ClientOnly fallback="Loading date...">
-                    {() =>
-                      formatDate(loaderData.lastMigration.createdDate, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    }
-                  </ClientOnly>
+                  <DateDisplay
+                    date={loaderData.lastMigration.createdDate}
+                    formatOptions={{
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }}
+                    prefix={<strong>Last Migration: </strong>}
+                  />
                   {loaderData.lastMigration.academicYear &&
                     ` (${loaderData.lastMigration.academicYear})`}
                   <br />

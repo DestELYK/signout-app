@@ -12,10 +12,9 @@
  */
 
 import { Text } from "@mantine/core";
-import { ClientOnly } from "remix-utils/client-only";
 import { ItemStatusData, PersonData } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
-import StatusBadge from "../StatusBadge";
+import { dateDiff, formatFullName } from "~/utils/utils";
+import DateDisplay from "../DateDisplay";
 
 /**
  * Props for the LoanSimpleView component
@@ -49,31 +48,26 @@ export default function LoanSimpleView({
 }: LoanSimpleViewProps) {
   return (
     <>
-      {/* Loan ID and person name */}
+      {/** Loan ID and person name */}
       <Text>
         Loan #{id}
-        {person && ` - ${formatFullName(person)}`}
+        {person && ` - ${formatFullName(person)}`} |{" "}
+        <Text component="span" c={status?.color || "dimmed"}>
+          {status ? status.name : "No Status"}
+        </Text>
       </Text>
       {/* Item count with proper pluralization */}
       {itemCount && <Text size="xs">{itemCount === 1 ? "1 item" : `${itemCount} items`}</Text>}
       {/* Loan date with relative timing */}
       {dateLoaned && (
-        <ClientOnly
-          fallback={
-            <Text size="xs" fs="italic" c="dimmed">
-              Loading date...
-            </Text>
-          }
-        >
-          {() => (
-            <Text size="xs" fs="italic" c="dimmed">
-              {formatDate(dateLoaned)} ({dateDiff({ date: dateLoaned })})
-            </Text>
-          )}
-        </ClientOnly>
+        <DateDisplay
+          date={dateLoaned}
+          suffix={` (${dateDiff({ date: dateLoaned })})`}
+          size="xs"
+          fs="italic"
+          c="dimmed"
+        />
       )}
-      {/* Status badge if available */}
-      {status && <StatusBadge status={status} />}
     </>
   );
 }

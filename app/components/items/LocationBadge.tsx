@@ -20,6 +20,10 @@ import HoverBadge, { HoverBadgeProps } from "../HoverBadge";
 export interface LocationBadgeProps {
   /** Optional location data to display */
   data?: LocationData;
+  /** Whether the badge should be clickable (default: false) */
+  clickable?: boolean;
+  /** The route type to navigate to when clicked */
+  redirectRoute?: "items" | "loans" | "people";
 }
 
 /**
@@ -31,9 +35,15 @@ export interface LocationBadgeProps {
  */
 export default function LocationBadge({
   data,
+  clickable = false,
+  redirectRoute = "items",
   badgeProps,
   tooltipProps,
-}: LocationBadgeProps & Omit<HoverBadgeProps, "name" | "description" | "color">) {
+}: LocationBadgeProps &
+  Omit<
+    HoverBadgeProps,
+    "name" | "description" | "color" | "clickable" | "redirectRoute" | "filterParam" | "filterValue"
+  >) {
   return (
     data && (
       <HoverBadge
@@ -41,6 +51,10 @@ export default function LocationBadge({
         color="green"
         badgeProps={badgeProps}
         tooltipProps={tooltipProps}
+        clickable={clickable}
+        redirectRoute={redirectRoute}
+        filterParam="location"
+        filterValue={data.name}
       />
     )
   );

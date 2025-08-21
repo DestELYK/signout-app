@@ -173,9 +173,19 @@ export const LOAN_STATUSES = {
     name: "Outstanding",
     color: "red",
   },
-  invalid: {
-    id: "invalid",
-    name: "Invalid Items",
+  lost: {
+    id: "lost",
+    name: "Lost",
+    color: "#dd6300",
+  },
+  damaged: {
+    id: "damaged",
+    name: "Damaged",
+    color: "#cc0000",
+  },
+  unknown: {
+    id: "unknown",
+    name: "Unknown Status",
     color: "gray",
   },
 };

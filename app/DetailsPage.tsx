@@ -63,6 +63,8 @@ export interface DetailsPageProps {
   disabled?: boolean;
   /** Delete action handler */
   handleDelete: () => void;
+  /** The route type to navigate to when a tag is clicked */
+  tagsRedirectRoute?: "items" | "loans" | "people" | "tag";
 }
 
 /**
@@ -82,6 +84,7 @@ export default function DetailsPage({
   desktopComponent,
   disabled,
   handleDelete,
+  tagsRedirectRoute = "tag",
 }: DetailsPageProps) {
   const navigate = useNavigate();
   const navigation = useNavigation();
@@ -200,7 +203,16 @@ export default function DetailsPage({
             rightSection={rightSection}
             topSection={topSection}
             withDivider={bannerText === undefined}
-            bottomSection={tags && <TagGroup tags={tags} groupProps={{ justify: "start" }} />}
+            bottomSection={
+              tags && (
+                <TagGroup
+                  tags={tags}
+                  groupProps={{ justify: "start" }}
+                  clickable
+                  redirectRoute={tagsRedirectRoute}
+                />
+              )
+            }
           />
           {bannerText && (
             <>
@@ -260,7 +272,16 @@ export default function DetailsPage({
             title={title}
             rightSection={rightSection}
             topSection={topSection}
-            bottomSection={tags && <TagGroup tags={tags} groupProps={{ justify: "start" }} />}
+            bottomSection={
+              tags && (
+                <TagGroup
+                  tags={tags}
+                  groupProps={{ justify: "start" }}
+                  clickable
+                  redirectRoute={tagsRedirectRoute}
+                />
+              )
+            }
             withDivider={false}
           />
           <TabbedContentView

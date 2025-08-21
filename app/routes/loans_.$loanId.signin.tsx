@@ -325,7 +325,7 @@ export default function Page() {
                 </Stack>
               </Collapse>
               {items.length > 0 &&
-                items.filter((i) => i.status?.id === "returned").length === 0 && (
+                items.filter((i) => i.status?.id === "returned").length !== items.length && (
                   <Button
                     loading={loading}
                     leftSection={

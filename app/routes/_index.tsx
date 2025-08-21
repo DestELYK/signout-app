@@ -225,8 +225,8 @@ export default function Index() {
                   {hasPeopleData ? (
                     <StatView
                       h={100}
-                      label="People with Lost Items"
-                      caption="People who have lost loaned out items"
+                      label="People with Problem Items"
+                      caption="People who have lost, damaged, or unknown status items"
                       value={data.peopleWithLostItemsTotalCount ?? 0}
                     />
                   ) : (
@@ -426,8 +426,8 @@ export default function Index() {
               <Card.Section inheritPadding withBorder p="sm">
                 {hasPeopleData ? (
                   <StatView
-                    label="People with Lost Items"
-                    caption="People who have lost loaned out items"
+                    label="People with Problem Items"
+                    caption="People who have lost, damaged, or unknown status items"
                     value={data.peopleWithLostItemsTotalCount ?? 0}
                     onClick={() => {
                       navigate("/people");

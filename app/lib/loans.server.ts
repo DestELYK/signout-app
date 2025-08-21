@@ -60,29 +60,12 @@ export const getLoans = async (
     // Build ordering from query parameters with fallback
     const finalOrder = parsedFilter.order || ["desc"];
 
-    // Debug logging for sorting parameters
-    console.log("DEBUG: Loan sorting", {
-      sortBy: parsedFilter.sortBy,
-      order: parsedFilter.order,
-      finalOrder,
-      sortByType: typeof parsedFilter.sortBy,
-      sortByArray: Array.isArray(parsedFilter.sortBy),
-    });
-
     // Map client sort fields to valid Prisma fields
     const buildOrderBy = (
       sortBy: string[] | null | undefined,
       order: string[] | null | undefined
     ): Prisma.LoanFindManyArgs["orderBy"] => {
-      console.log("DEBUG: buildOrderBy received", {
-        sortBy,
-        order,
-        sortByType: typeof sortBy,
-        sortByArray: Array.isArray(sortBy),
-      });
-
       if (!sortBy || sortBy.length === 0) {
-        console.log("DEBUG: Using default ID sorting");
         return { id: finalOrder[0] as "asc" | "desc" };
       }
 

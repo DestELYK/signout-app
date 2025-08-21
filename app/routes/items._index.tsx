@@ -188,10 +188,10 @@ export default function Page() {
               </InfoView>
             </Stack>
             {
-              //#region Invalid Items
+              //#region Problem Items
             }
             <InfoView
-              title={`Invalid Items`}
+              title={`Problem Items`}
               cardProps={{
                 w: { md: "40%", lg: "35%" },
                 h: "100%",

@@ -72,6 +72,10 @@ export default function ItemTable({
 }: ItemTableProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [initialParamsProcessed, setInitialParamsProcessed] = useState(false);
+
+  // Ensure data is always an array to prevent MRT errors
+  const safeData = useMemo(() => data ?? [], [data]);
 
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([
     {
@@ -81,7 +85,7 @@ export default function ItemTable({
           ? searchParams
               .getAll("status")
               .map(
-                (statusParam) =>
+                (statusParam: string) =>
                   STATUS_OPTIONS.find(
                     (status) => status.id === statusParam || status.name === statusParam
                   )?.name
@@ -129,7 +133,7 @@ export default function ItemTable({
     const orderParams = searchParams.getAll("order");
 
     if (sortByParams.length > 0) {
-      return sortByParams.map((field, index) => ({
+      return sortByParams.map((field: string, index: number) => ({
         id: field,
         desc: (orderParams[index] || "desc") === "desc",
       }));
@@ -149,6 +153,11 @@ export default function ItemTable({
   const tagNames = tags.map((tag) => tag.name);
 
   const notificationId = "item-delete";
+
+  // Mark initial params as processed on first render
+  useEffect(() => {
+    setInitialParamsProcessed(true);
+  }, []);
 
   const deleteFetcher = useFetcherWithErrorHandler<DataReturn<number>>(
     (data) => {
@@ -188,10 +197,10 @@ export default function ItemTable({
         header: "UUID",
         enableColumnFilter: false,
         size: 80,
-        accessorFn: (item) => item.uuid,
+        accessorFn: (item) => item?.uuid,
         Cell: ({ cell }) => {
           const uuid = cell.getValue<string>();
-          return <QRCodePreview qrCode={uuid} scale={1} type="hover" />;
+          return uuid ? <QRCodePreview qrCode={uuid} scale={1} type="hover" /> : null;
         },
       },
       {
@@ -203,7 +212,7 @@ export default function ItemTable({
           data: statuses.map((status) => status.name),
           style: { minWidth: 150 },
         },
-        accessorFn: (item) => item.status,
+        accessorFn: (item) => item?.status,
         Cell: ({ cell }) => {
           const status = cell.getValue<ItemStatusData>();
           if (status) {
@@ -247,7 +256,8 @@ export default function ItemTable({
           data: tagNames,
         },
         Cell: ({ cell }) => {
-          return cell.getValue<TagData[]>().map((tag) => (
+          const tags = cell.getValue<TagData[]>();
+          return (tags || []).map((tag) => (
             <Badge key={tag.id} color={tag.color} variant="filled" size="xs" autoContrast>
               {tag.name}
             </Badge>
@@ -260,7 +270,7 @@ export default function ItemTable({
 
   const table = useMantineReactTable({
     columns: columns,
-    data: data ?? [],
+    data: safeData,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     layoutMode: "semantic",
@@ -280,13 +290,13 @@ export default function ItemTable({
     manualSorting: true,
     positionActionsColumn: "last",
     pageCount: totalCount ?? 0,
-    rowCount: totalCount,
+    rowCount: totalCount ?? 0,
     initialState: {
       showGlobalFilter: true,
       showColumnFilters: true,
     },
     state: {
-      showLoadingOverlay: data === undefined,
+      isLoading: data === undefined || !initialParamsProcessed,
       columnFilters: columnFilters,
       globalFilter: globalFilter,
       pagination: pagination,
@@ -299,9 +309,9 @@ export default function ItemTable({
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
-    getRowId: (row: ItemData) => row.id.toString(),
+    getRowId: (row: ItemData) => row?.id?.toString() ?? "",
     mantineTableBodyRowProps: (row) => ({
-      onClick: () => navigate(`/items/${row.row.original.id}`),
+      onClick: () => row?.row?.original?.id && navigate(`/items/${row.row.original.id}`),
       style: {
         cursor: "pointer",
         fontSize: "xs",
@@ -358,79 +368,97 @@ export default function ItemTable({
   });
 
   useEffect(() => {
-    setSearchParams(
-      (prev) => {
-        const mappedFilters = columnFilters.map((filter) => ({
-          [filter.id]: filter.value,
-        }));
+    // Prevent clearing URL params on initial load if filters are being initialized
+    const hasInitialFilters = columnFilters.some(
+      (f) =>
+        (Array.isArray(f.value) && f.value.length > 0) ||
+        (typeof f.value === "string" && f.value.length > 0)
+    );
 
-        !("q" in mappedFilters) && prev.delete("q");
-        !("page" in mappedFilters) && prev.delete("page");
-        !("limit" in mappedFilters) && prev.delete("limit");
-        !("status" in mappedFilters) && prev.delete("status");
-        !("name" in mappedFilters) && prev.delete("name");
-        !("type" in mappedFilters) && prev.delete("type");
-        !("location" in mappedFilters) && prev.delete("location");
-        !("tag" in mappedFilters) && prev.delete("tag");
-        prev.delete("sortBy");
-        prev.delete("order");
+    // Only update URL if we have active filters or need to clear them
+    if (
+      hasInitialFilters ||
+      globalFilter ||
+      pagination.pageIndex > 0 ||
+      pagination.pageSize !== INITIAL_PAGE_SIZE ||
+      sorting.length > 0
+    ) {
+      // Create new URLSearchParams to compare with current
+      const newSearchParams = new URLSearchParams(searchParams);
 
-        columnFilters.forEach((filter) => {
-          if (typeof filter.value === "string" && filter.value.length > 0) {
-            switch (filter.id) {
-              case "status":
-                const status = STATUS_OPTIONS.find((status) => status.name === filter.value);
-                if (status) {
-                  prev.set(filter.id, status.id);
-                }
-                break;
-              default:
-                prev.set(filter.id, filter.value);
-                break;
-            }
-          } else if (Array.isArray(filter.value)) {
-            filter.value.forEach((val) => {
-              if (typeof val === "string" && val.length > 0) {
-                switch (filter.id) {
-                  case "tags":
-                    const tag = tags.find((tag) => tag.name === val);
-                    if (tag) {
-                      prev.append("tag", tag.id.toString());
-                    }
-                    break;
-                  default:
-                    prev.append(filter.id, val);
-                    break;
-                }
+      const mappedFilters = columnFilters.map((filter) => ({
+        [filter.id]: filter.value,
+      }));
+
+      // Clear existing params that might be updated
+      !("q" in mappedFilters) && newSearchParams.delete("q");
+      !("page" in mappedFilters) && newSearchParams.delete("page");
+      !("limit" in mappedFilters) && newSearchParams.delete("limit");
+      !("status" in mappedFilters) && newSearchParams.delete("status");
+      !("name" in mappedFilters) && newSearchParams.delete("name");
+      !("type" in mappedFilters) && newSearchParams.delete("type");
+      !("location" in mappedFilters) && newSearchParams.delete("location");
+      !("tag" in mappedFilters) && newSearchParams.delete("tag");
+      newSearchParams.delete("sortBy");
+      newSearchParams.delete("order");
+
+      columnFilters.forEach((filter) => {
+        if (typeof filter.value === "string" && filter.value.length > 0) {
+          switch (filter.id) {
+            case "status":
+              const status = STATUS_OPTIONS.find((status) => status.name === filter.value);
+              if (status) {
+                newSearchParams.set(filter.id, status.id);
               }
-            });
+              break;
+            default:
+              newSearchParams.set(filter.id, filter.value);
+              break;
           }
-        });
-        if (globalFilter) {
-          prev.set("q", globalFilter);
-        } else {
-          prev.delete("q");
-        }
-        if (pagination.pageIndex > 0) {
-          prev.set("page", pagination.pageIndex.toString());
-        }
-        if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
-          prev.set("limit", pagination.pageSize.toString());
-        }
-
-        // Add sorting parameters
-        if (sorting.length > 0) {
-          sorting.forEach((sort) => {
-            prev.append("sortBy", sort.id);
-            prev.append("order", sort.desc ? "desc" : "asc");
+        } else if (Array.isArray(filter.value)) {
+          filter.value.forEach((val: any) => {
+            if (typeof val === "string" && val.length > 0) {
+              switch (filter.id) {
+                case "tags":
+                  const tag = tags.find((tag) => tag.name === val);
+                  if (tag) {
+                    newSearchParams.append("tag", tag.id.toString());
+                  }
+                  break;
+                default:
+                  newSearchParams.append(filter.id, val);
+                  break;
+              }
+            }
           });
         }
+      });
+      if (globalFilter) {
+        newSearchParams.set("q", globalFilter);
+      } else {
+        newSearchParams.delete("q");
+      }
+      if (pagination.pageIndex > 0) {
+        newSearchParams.set("page", pagination.pageIndex.toString());
+      }
+      if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
+        newSearchParams.set("limit", pagination.pageSize.toString());
+      }
 
-        return prev;
-      },
-      { replace: true }
-    );
-  }, [columnFilters, globalFilter, pagination, sorting]);
+      // Add sorting parameters
+      if (sorting.length > 0) {
+        sorting.forEach((sort) => {
+          newSearchParams.append("sortBy", sort.id);
+          newSearchParams.append("order", sort.desc ? "desc" : "asc");
+        });
+      }
+
+      // Only update if there are actual differences
+      if (newSearchParams.toString() !== searchParams.toString()) {
+        setSearchParams(newSearchParams, { replace: true });
+      }
+    }
+  }, [columnFilters, globalFilter, pagination, sorting, searchParams, tags]);
 
   return <MantineReactTable table={table} />;
 }

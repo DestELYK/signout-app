@@ -79,7 +79,7 @@ export default function PersonCard({
         <>
           {/* Role badge with color coding */}
           {person.role && (
-            <Badge color={person.role.color} variant="outline" autoContrast>
+            <Badge color={person.role.color} autoContrast>
               {person.role.name}
             </Badge>
           )}

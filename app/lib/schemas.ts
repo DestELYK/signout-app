@@ -108,20 +108,23 @@ export const PersonFormSchema = z.object({
   firstName: z
     .string()
     .regex(/^[a-z0-9\'-\s]+$/i, "Name contains invalid characters")
-    .min(1, "Name is required"),
+    .min(1, "Name is required")
+    .transform((val) => val.trim()),
   lastName: z
     .string()
     .regex(/^[a-z0-9\'-\s]+$/i, "Name contains invalid characters")
-    .min(1, "Name is required"),
+    .min(1, "Name is required")
+    .transform((val) => val.trim()),
   nickname: z
     .string()
     .regex(/^$|^[a-z0-9\'-\s]+$/i, "Nickname contains invalid characters")
     .min(0)
     .max(50, "Nickname is too long")
+    .transform((val) => val?.trim())
     .optional(),
   role: PersonRoleSchema.partial().extend({ id: z.coerce.number().int().min(0) }),
   notes: z.string().max(500).optional(),
-  schoolId: z.string().nullish(),
+  schoolId: z.string().transform((val) => val?.trim()).nullish(),
   tags: z.array(TagFormSchema.extend({ id: z.coerce.number() })).optional(),
 });
 export type PersonFormType = z.infer<typeof PersonFormSchema>;
@@ -135,6 +138,7 @@ export const ItemQuerySchema = QuerySchema.extend({
   name: z
     .string()
     .regex(/^[a-z0-9-\s]+$/i, "Name contains invalid characters")
+    .transform((val) => val?.trim())
     .optional(),
   statuses: z.array(z.string()).optional(),
   types: z
@@ -180,7 +184,8 @@ export const ItemFormSchema = z.object({
   name: z
     .string()
     .min(3)
-    .regex(/^[a-z0-9-\s]+$/i, "Name contains invalid characters"),
+    .regex(/^[a-z0-9-\s]+$/i, "Name contains invalid characters")
+    .transform((val) => val.trim()),
   type: ItemTypeSchema.partial().extend({
     id: z.number({ message: "Item Type is Required" }).int().min(0),
   }),

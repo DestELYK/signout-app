@@ -27,9 +27,9 @@ import StatView from "~/components/StatView";
 import { cache, CACHE_KEYS } from "~/lib/cache.server";
 import { useDesktopOnly } from "~/lib/hooks";
 import {
-  getPeople,
-  getPeopleWithInvalidItems,
-  getPersonRoleCount as getRoleCount,
+    getPeople,
+    getPeopleWithInvalidItems,
+    getPersonRoleCount as getRoleCount,
 } from "~/lib/people.server";
 import { prisma } from "~/lib/prisma.server";
 import { formatFullName } from "~/utils/utils";
@@ -101,12 +101,14 @@ export default function Page() {
 
   return (
     <>
-      {desktopOnly === undefined || data === undefined ? (
+      {data === undefined ? (
         <Box w="100%" h="100%" pos="relative" p="sm">
           <Skeleton w="100%" h="100%" />
         </Box>
-      ) : desktopOnly ? (
-        //#region Desktop
+      ) : (
+        <>
+        
+        {/* Desktop Layout */}
         <Flex
           w="100%"
           h="100%"
@@ -200,9 +202,8 @@ export default function Page() {
             />
           </InfoView>
         </Flex>
-      ) : (
-        //#endregion
-        //#region Mobile
+      
+        {/* Mobile Layout */}
         <Flex
           w="100%"
           align="center"
@@ -244,7 +245,7 @@ export default function Page() {
             />
           </InfoView>
         </Flex>
-        //#endregion
+        </>
       )}
     </>
   );

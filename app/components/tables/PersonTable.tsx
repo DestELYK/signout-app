@@ -64,6 +64,9 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   const [opened, { open, close }] = useDisclosure(false);
   const [personRole, setPersonRole] = useState<string>("");
 
+  // Ensure data is always an array to prevent MRT errors
+  const safeData = useMemo(() => data ?? [], [data]);
+
   const personRoleField = useField<PersonRoleData | undefined>({
     initialValue: undefined,
     validate: (value) => {
@@ -114,6 +117,7 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: INITIAL_PAGE_SIZE });
 
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
+  const [initialParamsProcessed, setInitialParamsProcessed] = useState(false);
   const [sorting, setSorting] = useState<MRT_SortingState>(() => {
     const sortByParams = searchParams.getAll("sortBy");
     const orderParams = searchParams.getAll("order");
@@ -134,6 +138,11 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   const tagNames = tags.map((tag) => tag.name);
 
   const notificationId = "item-delete";
+
+  // Mark initial params as processed on first render
+  useEffect(() => {
+    setInitialParamsProcessed(true);
+  }, []);
 
   const peopleFetcher = useFetcherWithErrorHandler<DataReturn<number>>(
     (data) => {
@@ -198,16 +207,19 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
           placeholder: "Select Role",
         },
         accessorFn: (person) => {
-          return person.role;
+          return person?.role;
         },
         Cell: ({ cell, renderedCellValue }) => {
           const role = cell.getValue<PersonRole>();
 
-          return (
-            <Badge color={role.color} variant="dot" autoContrast>
-              {role.name}
-            </Badge>
-          );
+          if (role) {
+            return (
+              <Badge color={role.color} variant="dot" autoContrast>
+                {role.name}
+              </Badge>
+            );
+          }
+          return null;
         },
       },
       {
@@ -219,20 +231,20 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
           data: tagNames,
         },
         accessorFn: (loan) => {
-          return loan.tags;
+          return loan?.tags;
         },
         Cell: ({ cell, table }) => {
           const tags = cell.getValue<TagData[]>();
-          return <TagGroup tags={tags} badgeProps={{ size: "xs" }} />;
+          return <TagGroup tags={tags || []} badgeProps={{ size: "xs" }} />;
         },
       },
       {
         accessorKey: "lostCount",
-        header: "# of Lost Items",
+        header: "# of Problem Items",
         size: 120,
         enableColumnFilter: false,
         enableSorting: false,
-        accessorFn: (person) => person.lostItemsCount,
+        accessorFn: (person) => person?.lostItemsCount,
         Cell: ({ cell }) => {
           const lostItemsCount = cell.getValue<number>();
 
@@ -252,7 +264,7 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
         size: 100,
         enableColumnFilter: false,
         enableSorting: false,
-        accessorFn: (person) => person.loansCount,
+        accessorFn: (person) => person?.loansCount,
       },
     ],
     []
@@ -260,7 +272,7 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
 
   const table = useMantineReactTable({
     columns: columns,
-    data: data ?? [],
+    data: safeData,
     enableColumnResizing: true,
     columnResizeMode: "onChange",
     layoutMode: "semantic",
@@ -280,13 +292,13 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
     manualSorting: true,
     positionActionsColumn: "last",
     pageCount: totalCount ?? 0,
-    rowCount: totalCount,
+    rowCount: totalCount ?? 0,
     initialState: {
       showGlobalFilter: true,
       showColumnFilters: true,
     },
     state: {
-      showLoadingOverlay: data === undefined,
+      isLoading: data === undefined || !initialParamsProcessed,
       columnFilters: columnFilters,
       globalFilter: globalFilter,
       pagination: pagination,
@@ -307,9 +319,9 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       setGlobalFilter(value || "");
     },
     onPaginationChange: setPagination,
-    getRowId: (row: PersonData) => row.id.toString(),
+    getRowId: (row: PersonData) => row?.id?.toString() ?? "",
     mantineTableBodyRowProps: (row) => ({
-      onClick: () => navigate(`/people/${row.row.original.id}`),
+      onClick: () => row?.row?.original?.id && navigate(`/people/${row.row.original.id}`),
       style: {
         cursor: "pointer",
         fontSize: "xs",
@@ -373,84 +385,102 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   });
 
   useEffect(() => {
-    setSearchParams(
-      (prev) => {
-        const mappedFilters = columnFilters.map((filter) => ({
-          [filter.id]: filter.value,
-        }));
-
-        !("q" in mappedFilters) && prev.delete("q");
-        !("page" in mappedFilters) && prev.delete("page");
-        !("limit" in mappedFilters) && prev.delete("limit");
-        !("schoolId" in mappedFilters) && prev.delete("schoolId");
-        !("firstName" in mappedFilters) && prev.delete("firstName");
-        !("lastName" in mappedFilters) && prev.delete("lastName");
-        !("nickname" in mappedFilters) && prev.delete("nickname");
-        !("role" in mappedFilters) && prev.delete("role");
-        !("tag" in mappedFilters) && prev.delete("tag");
-        prev.delete("sortBy");
-        prev.delete("order");
-
-        columnFilters
-          .filter((f) =>
-            globalFilter && globalFilter.length > 0 ? f.id !== "person" && f.id !== "items" : true
-          )
-          .forEach((filter) => {
-            if (typeof filter.value === "string" && filter.value.length > 0) {
-              switch (filter.id) {
-                default:
-                  prev.set(filter.id, filter.value);
-                  break;
-              }
-            } else if (Array.isArray(filter.value)) {
-              filter.value.forEach((val) => {
-                if (typeof val === "string" && val.length > 0) {
-                  switch (filter.id) {
-                    case "role":
-                      const role = roles.find((role) => role.name === val);
-                      if (role) {
-                        prev.append("role", role.id.toString());
-                      }
-                      break;
-                    case "tags":
-                      const tag = tags.find((tag) => tag.name === val);
-                      if (tag) {
-                        prev.append("tag", tag.id.toString());
-                      }
-                      break;
-                    default:
-                      prev.append(filter.id, val);
-                      break;
-                  }
-                }
-              });
-            }
-          });
-        if (globalFilter) {
-          prev.set("q", globalFilter);
-        } else {
-          prev.delete("q");
-        }
-        if (pagination.pageIndex > 0) {
-          prev.set("page", pagination.pageIndex.toString());
-        }
-        if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
-          prev.set("limit", pagination.pageSize.toString());
-        }
-
-        // Add sorting parameters
-        if (sorting.length > 0) {
-          sorting.forEach((sort) => {
-            prev.append("sortBy", sort.id);
-            prev.append("order", sort.desc ? "desc" : "asc");
-          });
-        }
-
-        return prev;
-      },
-      { replace: true }
+    // Prevent clearing URL params on initial load if filters are being initialized
+    const hasInitialFilters = columnFilters.some(
+      (f) =>
+        (Array.isArray(f.value) && f.value.length > 0) ||
+        (typeof f.value === "string" && f.value.length > 0)
     );
-  }, [columnFilters, globalFilter, pagination, sorting]);
+
+    // Only update URL if we have active filters or need to clear them
+    if (
+      hasInitialFilters ||
+      globalFilter ||
+      pagination.pageIndex > 0 ||
+      pagination.pageSize !== INITIAL_PAGE_SIZE ||
+      sorting.length > 0
+    ) {
+      // Create new URLSearchParams to compare with current
+      const newSearchParams = new URLSearchParams(searchParams);
+
+      const mappedFilters = columnFilters.map((filter) => ({
+        [filter.id]: filter.value,
+      }));
+
+      // Clear existing params that might be updated
+      !("q" in mappedFilters) && newSearchParams.delete("q");
+      !("page" in mappedFilters) && newSearchParams.delete("page");
+      !("limit" in mappedFilters) && newSearchParams.delete("limit");
+      !("schoolId" in mappedFilters) && newSearchParams.delete("schoolId");
+      !("firstName" in mappedFilters) && newSearchParams.delete("firstName");
+      !("lastName" in mappedFilters) && newSearchParams.delete("lastName");
+      !("nickname" in mappedFilters) && newSearchParams.delete("nickname");
+      !("role" in mappedFilters) && newSearchParams.delete("role");
+      !("tag" in mappedFilters) && newSearchParams.delete("tag");
+      newSearchParams.delete("sortBy");
+      newSearchParams.delete("order");
+
+      columnFilters
+        .filter((f) =>
+          globalFilter && globalFilter.length > 0 ? f.id !== "person" && f.id !== "items" : true
+        )
+        .forEach((filter) => {
+          if (typeof filter.value === "string" && filter.value.length > 0) {
+            switch (filter.id) {
+              default:
+                newSearchParams.set(filter.id, filter.value);
+                break;
+            }
+          } else if (Array.isArray(filter.value)) {
+            filter.value.forEach((val: any) => {
+              if (typeof val === "string" && val.length > 0) {
+                switch (filter.id) {
+                  case "role":
+                    const role = roles.find((role) => role.name === val);
+                    if (role) {
+                      newSearchParams.append("role", role.id.toString());
+                    }
+                    break;
+                  case "tags":
+                    const tag = tags.find((tag) => tag.name === val);
+                    if (tag) {
+                      newSearchParams.append("tag", tag.id.toString());
+                    }
+                    break;
+                  default:
+                    newSearchParams.append(filter.id, val);
+                    break;
+                }
+              }
+            });
+          }
+        });
+      if (globalFilter) {
+        newSearchParams.set("q", globalFilter);
+      } else {
+        newSearchParams.delete("q");
+      }
+      if (pagination.pageIndex > 0) {
+        newSearchParams.set("page", pagination.pageIndex.toString());
+      }
+      if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
+        newSearchParams.set("limit", pagination.pageSize.toString());
+      }
+
+      // Add sorting parameters
+      if (sorting.length > 0) {
+        sorting.forEach((sort) => {
+          newSearchParams.append("sortBy", sort.id);
+          newSearchParams.append("order", sort.desc ? "desc" : "asc");
+        });
+      }
+
+      // Only update if there are actual differences
+      if (newSearchParams.toString() !== searchParams.toString()) {
+        setSearchParams(newSearchParams, { replace: true });
+      }
+    }
+  }, [columnFilters, globalFilter, pagination, sorting, searchParams, roles, tags]);
 
   return (
     <>

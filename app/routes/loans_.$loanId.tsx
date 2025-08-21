@@ -179,9 +179,10 @@ export default function Page() {
           label: "Sign-In",
         },
       }}
-      topSection={<StatusBadge status={loanData.data?.status} />}
+      topSection={<StatusBadge status={loanData.data?.status} clickable redirectRoute="loans" />}
       handleDelete={handleDelete}
       tags={loanData.data?.tags}
+      tagsRedirectRoute="loans"
       disabled={loanData.error != undefined}
       title={`Loan #${loanData.data?.id}`}
       desktopComponent={infoView}

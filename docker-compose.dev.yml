@@ -19,7 +19,16 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - 8080:80
+    environment:
+      - PMA_ARBITRARY=1
   app:
     image: node:20.12.2-bullseye-slim
     working_dir: /app

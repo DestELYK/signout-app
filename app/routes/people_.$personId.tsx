@@ -18,12 +18,13 @@
  * @author Kyle Dunn
  */
 
-import { Badge, Center, Stack, Text } from "@mantine/core";
+import { Center, Stack, Text } from "@mantine/core";
 import { LoaderFunctionArgs, MetaFunction } from "@remix-run/node";
 import { IconClipboard, IconInfoCircle } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import DetailsPage from "~/DetailsPage";
 import EditableNotes from "~/components/EditableNotes";
+import HoverBadge from "~/components/HoverBadge";
 import InfoView from "~/components/base/InfoView";
 import LastLoanView from "~/components/loans/LastLoanView";
 import { deletePerson, getPersonById, updatePerson } from "~/lib/people.server";
@@ -176,9 +177,14 @@ export default function Page() {
       topSection={
         personData.data &&
         personData.data.role && (
-          <Badge color={personData.data.role.color} autoContrast>
-            {personData.data.role.name}
-          </Badge>
+          <HoverBadge
+            name={personData.data.role.name}
+            color={personData.data.role.color}
+            clickable
+            redirectRoute="people"
+            filterParam="role"
+            filterValue={personData.data.role.id.toString()}
+          />
         )
       }
       bannerText={upperFirst(
@@ -186,13 +192,14 @@ export default function Page() {
           (personData.data?.outstandingItemsCount ?? 0) > 1
             ? "more than one outstanding item"
             : undefined,
-          (personData.data?.lostItemsCount ?? 0) > 0 ? "lost items" : undefined,
+          (personData.data?.lostItemsCount ?? 0) > 0 ? "problem items" : undefined,
         ]
           .filter((x) => x)
           .join(" & ")
       )}
       handleDelete={handleDelete}
       tags={personData.data?.tags}
+      tagsRedirectRoute="people"
       disabled={personData.error != undefined}
       desktopComponent={personView}
       title={personData.data ? formatFullName(personData.data) : "Unknown"}

@@ -14,28 +14,28 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import dayjs from "dayjs";
 import { z } from "zod";
-import { DEFAULT_ROLES, ROLE_ORDER, STATUS_OPTIONS } from "~/utils/consts";
+import { DEFAULT_ROLES, INVALID_STATUS_IDS, ROLE_ORDER, STATUS_OPTIONS } from "~/utils/consts";
 import {
-  DataReturn,
-  InvalidItemData,
-  loanSimpleSelection,
-  personAdvancedSelection,
-  PersonData,
-  PersonRoleData,
-  personRoleSelection,
-  personSimpleSelection,
+    DataReturn,
+    InvalidItemData,
+    loanSimpleSelection,
+    personAdvancedSelection,
+    PersonData,
+    PersonRoleData,
+    personRoleSelection,
+    personSimpleSelection,
 } from "~/utils/types.server";
 import { getLoanStatus } from "~/utils/utils";
 import { handleError } from "./db.server";
 import {
-  PersonFormSchema,
-  PersonFormType,
-  PersonQuerySchema,
-  PersonQueryType,
-  PersonRoleSchema,
-  PersonRoleType,
-  QuerySchema,
-  QueryType,
+    PersonFormSchema,
+    PersonFormType,
+    PersonQuerySchema,
+    PersonQueryType,
+    PersonRoleSchema,
+    PersonRoleType,
+    QuerySchema,
+    QueryType,
 } from "./schemas";
 
 const prisma = new PrismaClient();
@@ -241,7 +241,7 @@ export const getPeople = async (
 
         let lostItemsCount = 0;
         person.loans.forEach((loan) => {
-          lostItemsCount += loan.items.filter((item) => item.status === "lost").length;
+          lostItemsCount += loan.items.filter((item) => INVALID_STATUS_IDS.includes(item.status)).length;
         });
         return {
           id: person.id,
@@ -259,7 +259,7 @@ export const getPeople = async (
           lostItemsCount: lostItemsCount,
           lostItems: person.loans.flatMap((loan) =>
             loan.items
-              .filter((item) => item.status === "lost")
+              .filter((item) => INVALID_STATUS_IDS.includes(item.status))
               .map((item) => ({
                 id: item.item.id,
                 name: item.item.name,
@@ -314,7 +314,7 @@ export const getPersonById = async (id?: string): Promise<DataReturn<PersonData>
           })) ?? undefined;
 
     const lostItems: InvalidItemData[] = person.loans.flatMap((loan) => {
-      const items = loan.items.filter((item) => item.status === "lost");
+      const items = loan.items.filter((item) => INVALID_STATUS_IDS.includes(item.status));
 
       return items.map((item) => ({
         id: item.item.id,
@@ -484,7 +484,9 @@ export const getPeopleWithInvalidItems = async (): Promise<DataReturn<PersonData
     const invalidItemFilter: Prisma.LoanWhereInput = {
       items: {
         some: {
-          status: "lost",
+          status: {
+            in: INVALID_STATUS_IDS,
+          },
         },
       },
     };
@@ -541,7 +543,7 @@ export const getPeopleWithInvalidItems = async (): Promise<DataReturn<PersonData
 
         let lostItemsCount = 0;
         person.loans.forEach((loan) => {
-          lostItemsCount += loan.items.filter((item) => item.status === "lost").length;
+          lostItemsCount += loan.items.filter((item) => INVALID_STATUS_IDS.includes(item.status)).length;
         });
         return {
           id: person.id,
@@ -560,7 +562,7 @@ export const getPeopleWithInvalidItems = async (): Promise<DataReturn<PersonData
 
           lostItems: person.loans.flatMap((loan) =>
             loan.items
-              .filter((item) => item.status === "lost")
+              .filter((item) => INVALID_STATUS_IDS.includes(item.status))
               .map((item) => ({
                 id: item.item.id,
                 name: item.item.name,
@@ -628,10 +630,6 @@ export const updatePerson = async (
 
     if (data?.schoolId?.length === 0) {
       data.schoolId = null;
-    }
-
-    if (data?.nickname?.length === 0) {
-      data.nickname = undefined;
     }
 
     const person = PersonFormSchema.partial().parse(data);

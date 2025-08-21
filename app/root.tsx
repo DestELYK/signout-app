@@ -21,44 +21,43 @@ import "./styles.css";
 
 import type { MetaFunction } from "@remix-run/node";
 import {
-  Link,
-  Links,
-  Meta,
-  NavLink as NavLinkRemix,
-  Outlet,
-  Scripts,
-  ScrollRestoration,
-  useLocation,
-  useNavigation,
-  useRouteError,
+    Link,
+    Links,
+    Meta,
+    NavLink as NavLinkRemix,
+    Outlet,
+    Scripts,
+    ScrollRestoration,
+    useLocation,
+    useNavigation,
+    useRouteError,
 } from "@remix-run/react";
 
 import { NavigationProgress, nprogress } from "@mantine/nprogress";
 
 import {
-  AppShell,
-  Burger,
-  ColorSchemeScript,
-  Divider,
-  Group,
-  Image,
-  MantineProvider,
-  NavLink,
-  Stack,
-  createTheme,
+    AppShell,
+    Burger,
+    ColorSchemeScript,
+    Divider,
+    Group,
+    Image,
+    MantineProvider,
+    NavLink,
+    Stack,
+    createTheme,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import {
-  IconBug,
-  IconClipboard,
-  IconDeviceImac,
-  IconHome,
-  IconMapPin,
-  IconTag,
-  IconTools,
-  IconUser,
+    IconClipboard,
+    IconDeviceImac,
+    IconHome,
+    IconMapPin,
+    IconTag,
+    IconTools,
+    IconUser
 } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { ClientOnly } from "remix-utils/client-only";
@@ -196,7 +195,7 @@ function Root({ children }: { children: React.ReactNode }) {
                   </Group>
                 </Stack>
               </AppShell.Header>
-              <AppShell.Navbar py="md">
+              <AppShell.Navbar>
                 <NavLink
                   to="/"
                   component={NavLinkRemix}
@@ -225,28 +224,35 @@ function Root({ children }: { children: React.ReactNode }) {
                   leftSection={<IconUser size={24} />}
                   onClick={close}
                 />
-                <Stack mt="auto" gap={0}>
-                  <Divider />
+                <Divider />
+                <NavLink
+                  to="/locations"
+                  component={NavLinkRemix}
+                  label="Locations"
+                  leftSection={<IconMapPin size={24} />}
+                  onClick={close}
+                />
+                <NavLink
+                  to="/tags"
+                  component={NavLinkRemix}
+                  label="Tags"
+                  leftSection={<IconTag size={24} />}
+                  onClick={close}
+                />
+                <Divider mt="auto" />
+                <NavLink
+                  to="/tools"
+                  component={NavLinkRemix}
+                  label="Tools"
+                  leftSection={<IconTools size={24} />}
+                  onClick={close}
+                />
+                {/* <NavLink label="Links">
                   <NavLink
-                    to="/locations"
+                    to="/msm-redirect"
                     component={NavLinkRemix}
-                    label="Locations"
-                    leftSection={<IconMapPin size={24} />}
-                    onClick={close}
-                  />
-                  <NavLink
-                    to="/tags"
-                    component={NavLinkRemix}
-                    label="Tags"
-                    leftSection={<IconTag size={24} />}
-                    onClick={close}
-                  />
-                  <Divider />
-                  <NavLink
-                    to="/tools"
-                    component={NavLinkRemix}
-                    label="Tools"
-                    leftSection={<IconTools size={24} />}
+                    label="MSM"
+                    leftSection={<IconDeviceDesktop size={24} />}
                     onClick={close}
                   />
                   <NavLink
@@ -256,7 +262,7 @@ function Root({ children }: { children: React.ReactNode }) {
                     leftSection={<IconBug size={24} />}
                     onClick={close}
                   />
-                </Stack>
+                </NavLink> */}
               </AppShell.Navbar>
               <AppShell.Main w="100%" h="100dvh">
                 {children}

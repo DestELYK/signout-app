@@ -167,18 +167,25 @@ export default function Page() {
       }}
       topSection={
         <Group gap="xs">
-          <StatusBadge status={itemData.data?.status} />{" "}
+          <StatusBadge status={itemData.data?.status} clickable redirectRoute="items" />{" "}
           {itemData.data?.type !== undefined && (
             <HoverBadge
               name={itemData.data.type.name}
               description={itemData.data.type.description}
+              clickable
+              redirectRoute="items"
+              filterParam="type"
+              filterValue={itemData.data.type.name}
             />
           )}
-          {itemData.data?.location !== undefined && <LocationBadge data={itemData.data.location} />}
+          {itemData.data?.location !== undefined && (
+            <LocationBadge data={itemData.data.location} clickable redirectRoute="items" />
+          )}
         </Group>
       }
       handleDelete={handleDelete}
       tags={itemData.data?.tags ?? []}
+      tagsRedirectRoute="items"
       title={itemData.data?.name}
       disabled={itemData.error != undefined}
       desktopComponent={itemInfo}

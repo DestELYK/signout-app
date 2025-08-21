@@ -35,7 +35,7 @@ export interface DateDisplayProps extends TextProps {
   /** Whether to show "None" for undefined dates (default: true) */
   showNoneForUndefined?: boolean;
   /** Text to display before the date */
-  prefix?: string;
+  prefix?: React.ReactNode;
   /** Text to display after the date */
   suffix?: string;
 }

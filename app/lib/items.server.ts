@@ -17,27 +17,27 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { INVALID_STATUS_IDS, STATUS_OPTIONS } from "~/utils/consts";
 import {
-  DataReturn,
-  InvalidItemData,
-  itemAdvancedSelection,
-  ItemData,
-  ItemsByTypeData,
-  itemSimpleSelection,
-  ItemTypeData,
-  LocationData,
+    DataReturn,
+    InvalidItemData,
+    itemAdvancedSelection,
+    ItemData,
+    ItemsByTypeData,
+    itemSimpleSelection,
+    ItemTypeData,
+    LocationData,
 } from "~/utils/types.server";
 import { handleError } from "./db.server";
 import {
-  ItemFormSchema,
-  ItemFormType,
-  ItemQuerySchema,
-  ItemQueryType,
-  ItemTypeType as ItemTypeFormType,
-  ItemTypeSchema,
-  LocationSchema,
-  LocationType,
-  QuerySchema,
-  QueryType,
+    ItemFormSchema,
+    ItemFormType,
+    ItemQuerySchema,
+    ItemQueryType,
+    ItemTypeType as ItemTypeFormType,
+    ItemTypeSchema,
+    LocationSchema,
+    LocationType,
+    QuerySchema,
+    QueryType,
 } from "./schemas";
 
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
@@ -126,8 +126,10 @@ export const getItems = async (
 
     const hasReturnedStatus = parsedFilter.statuses?.some(
       (status) =>
-        status === "returned" ||
-        STATUS_OPTIONS.find((s) => (s.id === status || s.name === status) && s.id === "returned")
+        ["returned", "available"].includes(status) ||
+        STATUS_OPTIONS.some(
+          (s) => (s.id === status || s.name === status) && ["returned", "available"].includes(s.id)
+        )
     );
     const hasActiveStatuses =
       processedStatuses && processedStatuses.some((status) => status !== "returned");

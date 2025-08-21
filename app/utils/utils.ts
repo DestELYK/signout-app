@@ -231,8 +231,14 @@ export function parseNumber(
 export function getLoanStatus(statuses: string[]) {
   statuses = [...new Set(statuses)];
   let loanStatus = LOAN_STATUSES["returned"];
-  if (INVALID_STATUS_IDS.some((id) => statuses.includes(id))) {
-    loanStatus = LOAN_STATUSES["invalid"];
+
+  // Check for specific invalid status types first
+  if (statuses.includes("lost")) {
+    loanStatus = LOAN_STATUSES["lost"];
+  } else if (statuses.includes("damaged")) {
+    loanStatus = LOAN_STATUSES["damaged"];
+  } else if (statuses.includes("unknown")) {
+    loanStatus = LOAN_STATUSES["unknown"];
   } else if (statuses.some((id) => id === "outstanding" || id === "out")) {
     loanStatus = LOAN_STATUSES["outstanding"];
   }
