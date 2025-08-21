@@ -15,7 +15,8 @@ import { Badge, Flex, Highlight, Space, Text, UnstyledButton } from "@mantine/co
 import { Link, useNavigate } from "@remix-run/react";
 import { IconChevronRight } from "@tabler/icons-react";
 import { ItemData } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { dateDiff, formatFullName } from "~/utils/utils";
+import DateDisplay from "../DateDisplay";
 import { QRCodeWithComponent } from "../qrCode/QRCodeWithComponent";
 import LocationBadge from "./LocationBadge";
 
@@ -75,12 +76,16 @@ export default function ItemListView({ data, highlight, displayQRCode }: ItemLis
         {data.createdDate && (
           <Text size="xs">
             Added:{" "}
-            {formatDate(data.createdDate, {
-              month: "short",
-              day: "2-digit",
-              year: "numeric",
-            })}{" "}
-            <b>({dateDiff({ date: data.createdDate })})</b>
+            <DateDisplay
+              date={data.createdDate!}
+              formatOptions={{
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+              }}
+              inherit
+            />{" "}
+            <b>({dateDiff({ date: data.createdDate! })})</b>
           </Text>
         )}
 
@@ -101,13 +106,19 @@ export default function ItemListView({ data, highlight, displayQRCode }: ItemLis
 
             {data.lastLoan.dateLoaned && (
               <Text size="xs">
-                {data.lastLoan.dateAllReturned ? "Returned " : "Loaned "}
-                {formatDate(data.lastLoan.dateLoaned, {
-                  month: "short",
-                  day: "2-digit",
-                  year: "numeric",
-                })}
+                <DateDisplay
+                  date={data.lastLoan.dateLoaned}
+                  prefix={data.lastLoan.dateAllReturned ? "Returned " : "Loaned "}
+                  formatOptions={{
+                    month: "short",
+                    day: "2-digit",
+                    year: "numeric",
+                  }}
+                  inherit
+                  span
+                />
                 <b>
+                  {" "}
                   (
                   {dateDiff({
                     date: data.lastLoan.dateLoaned,

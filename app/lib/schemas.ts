@@ -17,8 +17,28 @@ import { z } from "zod";
 export const QuerySchema = z.object({
   query: z
     .string()
-    .regex(/^[a-zA-Z0-9-_ ]+$|^$/)
+    .regex(/^[\p{L}\p{N}\p{Zs}\-_'.]+$|^$/u)
     .nullish(),
+  sortBy: z
+    .union([z.string(), z.array(z.string())])
+    .nullish()
+    .transform((val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string" && val) return [val];
+      return null;
+    }),
+  order: z
+    .union([z.string(), z.array(z.string())])
+    .nullish()
+    .transform((val) => {
+      if (Array.isArray(val)) {
+        return val.map((v) => (v === "asc" || v === "desc" ? v : "desc"));
+      }
+      if (typeof val === "string" && val) {
+        return [val === "asc" || val === "desc" ? val : "desc"];
+      }
+      return null;
+    }),
 });
 export type QueryType = z.infer<typeof QuerySchema>;
 
@@ -134,7 +154,6 @@ export const ItemQuerySchema = QuerySchema.extend({
     .optional()
     .transform((v) => (v ? (v.length > 0 ? v : undefined) : undefined)),
   outstanding: z.boolean().optional(),
-  sortBy: z.string().optional(),
   sortOrder: z
     .string()
     .optional()
@@ -188,6 +207,22 @@ export const LoanQuerySchema = QuerySchema.extend({
     .array(z.coerce.number().int().min(0))
     .optional()
     .transform((v) => (v ? (v.length > 0 ? v : undefined) : undefined)),
+  dateFrom: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const date = new Date(v);
+      return isNaN(date.getTime()) ? undefined : date;
+    }),
+  dateTo: z
+    .string()
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const date = new Date(v);
+      return isNaN(date.getTime()) ? undefined : date;
+    }),
 });
 export type LoanQueryType = z.infer<typeof LoanQuerySchema>;
 

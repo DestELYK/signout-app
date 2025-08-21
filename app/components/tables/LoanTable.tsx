@@ -12,6 +12,7 @@
  */
 
 import { Button, Stack, Text } from "@mantine/core";
+import { DatePickerInput } from "@mantine/dates";
 import { modals } from "@mantine/modals";
 import { notifications } from "@mantine/notifications";
 import { useNavigate, useSearchParams } from "@remix-run/react";
@@ -20,13 +21,15 @@ import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
   MRT_RowSelectionState,
+  MRT_SortingState,
   useMantineReactTable,
 } from "mantine-react-table";
 import { useEffect, useMemo, useState } from "react";
 import { useFetcherWithErrorHandler } from "~/lib/hooks";
 import { INITIAL_PAGE_SIZE, STATUS_OPTIONS } from "~/utils/consts";
 import { DataReturn, ItemStatusData, LoanData, TagData } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { dateDiff, formatFullName } from "~/utils/utils";
+import DateDisplay from "../DateDisplay";
 import HoverBadge from "../HoverBadge";
 import StatusBadge from "../StatusBadge";
 import TagGroup from "../tags/TagGroup";
@@ -54,14 +57,22 @@ export interface LoanTableProps {
 export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([
     {
       id: "status",
       value:
-        STATUS_OPTIONS.find(
-          (status) =>
-            status.id === searchParams.get("status") || status.name === searchParams.get("status")
-        )?.name ?? "",
+        searchParams.getAll("status").length > 0
+          ? searchParams
+              .getAll("status")
+              .map(
+                (statusParam) =>
+                  STATUS_OPTIONS.find(
+                    (status) => status.id === statusParam || status.name === statusParam
+                  )?.name
+              )
+              .filter(Boolean)
+          : [],
     },
     { id: "person", value: searchParams.get("person") ?? "" },
     { id: "items", value: searchParams.get("items") ?? "" },
@@ -71,11 +82,31 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
         .filter((tag) => searchParams.getAll("tag").includes(tag.id.toString()))
         .map((tag) => tag.name),
     },
+    {
+      id: "createdDate",
+      value: [
+        searchParams.get("dateFrom") ? new Date(searchParams.get("dateFrom")!) : null,
+        searchParams.get("dateTo") ? new Date(searchParams.get("dateTo")!) : null,
+      ],
+    },
   ]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: INITIAL_PAGE_SIZE });
 
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
+  const [sorting, setSorting] = useState<MRT_SortingState>(() => {
+    const sortByParams = searchParams.getAll("sortBy");
+    const orderParams = searchParams.getAll("order");
+
+    if (sortByParams.length > 0) {
+      return sortByParams.map((sortBy, index) => ({
+        id: sortBy,
+        desc: (orderParams[index] || "desc") === "desc",
+      }));
+    }
+
+    return [{ id: "createdDate", desc: true }];
+  });
 
   const tagNames = tags.map((tag) => tag.name);
 
@@ -112,14 +143,14 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
         accessorKey: "id",
         header: "ID",
         enableColumnFilter: false,
-        size: 5,
+        size: 80,
       },
       {
         id: "status",
         header: "Status",
-        size: 120,
-        filterVariant: "select",
-        mantineFilterSelectProps: {
+        enableSorting: false,
+        filterVariant: "multi-select",
+        mantineFilterMultiSelectProps: {
           data: STATUS_OPTIONS.map((status) => status.name),
           style: { minWidth: 120 },
         },
@@ -134,7 +165,6 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
       {
         id: "person",
         header: "Person",
-        size: 150,
         accessorFn: (loan) => {
           return formatFullName(loan.person);
         },
@@ -156,7 +186,6 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
       {
         id: "items",
         header: "Items",
-        size: 150,
         accessorFn: (loan) => {
           return loan.items.map((item) => item.name).join(", ");
         },
@@ -165,9 +194,7 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
       {
         accessorKey: "createdDate",
         header: "Date",
-        enableColumnFilter: false,
-        mantineFilterDateInputProps: {},
-        size: 200,
+        enableColumnFilter: true,
         accessorFn: (loan) => {
           return new Date(loan.dateLoaned);
         },
@@ -175,23 +202,46 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
           const date = cell.getValue<Date>();
 
           return (
-            <Text size="sm" lineClamp={2}>
-              {formatDate(date, {
-                month: "long",
-                day: "2-digit",
-                year: "numeric",
-              })}
-              <b>{` (${dateDiff({
-                date: date,
-              })})`}</b>
-            </Text>
+            <Stack gap={0}>
+              <DateDisplay
+                date={date}
+                formatOptions={{
+                  month: "long",
+                  day: "2-digit",
+                  year: "numeric",
+                }}
+                size="xs"
+              />
+              <Text size="xs" c="dimmed" fw="bold">
+                ({dateDiff({ date: date })})
+              </Text>
+            </Stack>
+          );
+        },
+        Filter: ({ column, table }) => {
+          const columnFilterValue = column.getFilterValue() as
+            | [Date | null, Date | null]
+            | undefined;
+
+          return (
+            <DatePickerInput
+              type="range"
+              placeholder="Pick date range"
+              value={columnFilterValue || [null, null]}
+              onChange={(value) => {
+                column.setFilterValue(value);
+              }}
+              clearable
+              size="xs"
+              style={{ minWidth: 200 }}
+            />
           );
         },
       },
       {
         accessorKey: "tags",
         header: "Tags",
-        size: 100,
+        enableSorting: false,
         filterVariant: "multi-select",
         mantineFilterSelectProps: {
           data: tagNames,
@@ -211,13 +261,15 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
   const table = useMantineReactTable({
     columns: columns,
     data: data ?? [],
-    enableColumnResizing: false,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    layoutMode: "semantic",
     enableDensityToggle: false,
     enableRowDragging: false,
     enableStickyHeader: false,
     enableColumnOrdering: false,
     enableColumnActions: false,
-    enableSorting: false,
+    enableSorting: true,
     enableHiding: false,
     enableColumnFilters: true,
     enableFilterMatchHighlighting: true,
@@ -225,12 +277,10 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
     enableRowSelection: true,
     manualFiltering: true,
     manualPagination: true,
+    manualSorting: true,
     positionActionsColumn: "last",
     pageCount: totalCount ?? 0,
     rowCount: totalCount,
-    mantineTableContainerProps: {
-      style: { height: "calc(100dvh - 19rem)", minHeight: 300 },
-    },
     initialState: {
       showGlobalFilter: true,
       showColumnFilters: true,
@@ -241,18 +291,20 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
       globalFilter: globalFilter,
       pagination: pagination,
       rowSelection: rowSelection,
+      sorting: sorting,
     },
     positionToolbarAlertBanner: "bottom",
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onSortingChange: setSorting,
     getRowId: (row: LoanData) => row.id.toString(),
     mantineTableBodyRowProps: (row) => ({
       onClick: () => navigate(`/loans/${row.row.original.id}`),
       style: {
         cursor: "pointer",
-        fontSize: "sm",
+        fontSize: "xs",
       },
     }),
     renderTopToolbarCustomActions: ({ table }) => {
@@ -319,6 +371,10 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
         !("person" in mappedFilters) && prev.delete("person");
         !("items" in mappedFilters) && prev.delete("items");
         !("tag" in mappedFilters) && prev.delete("tag");
+        !("dateFrom" in mappedFilters) && prev.delete("dateFrom");
+        !("dateTo" in mappedFilters) && prev.delete("dateTo");
+        prev.delete("sortBy");
+        prev.delete("order");
 
         columnFilters
           .filter((f) =>
@@ -338,25 +394,39 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
                   break;
               }
             } else if (Array.isArray(filter.value)) {
-              filter.value.forEach((val) => {
-                if (typeof val === "string" && val.length > 0) {
-                  switch (filter.id) {
-                    case "tags":
-                      const tag = tags.find((tag) => tag.name === val);
-                      if (tag) {
-                        prev.append("tag", tag.id.toString());
-                      }
-                      break;
-                    default:
-                      prev.append(filter.id, val);
-                      break;
-                  }
+              // Handle date range filter
+              if (filter.id === "createdDate") {
+                const [dateFrom, dateTo] = filter.value as [Date | null, Date | null];
+                if (dateFrom) {
+                  prev.set("dateFrom", dateFrom.toISOString().split("T")[0]);
                 }
-              });
+                if (dateTo) {
+                  prev.set("dateTo", dateTo.toISOString().split("T")[0]);
+                }
+              } else {
+                // Handle other array filters (like tags)
+                filter.value.forEach((val) => {
+                  if (typeof val === "string" && val.length > 0) {
+                    switch (filter.id) {
+                      case "tags":
+                        const tag = tags.find((tag) => tag.name === val);
+                        if (tag) {
+                          prev.append("tag", tag.id.toString());
+                        }
+                        break;
+                      default:
+                        prev.append(filter.id, val);
+                        break;
+                    }
+                  }
+                });
+              }
             }
           });
         if (globalFilter) {
           prev.set("q", globalFilter);
+        } else {
+          prev.delete("q");
         }
         if (pagination.pageIndex > 0) {
           prev.set("page", pagination.pageIndex.toString());
@@ -364,11 +434,20 @@ export default function LoanTable({ data, totalCount, tags }: LoanTableProps) {
         if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
           prev.set("limit", pagination.pageSize.toString());
         }
+
+        // Add sorting parameters
+        if (sorting.length > 0) {
+          sorting.forEach((sort) => {
+            prev.append("sortBy", sort.id);
+            prev.append("order", sort.desc ? "desc" : "asc");
+          });
+        }
+
         return prev;
       },
       { replace: true }
     );
-  }, [columnFilters, globalFilter, pagination]);
+  }, [columnFilters, globalFilter, pagination, sorting]);
 
   return <MantineReactTable table={table} />;
 }

@@ -118,9 +118,6 @@ export default function FormView<T extends Record<string, any>, R>({
 
   const form = useForm<FormData<T>>({
     mode: "controlled",
-    onValuesChange: (values) => {
-      console.log("Values changed: ", values);
-    },
     clearInputErrorOnChange: true,
     validateInputOnBlur,
     validateInputOnChange,

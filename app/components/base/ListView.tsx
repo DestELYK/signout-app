@@ -114,9 +114,7 @@ export default function ListView<T extends { id: number }>({
 
   const [activePage, setPage] = useState(1);
 
-  const [itemsPerPage, setItemsPerPage] = useState(
-    searchParams.has("limit") ? Number(searchParams.get("limit")) : initialItemsPerPage
-  );
+  const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
 
   const filteredItems = data && data.length > itemsPerPage ? data.slice(0, itemsPerPage) : data;
 
@@ -152,8 +150,13 @@ export default function ListView<T extends { id: number }>({
 
   const searchLimit = searchParams.get("limit");
   useEffect(() => {
-    if (searchLimit) setItemsPerPage(Number(searchLimit));
-  }, [searchLimit]);
+    if (searchLimit) {
+      setItemsPerPage(Number(searchLimit));
+    } else {
+      // Reset to initial value if no limit parameter
+      setItemsPerPage(initialItemsPerPage);
+    }
+  }, [searchLimit, initialItemsPerPage]);
 
   return (
     <Flex pos="relative" w={w} h={h} direction="column" align="center">

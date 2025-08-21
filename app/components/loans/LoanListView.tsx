@@ -16,7 +16,8 @@ import { useNavigate } from "@remix-run/react";
 import { IconArrowRight } from "@tabler/icons-react";
 import items from "~/routes/items";
 import { LoanData } from "~/utils/types.server";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { dateDiff, formatFullName } from "~/utils/utils";
+import DateDisplay from "../DateDisplay";
 import StatusBadge from "../StatusBadge";
 
 /**
@@ -98,7 +99,8 @@ export default function LoanListView({ data, query }: LoanListViewProps) {
           )}
           {data.items.length > 0 && <Space h="sm" />}
           <Text size="xs">
-            Created: {formatDate(data.dateLoaned)} <b>({dateDiff({ date: data.dateLoaned })})</b>
+            Created: <DateDisplay date={data.dateLoaned} inherit span />{" "}
+            <b>({dateDiff({ date: data.dateLoaned })})</b>
           </Text>
         </Flex>
         <IconArrowRight />

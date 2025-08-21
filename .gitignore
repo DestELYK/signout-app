@@ -137,9 +137,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-prisma/*
-!prisma/schema.prisma
-!prisma/seed.ts
+prisma/*.db
 
 sslcert
 

@@ -33,28 +33,35 @@ dayjs.extend(localeData);
 //#region Date Utils
 
 /**
- * Format a date using the specified locale options
+ * Format a date using dayjs for consistent server/client rendering
  *
  * @param date - The date to format (string or Date object)
- * @param options - Intl.DateTimeFormatOptions for formatting
+ * @param options - Optional formatting options for different date display formats
  * @returns Formatted date string or "None" if undefined
  */
-export const formatDate = (
-  date: string | Date,
-  options: Intl.DateTimeFormatOptions = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  }
-) => {
+export const formatDate = (date: string | Date, options?: Intl.DateTimeFormatOptions) => {
   if (date === undefined) return "None";
 
-  if (typeof date === "string") date = new Date(date);
+  const dayjsDate = dayjs(date);
 
-  return date.toLocaleString("en", options);
+  // Handle specific formatting options by mapping to dayjs format strings
+  if (options) {
+    // Date-only formats (no time)
+    if (!options.hour && !options.minute) {
+      if (options.month === "long" && options.day === "2-digit" && options.year === "numeric") {
+        return dayjsDate.format("MMMM DD, YYYY");
+      }
+      if (options.month === "short" && options.day === "2-digit" && options.year === "numeric") {
+        return dayjsDate.format("MMM DD, YYYY");
+      }
+      if (options.month === "short" && options.day === "numeric" && options.year === "numeric") {
+        return dayjsDate.format("MMM D, YYYY");
+      }
+    }
+  }
+
+  // Default format with time (matches original behavior)
+  return dayjsDate.format("MMMM D, YYYY [at] h:mm A");
 };
 
 /**

@@ -139,3 +139,17 @@ model Tag {
 
   @@unique([name, category])
 }
+
+model Migration {
+  id               Int      @id @default(autoincrement())
+  type             String   @default("grade_promotion")
+  status           String   @default("completed")
+  changes          String   @db.LongText
+  studentsAffected Int      @default(0)
+  movedToAlumni    Int      @default(0)
+  promoted         Int      @default(0)
+  academicYear     String?
+  notes            String?  @db.VarChar(500)
+  createdDate      DateTime @default(now())
+  updatedDate      DateTime @updatedAt
+}

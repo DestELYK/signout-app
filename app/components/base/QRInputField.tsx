@@ -159,7 +159,6 @@ export default function QRInputField<T extends { id: number }>({
               }
             }}
             onBlur={() => {
-              console.log("QRInputField onBlur: ", onBlur === undefined);
               // Close dropdown on blur unless custom handler prevents it
               if (onBlur === undefined || onBlur?.()) {
                 combobox.closeDropdown();

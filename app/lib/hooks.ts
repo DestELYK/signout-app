@@ -120,7 +120,9 @@ export function useCreateModal(): [
  * @returns Boolean indicating if screen is desktop size (min-width: 62em)
  */
 export function useDesktopOnly() {
-  const matches = useMediaQuery("(min-width: 62em)");
+  const matches = useMediaQuery("(min-width: 62em)", true, {
+    getInitialValueInEffect: false,
+  });
 
   return matches;
 }

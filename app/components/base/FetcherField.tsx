@@ -95,14 +95,12 @@ export default function FetcherField<T extends { id: number }, F>({
 
   useEffect(() => {
     if (fetcher && fetcher.state === "idle" && fetcher.data) {
-      console.log("Fetched data: ", fetcher.data);
       setItems(onFetched?.(fetcher.data) ?? []);
     }
   }, [fetcher?.state, fetcher?.data]);
 
   useEffect(() => {
     if (value) {
-      console.log("Value changed: ", value);
       setItems([]);
     }
   }, [value]);

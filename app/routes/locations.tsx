@@ -44,6 +44,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return typedjson(
     await getItemLocations({
       query: search.get("query") ?? search.get("q") ?? undefined,
+      sortBy: search.get("sortBy") || undefined,
+      order: search.get("order") || undefined,
     })
   );
 };

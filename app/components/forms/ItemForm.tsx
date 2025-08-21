@@ -82,7 +82,6 @@ export default function ItemForm({
         submitLabel="Item"
         onResult={onResult}
         onSubmit={(values) => {
-          console.log("Values: ", values);
           onSubmit?.(values);
 
           return true;
@@ -149,7 +148,6 @@ export default function ItemForm({
                         }}
                         onResult={(result) => {
                           if (result.data) {
-                            console.log("Result: ", result);
                             setItemType(result.data.name);
                             form.setFieldValue("type", result.data);
 
@@ -222,7 +220,6 @@ export default function ItemForm({
                         }}
                         onResult={(result) => {
                           if (result.data) {
-                            console.log("Result: ", result);
                             setItemLocation(result.data.name);
                             form.setFieldValue("location", result.data);
 

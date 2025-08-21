@@ -12,6 +12,7 @@
  */
 
 import { Text } from "@mantine/core";
+import { ClientOnly } from "remix-utils/client-only";
 import { ItemStatusData, PersonData } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import StatusBadge from "../StatusBadge";
@@ -57,9 +58,19 @@ export default function LoanSimpleView({
       {itemCount && <Text size="xs">{itemCount === 1 ? "1 item" : `${itemCount} items`}</Text>}
       {/* Loan date with relative timing */}
       {dateLoaned && (
-        <Text size="xs" fs="italic" c="dimmed">
-          {formatDate(dateLoaned)} ({dateDiff({ date: dateLoaned })})
-        </Text>
+        <ClientOnly
+          fallback={
+            <Text size="xs" fs="italic" c="dimmed">
+              Loading date...
+            </Text>
+          }
+        >
+          {() => (
+            <Text size="xs" fs="italic" c="dimmed">
+              {formatDate(dateLoaned)} ({dateDiff({ date: dateLoaned })})
+            </Text>
+          )}
+        </ClientOnly>
       )}
       {/* Status badge if available */}
       {status && <StatusBadge status={status} />}

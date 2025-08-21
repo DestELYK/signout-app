@@ -23,6 +23,7 @@ import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
   MRT_RowSelectionState,
+  MRT_SortingState,
   useMantineReactTable,
 } from "mantine-react-table";
 import { useEffect, useMemo, useState } from "react";
@@ -113,6 +114,19 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: INITIAL_PAGE_SIZE });
 
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
+  const [sorting, setSorting] = useState<MRT_SortingState>(() => {
+    const sortByParams = searchParams.getAll("sortBy");
+    const orderParams = searchParams.getAll("order");
+
+    if (sortByParams.length > 0) {
+      return sortByParams.map((sortBy, index) => ({
+        id: sortBy,
+        desc: (orderParams[index] || "desc") === "desc",
+      }));
+    }
+
+    return [{ id: "id", desc: true }];
+  });
 
   // const typeNames = types.map((type) => type.name);
   // const locationNames = locations.map((location) => location.name);
@@ -152,37 +166,32 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
         accessorKey: "id",
         header: "ID",
         enableColumnFilter: false,
-        size: 100,
+        size: 80,
       },
       {
         accessorKey: "schoolId",
         header: "School ID",
-        size: 100,
         accessorFn: (person) => person.schoolId ?? "None",
       },
       {
         accessorKey: "firstName",
         header: "First Name",
-        size: 150,
         Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "lastName",
         header: "Last Name",
-        size: 150,
         Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "nickname",
         header: "Nickname",
-        size: 150,
         accessorFn: (person) => person.nickname ?? "None",
         Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "role",
         header: "Role",
-        size: 100,
         filterVariant: "multi-select",
         mantineFilterMultiSelectProps: {
           data: roleNames,
@@ -204,7 +213,7 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       {
         accessorKey: "tags",
         header: "Tags",
-        size: 100,
+        enableSorting: false,
         filterVariant: "multi-select",
         mantineFilterSelectProps: {
           data: tagNames,
@@ -220,8 +229,9 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       {
         accessorKey: "lostCount",
         header: "# of Lost Items",
-        maxSize: 10,
+        size: 120,
         enableColumnFilter: false,
+        enableSorting: false,
         accessorFn: (person) => person.lostItemsCount,
         Cell: ({ cell }) => {
           const lostItemsCount = cell.getValue<number>();
@@ -239,8 +249,9 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       {
         accessorKey: "loanCount",
         header: "# of Loans",
-        maxSize: 10,
+        size: 100,
         enableColumnFilter: false,
+        enableSorting: false,
         accessorFn: (person) => person.loansCount,
       },
     ],
@@ -250,13 +261,15 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   const table = useMantineReactTable({
     columns: columns,
     data: data ?? [],
-    enableColumnResizing: false,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    layoutMode: "semantic",
     enableDensityToggle: false,
     enableRowDragging: false,
     enableStickyHeader: false,
     enableColumnOrdering: false,
     enableColumnActions: false,
-    enableSorting: false,
+    enableSorting: true,
     enableHiding: false,
     enableColumnFilters: true,
     enableFilterMatchHighlighting: true,
@@ -264,12 +277,10 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
     enableRowSelection: true,
     manualFiltering: true,
     manualPagination: true,
+    manualSorting: true,
     positionActionsColumn: "last",
     pageCount: totalCount ?? 0,
     rowCount: totalCount,
-    mantineTableContainerProps: {
-      style: { height: "calc(100dvh - 19rem)", minHeight: 300 },
-    },
     initialState: {
       showGlobalFilter: true,
       showColumnFilters: true,
@@ -280,9 +291,11 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       globalFilter: globalFilter,
       pagination: pagination,
       rowSelection: rowSelection,
+      sorting: sorting,
     },
     positionToolbarAlertBanner: "bottom",
     onRowSelectionChange: setRowSelection,
+    onSortingChange: setSorting,
     onColumnFiltersChange: (value) => {
       if (!value || value.length === 0) {
         return;
@@ -291,11 +304,7 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       setColumnFilters(value);
     },
     onGlobalFilterChange: (value) => {
-      if (!value || value.length === 0) {
-        return;
-      }
-
-      setGlobalFilter(value);
+      setGlobalFilter(value || "");
     },
     onPaginationChange: setPagination,
     getRowId: (row: PersonData) => row.id.toString(),
@@ -303,18 +312,20 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
       onClick: () => navigate(`/people/${row.row.original.id}`),
       style: {
         cursor: "pointer",
-        fontSize: "sm",
+        fontSize: "xs",
       },
     }),
     renderTopToolbarCustomActions: ({ table }) => {
       const selection = Object.entries(rowSelection);
+      const hasSelection = selection.length > 0;
+
       return (
         <Group>
-          <Button disabled={selection.length === 0} variant="outline" onClick={open}>
+          <Button disabled={!hasSelection} variant="outline" onClick={open}>
             Update Role
           </Button>
           <Button
-            disabled={selection.length === 0}
+            disabled={!hasSelection}
             variant="outline"
             color="red"
             onClick={() => {
@@ -364,7 +375,6 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
   useEffect(() => {
     setSearchParams(
       (prev) => {
-        console.log("Setting search params", prev.toString());
         const mappedFilters = columnFilters.map((filter) => ({
           [filter.id]: filter.value,
         }));
@@ -378,6 +388,8 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
         !("nickname" in mappedFilters) && prev.delete("nickname");
         !("role" in mappedFilters) && prev.delete("role");
         !("tag" in mappedFilters) && prev.delete("tag");
+        prev.delete("sortBy");
+        prev.delete("order");
 
         columnFilters
           .filter((f) =>
@@ -416,6 +428,8 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
           });
         if (globalFilter) {
           prev.set("q", globalFilter);
+        } else {
+          prev.delete("q");
         }
         if (pagination.pageIndex > 0) {
           prev.set("page", pagination.pageIndex.toString());
@@ -423,11 +437,20 @@ export default function PersonTable({ data, totalCount, roles, tags }: PersonTab
         if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
           prev.set("limit", pagination.pageSize.toString());
         }
+
+        // Add sorting parameters
+        if (sorting.length > 0) {
+          sorting.forEach((sort) => {
+            prev.append("sortBy", sort.id);
+            prev.append("order", sort.desc ? "desc" : "asc");
+          });
+        }
+
         return prev;
       },
       { replace: true }
     );
-  }, [columnFilters, globalFilter, pagination]);
+  }, [columnFilters, globalFilter, pagination, sorting]);
 
   return (
     <>

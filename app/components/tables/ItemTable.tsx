@@ -20,6 +20,7 @@ import {
   MRT_ColumnDef,
   MRT_ColumnFiltersState,
   MRT_RowSelectionState,
+  MRT_SortingState,
   useMantineReactTable,
 } from "mantine-react-table";
 import { useEffect, useMemo, useState } from "react";
@@ -71,14 +72,22 @@ export default function ItemTable({
 }: ItemTableProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
   const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([
     {
       id: "status",
       value:
-        STATUS_OPTIONS.find(
-          (status) =>
-            status.id === searchParams.get("status") || status.name === searchParams.get("status")
-        )?.name ?? "",
+        searchParams.getAll("status").length > 0
+          ? searchParams
+              .getAll("status")
+              .map(
+                (statusParam) =>
+                  STATUS_OPTIONS.find(
+                    (status) => status.id === statusParam || status.name === statusParam
+                  )?.name
+              )
+              .filter(Boolean)
+          : [],
     },
     {
       id: "name",
@@ -115,6 +124,25 @@ export default function ItemTable({
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: INITIAL_PAGE_SIZE });
 
   const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
+  const [sorting, setSorting] = useState<MRT_SortingState>(() => {
+    const sortByParams = searchParams.getAll("sortBy");
+    const orderParams = searchParams.getAll("order");
+
+    if (sortByParams.length > 0) {
+      return sortByParams.map((field, index) => ({
+        id: field,
+        desc: (orderParams[index] || "desc") === "desc",
+      }));
+    }
+
+    // Default sorting
+    return [
+      {
+        id: "createdDate",
+        desc: true,
+      },
+    ];
+  });
 
   const typeNames = types.map((type) => type.name);
   const locationNames = locations.map((location) => location.name);
@@ -153,13 +181,13 @@ export default function ItemTable({
         accessorKey: "id",
         header: "ID",
         enableColumnFilter: false,
-        size: 50,
+        size: 80,
       },
       {
         accessorKey: "uuid",
         header: "UUID",
         enableColumnFilter: false,
-        size: 50,
+        size: 80,
         accessorFn: (item) => item.uuid,
         Cell: ({ cell }) => {
           const uuid = cell.getValue<string>();
@@ -169,9 +197,9 @@ export default function ItemTable({
       {
         id: "status",
         header: "Status",
-        size: 100,
-        filterVariant: "select",
-        mantineFilterSelectProps: {
+        enableSorting: false,
+        filterVariant: "multi-select",
+        mantineFilterMultiSelectProps: {
           data: statuses.map((status) => status.name),
           style: { minWidth: 150 },
         },
@@ -190,13 +218,11 @@ export default function ItemTable({
       {
         accessorKey: "name",
         header: "Name",
-        size: 150,
         Cell: ({ cell, table }) => <HighlightCell cell={cell} table={table} />,
       },
       {
         accessorKey: "type",
         header: "Type",
-        size: 100,
         filterVariant: "multi-select",
         mantineFilterMultiSelectProps: {
           data: typeNames,
@@ -206,7 +232,6 @@ export default function ItemTable({
       {
         accessorKey: "location",
         header: "Location",
-        size: 100,
         filterVariant: "multi-select",
         mantineFilterMultiSelectProps: {
           data: locationNames,
@@ -216,7 +241,7 @@ export default function ItemTable({
       {
         accessorKey: "tags",
         header: "Tags",
-        size: 100,
+        enableSorting: false,
         filterVariant: "multi-select",
         mantineFilterMultiSelectProps: {
           data: tagNames,
@@ -236,13 +261,15 @@ export default function ItemTable({
   const table = useMantineReactTable({
     columns: columns,
     data: data ?? [],
-    enableColumnResizing: false,
+    enableColumnResizing: true,
+    columnResizeMode: "onChange",
+    layoutMode: "semantic",
     enableDensityToggle: false,
     enableRowDragging: false,
     enableStickyHeader: false,
     enableColumnOrdering: false,
     enableColumnActions: false,
-    enableSorting: false,
+    enableSorting: true,
     enableHiding: false,
     enableColumnFilters: true,
     enableFilterMatchHighlighting: true,
@@ -250,12 +277,10 @@ export default function ItemTable({
     enableRowSelection: true,
     manualFiltering: true,
     manualPagination: true,
+    manualSorting: true,
     positionActionsColumn: "last",
     pageCount: totalCount ?? 0,
     rowCount: totalCount,
-    mantineTableContainerProps: {
-      style: { height: "calc(100dvh - 19rem)", minHeight: 300 },
-    },
     initialState: {
       showGlobalFilter: true,
       showColumnFilters: true,
@@ -266,18 +291,20 @@ export default function ItemTable({
       globalFilter: globalFilter,
       pagination: pagination,
       rowSelection: rowSelection,
+      sorting: sorting,
     },
     positionToolbarAlertBanner: "bottom",
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onSortingChange: setSorting,
     getRowId: (row: ItemData) => row.id.toString(),
     mantineTableBodyRowProps: (row) => ({
       onClick: () => navigate(`/items/${row.row.original.id}`),
       style: {
         cursor: "pointer",
-        fontSize: "sm",
+        fontSize: "xs",
       },
     }),
     renderTopToolbarCustomActions: ({ table }) => {
@@ -345,6 +372,8 @@ export default function ItemTable({
         !("type" in mappedFilters) && prev.delete("type");
         !("location" in mappedFilters) && prev.delete("location");
         !("tag" in mappedFilters) && prev.delete("tag");
+        prev.delete("sortBy");
+        prev.delete("order");
 
         columnFilters.forEach((filter) => {
           if (typeof filter.value === "string" && filter.value.length > 0) {
@@ -379,6 +408,8 @@ export default function ItemTable({
         });
         if (globalFilter) {
           prev.set("q", globalFilter);
+        } else {
+          prev.delete("q");
         }
         if (pagination.pageIndex > 0) {
           prev.set("page", pagination.pageIndex.toString());
@@ -386,11 +417,20 @@ export default function ItemTable({
         if (pagination.pageSize !== INITIAL_PAGE_SIZE) {
           prev.set("limit", pagination.pageSize.toString());
         }
+
+        // Add sorting parameters
+        if (sorting.length > 0) {
+          sorting.forEach((sort) => {
+            prev.append("sortBy", sort.id);
+            prev.append("order", sort.desc ? "desc" : "asc");
+          });
+        }
+
         return prev;
       },
       { replace: true }
     );
-  }, [columnFilters, globalFilter, pagination]);
+  }, [columnFilters, globalFilter, pagination, sorting]);
 
   return <MantineReactTable table={table} />;
 }

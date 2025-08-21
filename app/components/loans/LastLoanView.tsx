@@ -25,6 +25,7 @@ import {
 } from "@mantine/core";
 import { Link, useNavigate } from "@remix-run/react";
 import dayjs from "dayjs";
+import { ClientOnly } from "remix-utils/client-only";
 import { LastLoanData } from "~/utils/types.server";
 import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
 import InfoView from "../base/InfoView";
@@ -124,21 +125,45 @@ export default function LastLoanView({
                 </b>{" "}
                 since loan was created
               </Text>
-              <Text size="xs" c="dimmed" fs="italic">
-                {formatDate(data.dateLoaned)}
-              </Text>
+              <ClientOnly
+                fallback={
+                  <Text size="xs" c="dimmed" fs="italic">
+                    Loading date...
+                  </Text>
+                }
+              >
+                {() => (
+                  <Text size="xs" c="dimmed" fs="italic">
+                    {formatDate(data.dateLoaned!)}
+                  </Text>
+                )}
+              </ClientOnly>
             </>
           )}
           {data.dateAllReturned && (
             <>
-              <Text mt="sm">
-                It took <b>{dayjs(data.dateAllReturned).from(data.dateLoaned, true)}</b> for all
-                items to be returned{" "}
-                <b>({dateDiff({ date: data.dateAllReturned, withoutSuffix: false })})</b>
-              </Text>
-              <Text size="xs" c="dimmed" fs="italic">
-                {formatDate(data.dateAllReturned)}
-              </Text>
+              <ClientOnly fallback={<Text mt="sm">Loading return info...</Text>}>
+                {() => (
+                  <Text mt="sm">
+                    It took <b>{dayjs(data.dateAllReturned!).from(data.dateLoaned!, true)}</b> for
+                    all items to be returned{" "}
+                    <b>({dateDiff({ date: data.dateAllReturned!, withoutSuffix: false })})</b>
+                  </Text>
+                )}
+              </ClientOnly>
+              <ClientOnly
+                fallback={
+                  <Text size="xs" c="dimmed" fs="italic">
+                    Loading date...
+                  </Text>
+                }
+              >
+                {() => (
+                  <Text size="xs" c="dimmed" fs="italic">
+                    {formatDate(data.dateAllReturned!)}
+                  </Text>
+                )}
+              </ClientOnly>
             </>
           )}
         </Box>

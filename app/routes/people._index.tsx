@@ -24,6 +24,7 @@ import { typedjson, useTypedLoaderData } from "remix-typedjson";
 import InfoView from "~/components/base/InfoView";
 import PeopleList from "~/components/people/PeopleList";
 import StatView from "~/components/StatView";
+import { cache, CACHE_KEYS } from "~/lib/cache.server";
 import { useDesktopOnly } from "~/lib/hooks";
 import {
   getPeople,
@@ -40,14 +41,36 @@ import { formatFullName } from "~/utils/utils";
  * @returns JSON response with role statistics, outstanding loans, and invalid items data
  */
 export const loader = async () => {
-  // Get people count by role for analytics
-  const roleCount = await getRoleCount();
+  // Execute all queries in parallel with caching for better performance
+  const [roleCount, invalidItemsResult, outstandingLoansResult, totalPeople] = await Promise.all([
+    // Cache role count for 5 minutes (people roles don't change frequently)
+    cache.getOrSet(
+      CACHE_KEYS.PEOPLE_ROLE_COUNT,
+      () => getRoleCount(),
+      5 * 60 * 1000 // 5 minutes
+    ),
 
-  // Get people with invalid/lost items for monitoring
-  const invalidItemsResult = await getPeopleWithInvalidItems();
+    // Cache people with invalid items for 3 minutes
+    cache.getOrSet(
+      CACHE_KEYS.PEOPLE_WITH_LOST_ITEMS,
+      () => getPeopleWithInvalidItems(),
+      3 * 60 * 1000 // 3 minutes
+    ),
 
-  // Get people with outstanding loans for tracking
-  const outstandingLoansResult = await getPeople({ outstanding: true });
+    // Cache outstanding loans for 2 minutes (more dynamic data)
+    cache.getOrSet(
+      CACHE_KEYS.PEOPLE_OUTSTANDING_LOANS,
+      () => getPeople({ outstanding: true }),
+      2 * 60 * 1000 // 2 minutes
+    ),
+
+    // Cache total people count for 10 minutes (changes infrequently)
+    cache.getOrSet(
+      CACHE_KEYS.TOTAL_PEOPLE,
+      () => prisma.person.count(),
+      10 * 60 * 1000 // 10 minutes
+    ),
+  ]);
 
   return typedjson({
     roleLoans: roleCount.data ?? [],
@@ -65,7 +88,7 @@ export const loader = async () => {
           return formatFullName(a).localeCompare(formatFullName(b));
         }
       }) ?? [],
-    totalPeople: await prisma.person.count(),
+    totalPeople,
   });
 };
 

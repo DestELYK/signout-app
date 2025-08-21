@@ -49,9 +49,9 @@ const prisma = new PrismaClient();
  * @returns Promise resolving to DataReturn with people array or error
  */
 export const getPeople = async (
-  filters: {
+  filters: Partial<{
     [key in keyof PersonQueryType]: string | string[] | boolean | undefined;
-  } = {},
+  }> = {},
   limit?: number,
   offset?: number
 ): Promise<DataReturn<PersonData[]>> => {
@@ -59,6 +59,48 @@ export const getPeople = async (
 
   try {
     const parsedFilter = PersonQuerySchema.parse(filters);
+
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.PersonFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        return { id: finalOrder[0] as "asc" | "desc" };
+      }
+
+      const mappedOrder = sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "lostCount":
+            return {};
+          case "role":
+            return {
+              role: {
+                name: fieldOrder,
+              },
+            };
+          case "firstName":
+          case "lastName":
+          case "nickname":
+          case "schoolId":
+          case "notes":
+          case "createdDate":
+          case "updatedDate":
+          case "id":
+            return { [field]: fieldOrder };
+          default:
+            return { id: fieldOrder };
+        }
+      }) as Prisma.PersonOrderByWithRelationInput[];
+
+      return mappedOrder.length === 1
+        ? mappedOrder[0]
+        : mappedOrder.reduce((acc, curr) => ({ ...acc, ...curr }));
+    };
 
     const filter: Prisma.PersonWhereInput = parsedFilter.schoolId
       ? {
@@ -185,9 +227,7 @@ export const getPeople = async (
     const people = await prisma.person.findMany({
       ...personSimpleSelection,
       where: filter,
-      orderBy: {
-        id: "desc",
-      },
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
       take: limit,
       skip: offset,
     });
@@ -719,12 +759,49 @@ export const deletePeople = async (data: { peopleIds: string[] }): Promise<DataR
 
 //#region Person Role
 export const getPersonRoles = async (
-  filters: {
+  filters: Partial<{
     [key in keyof QueryType]: string | string[] | undefined;
-  } = {}
+  }> = {}
 ): Promise<DataReturn<PersonRoleData[]>> => {
   try {
     const parsedFilter = QuerySchema.parse(filters);
+
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.PersonRoleFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        // Default: use custom role order
+        return undefined;
+      }
+
+      return sortBy
+        .map((field, index) => {
+          const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+          switch (field) {
+            case "name":
+              // For name sorting, we'll handle this with custom post-processing
+              return null;
+            case "id":
+            case "description":
+            case "color":
+              return { [field]: fieldOrder };
+            default:
+              // Default: use custom role order
+              return null;
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+    };
+
+    const shouldUseCustomSort =
+      !parsedFilter.sortBy ||
+      parsedFilter.sortBy.length === 0 ||
+      parsedFilter.sortBy.includes("name");
 
     const roles = await prisma.personRole.findMany({
       where: parsedFilter.query
@@ -737,10 +814,13 @@ export const getPersonRoles = async (
           }
         : undefined,
       ...personRoleSelection,
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
     });
 
     return {
-      data: roles.sort((a, b) => ROLE_ORDER.indexOf(a.name) - ROLE_ORDER.indexOf(b.name)),
+      data: shouldUseCustomSort
+        ? roles.sort((a, b) => ROLE_ORDER.indexOf(a.name) - ROLE_ORDER.indexOf(b.name))
+        : roles,
     };
   } catch (e) {
     return { error: handleError(e, "getting person roles") };

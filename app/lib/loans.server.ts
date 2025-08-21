@@ -26,6 +26,7 @@ import {
   loanSimpleSelection,
 } from "~/utils/types.server";
 import { getLoanStatus } from "~/utils/utils";
+import { invalidateCacheGroup } from "./cache.server";
 import { handleError } from "./db.server";
 import { LoanFormSchema, LoanFormType, LoanQuerySchema, LoanQueryType } from "./schemas";
 
@@ -48,9 +49,6 @@ export const getLoans = async (
   filters: {
     [key in keyof LoanQueryType]?: string | string[] | number | boolean | undefined;
   },
-  order: Prisma.LoanOrderByWithAggregationInput = {
-    id: "desc",
-  },
   limit?: number,
   offset?: number
 ): Promise<DataReturn<LoanData[]>> => {
@@ -59,39 +57,125 @@ export const getLoans = async (
 
     if (limit && limit <= 0) limit = undefined;
 
-    const statuses = STATUS_OPTIONS.filter((status) => {
-      if (status.id === "out") {
-        return (
-          parsedFilter.statuses?.includes("out") || parsedFilter.statuses?.includes("outstanding")
-        );
-      } else if (status.id === "unknown") {
-        return (
-          parsedFilter.statuses?.includes("unknown") ||
-          parsedFilter.statuses?.includes("unknown status")
-        );
-      } else {
-        return parsedFilter.statuses?.includes(status.id);
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Debug logging for sorting parameters
+    console.log("DEBUG: Loan sorting", {
+      sortBy: parsedFilter.sortBy,
+      order: parsedFilter.order,
+      finalOrder,
+      sortByType: typeof parsedFilter.sortBy,
+      sortByArray: Array.isArray(parsedFilter.sortBy),
+    });
+
+    // Map client sort fields to valid Prisma fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.LoanFindManyArgs["orderBy"] => {
+      console.log("DEBUG: buildOrderBy received", {
+        sortBy,
+        order,
+        sortByType: typeof sortBy,
+        sortByArray: Array.isArray(sortBy),
+      });
+
+      if (!sortBy || sortBy.length === 0) {
+        console.log("DEBUG: Using default ID sorting");
+        return { id: finalOrder[0] as "asc" | "desc" };
       }
-    }).map((status) => status.id);
+
+      const mappedOrder = sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "person":
+            return {
+              person: {
+                firstName: fieldOrder,
+              },
+            };
+          case "id":
+          case "notes":
+          case "createdDate":
+          case "updatedDate":
+            return { [field]: fieldOrder };
+          default:
+            return { id: fieldOrder };
+        }
+      }) as Prisma.LoanOrderByWithRelationInput[];
+
+      if (mappedOrder.length === 1) {
+        return mappedOrder[0];
+      }
+
+      return mappedOrder;
+    };
+
+    // Process status filters to handle both IDs and names, including aliases
+    const processedStatuses =
+      parsedFilter.statuses && parsedFilter.statuses.length > 0
+        ? STATUS_OPTIONS.filter((status) => {
+            return parsedFilter.statuses!.some((filterStatus) => {
+              // Direct ID match
+              if (status.id === filterStatus) return true;
+              // Direct name match
+              if (status.name === filterStatus) return true;
+              // Handle aliases
+              if (status.id === "out" && (filterStatus === "outstanding" || filterStatus === "Out"))
+                return true;
+              if (
+                status.id === "unknown" &&
+                (filterStatus === "unknown status" || filterStatus === "Unknown")
+              )
+                return true;
+              return false;
+            });
+          }).map((status) => status.id)
+        : [];
+
+    // Build status-based item filters
+    const buildStatusItemFilter = (): Prisma.LoanedItemListRelationFilter | undefined => {
+      if (processedStatuses.length === 0) return undefined;
+
+      // If only one status type is selected, use direct filtering
+      if (processedStatuses.length === 1) {
+        const status = processedStatuses[0];
+        if (status === "returned") {
+          return { every: { status: "returned" } };
+        } else {
+          return { some: { status } };
+        }
+      }
+
+      // For multiple statuses, we need to handle this differently
+      // Check if "returned" is included with other statuses
+      if (processedStatuses.includes("returned")) {
+        const activeStatuses = processedStatuses.filter((s) => s !== "returned");
+        if (activeStatuses.length > 0) {
+          // This is complex - items that are either all returned OR have some of the active statuses
+          // This requires a more complex query structure that we'll handle at the loan level
+          return undefined; // We'll handle this case separately
+        } else {
+          return { every: { status: "returned" } };
+        }
+      } else {
+        // Only active statuses
+        return { some: { status: { in: processedStatuses } } };
+      }
+    };
+
+    const statusItemFilter = buildStatusItemFilter();
+
+    // Handle complex multi-status filtering that includes both "returned" and active statuses
+    const hasComplexStatusFilter =
+      processedStatuses.includes("returned") && processedStatuses.some((s) => s !== "returned");
 
     const filter: Prisma.LoanWhereInput =
       parsedFilter.query && parsedFilter.query.length > 0
         ? {
-            ...(statuses?.includes("out")
-              ? { items: { some: { status: "out" } } }
-              : statuses?.includes("returned")
-              ? {
-                  items: { every: { status: "returned" } },
-                }
-              : statuses?.includes("invalid") && {
-                  items: {
-                    some: {
-                      status: {
-                        in: INVALID_STATUS_IDS,
-                      },
-                    },
-                  },
-                }),
+            // Apply status filtering if specified and not complex
+            ...(statusItemFilter && !hasComplexStatusFilter ? { items: statusItemFilter } : {}),
             OR: [
               {
                 person: {
@@ -149,6 +233,35 @@ export const getLoans = async (
             ],
 
             tags: parsedFilter.tags ? { some: { id: { in: parsedFilter.tags } } } : undefined,
+
+            // Date range filtering
+            ...(parsedFilter.dateFrom || parsedFilter.dateTo
+              ? {
+                  createdDate: {
+                    ...(parsedFilter.dateFrom && {
+                      gte: new Date(
+                        parsedFilter.dateFrom.getFullYear(),
+                        parsedFilter.dateFrom.getMonth(),
+                        parsedFilter.dateFrom.getDate(),
+                        0,
+                        0,
+                        0
+                      ),
+                    }),
+                    ...(parsedFilter.dateTo && {
+                      lte: new Date(
+                        parsedFilter.dateTo.getFullYear(),
+                        parsedFilter.dateTo.getMonth(),
+                        parsedFilter.dateTo.getDate(),
+                        23,
+                        59,
+                        59,
+                        999
+                      ),
+                    }),
+                  },
+                }
+              : {}),
           }
         : {
             person: {
@@ -185,9 +298,9 @@ export const getLoans = async (
                       }
                     : undefined,
                 status:
-                  statuses && statuses.length > 0
+                  processedStatuses && processedStatuses.length > 0
                     ? {
-                        in: statuses,
+                        in: processedStatuses,
                       }
                     : undefined,
                 AND:
@@ -202,11 +315,40 @@ export const getLoans = async (
             },
 
             tags: parsedFilter.tags ? { some: { id: { in: parsedFilter.tags } } } : undefined,
+
+            // Date range filtering
+            ...(parsedFilter.dateFrom || parsedFilter.dateTo
+              ? {
+                  createdDate: {
+                    ...(parsedFilter.dateFrom && {
+                      gte: new Date(
+                        parsedFilter.dateFrom.getFullYear(),
+                        parsedFilter.dateFrom.getMonth(),
+                        parsedFilter.dateFrom.getDate(),
+                        0,
+                        0,
+                        0
+                      ),
+                    }),
+                    ...(parsedFilter.dateTo && {
+                      lte: new Date(
+                        parsedFilter.dateTo.getFullYear(),
+                        parsedFilter.dateTo.getMonth(),
+                        parsedFilter.dateTo.getDate(),
+                        23,
+                        59,
+                        59,
+                        999
+                      ),
+                    }),
+                  },
+                }
+              : {}),
           };
 
     const loans = await prisma.loan.findMany({
       where: filter,
-      orderBy: order,
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
       take: limit,
       skip: offset,
       ...loanSimpleSelection,
@@ -546,6 +688,57 @@ export const createLoan = async (data: LoanFormType): Promise<DataReturn<LoanDat
       },
       ...loanSimpleSelection,
     });
+
+    return {
+      data: {
+        ...createdLoan,
+        person: {
+          id: createdLoan.person.id,
+          schoolId: createdLoan.person.schoolId ?? undefined,
+          firstName: createdLoan.person.firstName,
+          lastName: createdLoan.person.lastName,
+          nickname: createdLoan.person.nickname ?? undefined,
+          role: createdLoan.person.role
+            ? {
+                ...createdLoan.person.role,
+                description: createdLoan.person.role.description ?? undefined,
+              }
+            : undefined,
+          loansCount: createdLoan.person.loans.length,
+          outstandingItemsCount: createdLoan.person.loans.filter((p) =>
+            p.items.some((i) => i.dateReturned === null)
+          ).length,
+          tags: createdLoan.person.tags.map((tag) => ({
+            ...tag,
+            description: tag.description ?? undefined,
+          })),
+        } satisfies LoanData["person"],
+        items: createdLoan.items.map((item) => ({
+          ...item,
+          ...item.item,
+          loanId: createdLoan.id,
+          loans: undefined,
+          itemId: item.item.id,
+          dateReturned: undefined,
+          description: item.item.description ?? undefined,
+          status: STATUS_OPTIONS.find((status) => status.id === "outstanding"),
+          tags: item.item.tags.map((tag) => ({
+            ...tag,
+            description: tag.description ?? undefined,
+          })),
+          returnedBy: undefined,
+        })) satisfies LoanData["items"],
+        dateLoaned: createdLoan.createdDate,
+        tags: createdLoan.tags.map((tag) => ({
+          ...tag,
+          description: tag.description ?? undefined,
+        })) satisfies LoanData["tags"],
+        status: LOAN_STATUSES["outstanding"],
+      },
+    };
+
+    // Invalidate cache after successful loan creation
+    invalidateCacheGroup("LOANS");
 
     return {
       data: {
@@ -1094,72 +1287,57 @@ export const groupLoansByYear = async (): Promise<
   try {
     const yearBeforeDate = dayjs().subtract(1, "year");
 
-    const loansInYear = await prisma.loan.findMany({
-      include: { person: true, items: true, tags: true },
-      where: {
-        createdDate: {
-          gte: yearBeforeDate.toDate(),
-        },
-      },
+    // Use SQL aggregation for better performance instead of fetching all records
+    const loansByDate = await prisma.$queryRaw<{ date: string; totalLoans: number }[]>`
+      SELECT 
+        DATE(createdDate) as date,
+        COUNT(*) as totalLoans
+      FROM Loan
+      WHERE createdDate >= ${yearBeforeDate.toDate()}
+      GROUP BY DATE(createdDate)
+      ORDER BY DATE(createdDate)
+    `;
+
+    const returnsByDate = await prisma.$queryRaw<{ date: string; totalReturns: number }[]>`
+      SELECT 
+        DATE(l.createdDate) as date,
+        COUNT(*) as totalReturns
+      FROM Loan l
+      WHERE l.createdDate >= ${yearBeforeDate.toDate()}
+        AND NOT EXISTS (
+          SELECT 1 FROM LoanedItem li 
+          WHERE li.loanId = l.id AND li.dateReturned IS NULL
+        )
+      GROUP BY DATE(l.createdDate)
+      ORDER BY DATE(l.createdDate)
+    `;
+
+    // Merge loans and returns data efficiently
+    const dateMap = new Map<string, { totalLoans: number; totalReturns: number }>();
+
+    loansByDate.forEach(({ date, totalLoans }) => {
+      const dateStr = dayjs(date).format("YYYY-MM-DD");
+      dateMap.set(dateStr, { totalLoans: Number(totalLoans), totalReturns: 0 });
     });
 
-    let loansByYear: {
-      date: string;
-      totalLoans: number;
-      totalReturns: number;
-    }[] = [];
-
-    loansInYear.forEach((loan) => {
-      const date = dayjs(loan.createdDate).format("YYYY-MM-DD");
-
-      const existingDate = loansByYear.find((d) => d.date === date);
-
-      if (existingDate) {
-        existingDate.totalLoans += 1;
+    returnsByDate.forEach(({ date, totalReturns }) => {
+      const dateStr = dayjs(date).format("YYYY-MM-DD");
+      const existing = dateMap.get(dateStr);
+      if (existing) {
+        existing.totalReturns = Number(totalReturns);
       } else {
-        loansByYear.push({
-          date: date,
-          totalLoans: 1,
-          totalReturns: 0,
-        });
+        dateMap.set(dateStr, { totalLoans: 0, totalReturns: Number(totalReturns) });
       }
     });
 
-    loansInYear
-      .filter((loan) => loan.items.filter((item) => !item.dateReturned).length === 0)
-      .forEach((loan) => {
-        const date = dayjs(loan.createdDate).format("YYYY-MM-DD");
+    // Convert to array and fill gaps only for dates with actual data
+    const loansByYear = Array.from(dateMap.entries()).map(([date, data]) => ({
+      date,
+      totalLoans: data.totalLoans,
+      totalReturns: data.totalReturns,
+    }));
 
-        const existingDate = loansByYear.find((d) => d.date === date);
-
-        if (existingDate) {
-          existingDate.totalReturns += 1;
-        } else {
-          loansByYear.push({
-            date: date,
-            totalLoans: 0,
-            totalReturns: 1,
-          });
-        }
-      });
-
-    // Fill in any gaps in days for loansByYear
-    const endDate = dayjs(dayjs().format("YYYY-MM-DD"));
-    let currentDate = yearBeforeDate;
-
-    while (currentDate.isBefore(endDate) || currentDate.isSame(endDate)) {
-      const dateStr = currentDate.format("YYYY-MM-DD");
-      if (!loansByYear.find((d) => d.date === dateStr)) {
-        loansByYear.push({
-          date: dateStr,
-          totalLoans: 0,
-          totalReturns: 0,
-        });
-      }
-      currentDate = currentDate.add(1, "day");
-    }
-
-    // Sort loansByYear by date
+    // Sort by date (should already be sorted from SQL ORDER BY)
     loansByYear.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
 
     return { data: loansByYear, totalCount: loansByYear.length };

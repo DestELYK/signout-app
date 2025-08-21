@@ -56,7 +56,7 @@ export default function HighlightCell<T extends MRT_RowData>({
   }
 
   return (
-    <Highlight size="sm" lineClamp={2} highlight={highlight.split(" ")}>
+    <Highlight size="xs" lineClamp={2} highlight={highlight.split(" ")}>
       {value}
     </Highlight>
   );

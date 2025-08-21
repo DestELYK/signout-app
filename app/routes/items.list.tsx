@@ -17,9 +17,11 @@
  * @author Kyle Dunn
  */
 
-import { Box, Center, Loader } from "@mantine/core";
+import { Alert, Box, Center, Loader } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import { ClientOnly } from "remix-utils/client-only";
 import ItemList from "~/components/items/ItemList";
 import ItemTable from "~/components/tables/ItemTable";
 import { handleError } from "~/lib/db.server";
@@ -52,35 +54,33 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     const offset = parseNumber(searchParams.get("page"), 0);
 
-    console.log("pageSize", pageSize);
-    console.log("offset", offset);
+    // Execute main query and metadata queries in parallel for better performance
+    const [itemResult, itemTypes, itemLocations, tags] = await Promise.all([
+      // Fetch items with comprehensive filtering parameters
+      getItems(
+        {
+          query: searchParams.get("query") || searchParams.get("q") || undefined,
+          name: searchParams.get("name") || undefined,
+          statuses: searchParams.getAll("status") ?? undefined,
+          types: searchParams.getAll("type"),
+          locations: searchParams.getAll("location"),
+          sortBy: searchParams.get("sortBy") || undefined,
+          order: searchParams.get("order") || undefined,
+          personId: searchParams.get("personId") || undefined,
+          tags: searchParams.getAll("tag") || undefined,
+        },
+        pageSize,
+        parseNumber(searchParams.get("page"), 0) * pageSize
+      ),
 
-    // Fetch items with comprehensive filtering parameters
-    const itemResult = await getItems(
-      {
-        query: searchParams.get("query") || searchParams.get("q") || undefined,
-        name: searchParams.get("name") || undefined,
-        statuses: searchParams.getAll("status") ?? undefined,
-        types: searchParams.getAll("type"),
-        locations: searchParams.getAll("location"),
-        sortBy: searchParams.get("sortBy") || undefined,
-        sortOrder: searchParams.get("sortOrder") || undefined,
-        personId: searchParams.get("personId") || undefined,
-        tags: searchParams.getAll("tag") || undefined,
-      },
-      pageSize,
-      parseNumber(searchParams.get("page"), 0) * pageSize
-    );
-
-    const itemTypes = await getItemTypes();
-
-    const itemLocations = await getItemLocations();
-
-    const tags = await getTags({});
-
-    console.log("itemResult", itemResult.totalCount);
-
-    console.log("itemCount", itemResult.data?.length);
+      // Fetch metadata for filters
+      getItemTypes(),
+      getItemLocations(),
+      getTags({
+        sortBy: searchParams.get("tagSortBy") || undefined,
+        order: searchParams.get("tagOrder") || undefined,
+      } as any),
+    ]);
 
     return typedjson({
       items: itemResult.data,
@@ -117,24 +117,42 @@ export default function Page() {
   const desktopOnly = useDesktopOnly();
   const data = useTypedLoaderData<typeof loader>();
 
-  return desktopOnly === undefined ? (
-    <Center w="100%" h="100%">
-      <Loader />
-    </Center>
-  ) : (
-    <Box pos="relative" w="100%" h="100%" p="sm">
-      {desktopOnly ? (
-        <ItemTable
-          data={data.items}
-          totalCount={data.totalCount}
-          statuses={data.statuses ?? []}
-          types={data.itemTypes ?? []}
-          locations={data.itemLocations ?? []}
-          tags={data.tags?.tags ?? []}
-        />
-      ) : (
-        <ItemList data={data?.items} totalCount={data?.totalCount} />
+  return (
+    <ClientOnly
+      fallback={
+        <Center w="100%" h="100%">
+          <Loader />
+        </Center>
+      }
+    >
+      {() => (
+        <Box pos="relative" w="100%" h="100%" p="sm">
+          {data.error ? (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Error Loading Items"
+              color="red"
+              variant="light"
+              mb="md"
+            >
+              {data.error}
+            </Alert>
+          ) : null}
+
+          {desktopOnly ? (
+            <ItemTable
+              data={data.items}
+              totalCount={data.totalCount}
+              statuses={data.statuses ?? []}
+              types={data.itemTypes ?? []}
+              locations={data.itemLocations ?? []}
+              tags={data.tags?.tags ?? []}
+            />
+          ) : (
+            <ItemList data={data?.items} totalCount={data?.totalCount} />
+          )}
+        </Box>
       )}
-    </Box>
+    </ClientOnly>
   );
 }

@@ -17,9 +17,11 @@
  * @author Kyle Dunn
  */
 
-import { Box, Center, Loader } from "@mantine/core";
+import { Alert, Box, Center, Loader } from "@mantine/core";
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import { ClientOnly } from "remix-utils/client-only";
 import PeopleList from "~/components/people/PeopleList";
 import PersonTable from "~/components/tables/PersonTable";
 import { useDesktopOnly } from "~/lib/hooks";
@@ -46,13 +48,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     MAX_PAGE_SIZE
   );
 
-  // Fetch supporting data for filters
-  const roles = await getPersonRoles();
-  const tags = await getTags({});
-
-  return typedjson({
+  // Execute main query and metadata queries in parallel for better performance
+  const [peopleResult, roles, tags] = await Promise.all([
     // Fetch people with comprehensive filtering parameters
-    ...(await getPeople(
+    getPeople(
       {
         query: searchParams.get("q") || undefined,
         firstName: searchParams.get("firstName") || undefined,
@@ -64,10 +63,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           : undefined,
         schoolId: searchParams.get("schoolId") || searchParams.get("qrCode") || undefined,
         tags: searchParams.getAll("tag") || undefined,
+        sortBy: searchParams.get("sortBy") || undefined,
+        order: searchParams.get("order") || undefined,
       },
       pageSize,
       parseNumber(searchParams.get("page"), 0) * pageSize
-    )),
+    ),
+
+    // Fetch supporting data for filters
+    getPersonRoles(),
+    getTags({
+      sortBy: searchParams.get("tagSortBy") || undefined,
+      order: searchParams.get("tagOrder") || undefined,
+    } as any),
+  ]);
+
+  // Check for errors in the main query result
+  if (peopleResult.error) {
+    return typedjson({
+      data: [],
+      totalCount: 0,
+      roles: roles.data ?? [],
+      tags: tags.tags ?? [],
+      error: peopleResult.error,
+    });
+  }
+
+  return typedjson({
+    ...peopleResult,
     roles: roles.data,
     tags: tags.tags,
   });
@@ -88,22 +111,40 @@ export default function Page() {
   const desktopOnly = useDesktopOnly();
   const peopleData = useTypedLoaderData<typeof loader>();
 
-  return desktopOnly === undefined ? (
-    <Center w="100%" h="100%">
-      <Loader />
-    </Center>
-  ) : (
-    <Box pos="relative" w="100%" h="100%" p="sm">
-      {desktopOnly ? (
-        <PersonTable
-          data={peopleData?.data}
-          totalCount={peopleData?.totalCount}
-          roles={peopleData.roles ?? []}
-          tags={peopleData.tags ?? []}
-        />
-      ) : (
-        <PeopleList data={peopleData?.data} totalCount={peopleData?.totalCount} />
+  return (
+    <ClientOnly
+      fallback={
+        <Center w="100%" h="100%">
+          <Loader />
+        </Center>
+      }
+    >
+      {() => (
+        <Box pos="relative" w="100%" h="100%" p="sm">
+          {peopleData.error ? (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Error Loading People"
+              color="red"
+              variant="light"
+              mb="md"
+            >
+              {peopleData.error}
+            </Alert>
+          ) : null}
+
+          {desktopOnly ? (
+            <PersonTable
+              data={peopleData?.data}
+              totalCount={peopleData?.totalCount}
+              roles={peopleData.roles ?? []}
+              tags={peopleData.tags ?? []}
+            />
+          ) : (
+            <PeopleList data={peopleData?.data} totalCount={peopleData?.totalCount} />
+          )}
+        </Box>
       )}
-    </Box>
+    </ClientOnly>
   );
 }

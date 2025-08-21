@@ -24,7 +24,6 @@ export const MAX_RECENT_ITEMS = 20;
 
 /** Predefined order for student grade levels and staff */
 export const ROLE_ORDER = [
-  "Grade 3",
   "Grade 4",
   "Grade 5",
   "Grade 6",
@@ -34,6 +33,7 @@ export const ROLE_ORDER = [
   "Grade 10",
   "Grade 11",
   "Grade 12",
+  "Alumni",
   "Staff",
 ];
 
@@ -48,7 +48,8 @@ export const DEFAULT_ROLES = [
   { id: 6, name: "Grade 10", color: "#0c0cb4" },
   { id: 7, name: "Grade 11", color: "#0c0cb4" },
   { id: 8, name: "Grade 12", color: "#0c0cb4" },
-  { id: 9, name: "Staff", color: "#800080" },
+  { id: 9, name: "Alumni", color: "#228b22" },
+  { id: 10, name: "Staff", color: "#800080" },
 ] satisfies Partial<PersonRole>[];
 
 /** Configuration options for item management */

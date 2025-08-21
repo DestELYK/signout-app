@@ -17,9 +17,11 @@
  * @author Kyle Dunn
  */
 
-import { Box, Center, Loader } from "@mantine/core";
+import { Alert, Box, Center, Loader } from "@mantine/core";
 import { LoaderFunctionArgs } from "@remix-run/node";
+import { IconAlertCircle } from "@tabler/icons-react";
 import { typedjson, useTypedLoaderData } from "remix-typedjson";
+import { ClientOnly } from "remix-utils/client-only";
 import { LoanList } from "~/components/loans/LoanList";
 import LoanTable from "~/components/tables/LoanTable";
 import { useDesktopOnly } from "~/lib/hooks";
@@ -48,12 +50,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     MAX_PAGE_SIZE
   );
 
-  // Fetch available tags for filtering
-  const tags = await getTags({});
-
-  return typedjson({
+  // Execute main query and metadata queries in parallel for better performance
+  const [loansResult, tags] = await Promise.all([
     // Fetch loans with comprehensive filtering parameters
-    ...(await getLoans(
+    getLoans(
       {
         query: searchParams.get("query") || searchParams.get("q") || undefined,
         statuses: searchParams.getAll("status") || undefined,
@@ -63,11 +63,34 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         items: searchParams.get("items") || undefined,
         person: searchParams.get("person") || undefined,
         tags: searchParams.getAll("tag") || undefined,
+        dateFrom: searchParams.get("dateFrom") || undefined,
+        dateTo: searchParams.get("dateTo") || undefined,
+        sortBy: searchParams.get("sortBy") || undefined,
+        order: searchParams.get("order") || undefined,
       },
-      undefined,
       pageSize,
       parseNumber(searchParams.get("page"), 0) * pageSize
-    )),
+    ),
+
+    // Fetch available tags for filtering
+    getTags({
+      sortBy: searchParams.get("tagSortBy") || undefined,
+      order: searchParams.get("tagOrder") || undefined,
+    } as any),
+  ]);
+
+  // Check for errors in the main query result
+  if (loansResult.error) {
+    return typedjson({
+      data: [],
+      totalCount: 0,
+      tags: tags.tags ?? [],
+      error: loansResult.error,
+    });
+  }
+
+  return typedjson({
+    ...loansResult,
     tags: tags.tags,
   });
 };
@@ -85,21 +108,39 @@ export default function Page() {
   const desktopOnly = useDesktopOnly();
   const loanData = useTypedLoaderData<typeof loader>();
 
-  return desktopOnly === undefined ? (
-    <Center w="100%" h="100%">
-      <Loader />
-    </Center>
-  ) : (
-    <Box pos="relative" w="100%" h="100%" p="sm">
-      {desktopOnly ? (
-        <LoanTable
-          data={loanData?.data}
-          totalCount={loanData?.totalCount}
-          tags={loanData.tags ?? []}
-        />
-      ) : (
-        <LoanList data={loanData?.data} totalCount={loanData?.totalCount} />
+  return (
+    <ClientOnly
+      fallback={
+        <Center w="100%" h="100%">
+          <Loader />
+        </Center>
+      }
+    >
+      {() => (
+        <Box pos="relative" w="100%" h="100%" p="sm">
+          {loanData.error ? (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Error Loading Loans"
+              color="red"
+              variant="light"
+              mb="md"
+            >
+              {loanData.error}
+            </Alert>
+          ) : null}
+
+          {desktopOnly ? (
+            <LoanTable
+              data={loanData?.data}
+              totalCount={loanData?.totalCount}
+              tags={loanData.tags ?? []}
+            />
+          ) : (
+            <LoanList data={loanData?.data} totalCount={loanData?.totalCount} />
+          )}
+        </Box>
       )}
-    </Box>
+    </ClientOnly>
   );
 }

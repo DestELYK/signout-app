@@ -37,6 +37,37 @@ export const getTags = async (
   error?: string;
 }> => {
   try {
+    // Build ordering from query parameters with fallback
+    const finalOrder = filters.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.TagFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        return { priority: finalOrder[0] as "asc" | "desc" };
+      }
+
+      return sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "id":
+          case "name":
+          case "description":
+          case "color":
+          case "priority":
+          case "category":
+          case "hidden":
+          case "createdDate":
+          case "updatedDate":
+            return { [field]: fieldOrder };
+          default:
+            return { priority: fieldOrder };
+        }
+      });
+    };
+
     const filter = {
       AND: [
         filters.query
@@ -70,9 +101,7 @@ export const getTags = async (
 
     const result = await prisma.tag.findMany({
       where: filter,
-      orderBy: {
-        priority: "desc",
-      },
+      orderBy: buildOrderBy(filters.sortBy, filters.order),
       take: limit,
       skip: offset,
     });

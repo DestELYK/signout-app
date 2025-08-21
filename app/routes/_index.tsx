@@ -18,6 +18,7 @@ import {
   Center,
   Flex,
   Group,
+  Loader,
   Skeleton,
   Stack,
   Text,
@@ -31,8 +32,13 @@ import InfoView from "~/components/base/InfoView";
 import ListView from "~/components/base/ListView";
 import { LoanList } from "~/components/loans/LoanList";
 import PeopleList from "~/components/people/PeopleList";
+import {
+  DesktopDashboardSkeleton,
+  MobileDashboardSkeleton,
+  StatViewSkeleton,
+} from "~/components/skeletons/DashboardSkeleton";
 import StatView from "~/components/StatView";
-import { useDesktopOnly } from "~/lib/hooks";
+import { cache, CACHE_KEYS } from "~/lib/cache.server";
 import { getItemsGroupedByType } from "~/lib/items.server";
 import { getLoans, getTotalOutstandingLoans, groupLoansByYear } from "~/lib/loans.server";
 import { getPeopleWithInvalidItems } from "~/lib/people.server";
@@ -54,32 +60,46 @@ export const meta: MetaFunction = () => {
 
 /**
  * Loader function to fetch dashboard data
- * Loads recent loans, inventory stats, and analytics data
+ * Loads recent loans, inventory stats, and analytics data in parallel for optimal performance
+ * Uses caching to reduce database load for frequently accessed dashboard data
  * @returns Deferred promise with dashboard data
  */
 export const loader = async () => {
-  const recentLoans = await getLoans({ statuses: ["out"] }, undefined, MAX_RECENT_ITEMS);
-  const peopleWithLostItems = await getPeopleWithInvalidItems();
-  const inventory = await getItemsGroupedByType();
-  const totalOutstanding = await getTotalOutstandingLoans();
+  // Execute all database queries in parallel with caching for better performance
+  const [recentLoans, peopleWithLostItems, inventory, totalOutstanding, loansByYear] =
+    await Promise.all([
+      // Recent loans - get all non-returned statuses to match outstanding count logic
+      getLoans(
+        {
+          statuses: ["out"],
+          sortBy: ["createdDate"],
+          order: ["desc"],
+        },
+        MAX_RECENT_ITEMS
+      ),
 
-  const loansByYear = await groupLoansByYear();
+      // Cache other dashboard data for 5 minutes as it changes less frequently
+      getPeopleWithInvalidItems(),
+      getItemsGroupedByType(),
+      getTotalOutstandingLoans(),
+      cache.getOrSet(
+        CACHE_KEYS.LOANS_BY_YEAR,
+        () => groupLoansByYear(),
+        10 * 60 * 1000 // 10 minutes (historical data changes less frequently)
+      ),
+    ]);
 
-  if (
-    recentLoans.error ||
-    peopleWithLostItems.error ||
-    inventory.error ||
-    totalOutstanding.error ||
-    loansByYear.error
-  ) {
-    throw new Error(
-      recentLoans.error ||
-        peopleWithLostItems.error ||
-        inventory.error ||
-        totalOutstanding.error ||
-        loansByYear.error ||
-        "An error occurred"
-    );
+  // Check for any errors from the parallel operations
+  const errors = [
+    recentLoans.error,
+    peopleWithLostItems.error,
+    inventory.error,
+    totalOutstanding.error,
+    loansByYear.error,
+  ].filter(Boolean);
+
+  if (errors.length > 0) {
+    throw new Error(errors[0] || "An error occurred while loading dashboard data");
   }
 
   return typeddefer({
@@ -102,12 +122,22 @@ export default function Index() {
   const navigate = useNavigate();
   const data = useTypedLoaderData<typeof loader>();
 
-  const desktopOnly = useDesktopOnly();
+  // Check individual data loading states for progressive loading
+  const hasRecentLoans = data?.recentLoans !== undefined;
+  const hasPeopleData = data?.peopleWithLostItems !== undefined;
+  const hasInventoryData = data?.inventory !== undefined;
+  const hasTotalOutstanding = data?.totalOutstanding !== undefined;
+  const hasLoansData = data?.loansByYear !== undefined;
+
+  // Check if all critical data is loaded for main layout decision
+  const isDataLoaded = data && hasRecentLoans && hasTotalOutstanding && hasInventoryData;
 
   let totalAvailableItems = 0;
-  data.inventory?.itemByTypes.forEach((i) => {
-    totalAvailableItems += i.statusCount["returned"];
-  });
+  if (isDataLoaded && data.inventory?.itemByTypes) {
+    data.inventory.itemByTypes.forEach((i) => {
+      totalAvailableItems += i.statusCount["returned"];
+    });
+  }
 
   const today = dayjs();
 
@@ -120,8 +150,8 @@ export default function Index() {
   return (
     <Flex
       w="100%"
-      h={desktopOnly ? "100%" : undefined}
-      mih={600}
+      h={{ base: "100%", md: "100%" }}
+      mih={{ base: 800, md: 600 }}
       direction="column"
       wrap="nowrap"
       gap="sm"
@@ -134,236 +164,360 @@ export default function Index() {
         <br /> This is a web app for tracking inventory for item sign-outs. You can use the sidebar
         to navigate to different pages.
       </Text>
-      {desktopOnly === undefined || data === undefined ? (
-        <Box w="100%" h="100%" pos="relative">
-          <Skeleton w="100%" h="100%" />
-        </Box>
-      ) : desktopOnly ? (
+      {!isDataLoaded ? (
         <>
-          <Group w="100%" h="75%" grow>
-            <Card h="100%" withBorder>
-              <Card.Section inheritPadding withBorder>
-                <StatView
-                  h={100}
-                  label="Outstanding Loans"
-                  caption="Loans that are currently outstanding"
-                  value={data.totalOutstanding ?? 0}
-                />
-              </Card.Section>
-              <Card.Section h="calc(100% - 70px)">
-                <LoanList
-                  data={data.recentLoans}
-                  initialItemsPerPage={MAX_RECENT_ITEMS}
-                  totalCount={data.recentLoans?.length}
-                  withSearch={false}
-                  showPagination={false}
-                  w="100%"
-                  h="100%"
-                  withinParent
-                />
-              </Card.Section>
-            </Card>
-            <Card h="100%" withBorder>
-              <Card.Section inheritPadding withBorder>
-                <StatView
-                  h={100}
-                  label="People with Lost Items"
-                  caption="People who have lost loaned out items"
-                  value={data.peopleWithLostItemsTotalCount ?? 0}
-                />
-              </Card.Section>
-              <Card.Section h="calc(100% - 70px)">
-                <PeopleList
-                  data={data.peopleWithLostItems}
-                  initialItemsPerPage={MAX_RECENT_ITEMS}
-                  totalCount={data.peopleWithLostItemsTotalCount}
-                  withSearch={false}
-                  w="100%"
-                  h="100%"
-                  withinParent
-                />
-              </Card.Section>
-            </Card>
-            <Card h="100%" withBorder>
-              <Card.Section inheritPadding withBorder>
-                <StatView
-                  h={100}
-                  label="Available Items"
-                  caption="Number of Available Items"
-                  value={totalAvailableItems}
-                />
-              </Card.Section>
-              <Card.Section h="calc(100% - 70px)">
-                <ListView
-                  data={data.inventory?.itemByTypes?.map((i) => ({
-                    ...i,
-                    id: i.typeId,
-                  }))}
-                  initialItemsPerPage={data.inventory?.itemByTypes?.length}
-                  totalCount={data.inventory?.itemByTypes?.length}
-                  withSearch={false}
-                  w="100%"
-                  h="100%"
-                  withinParent
-                >
-                  {(type) => (
-                    <UnstyledButton
-                      className="list-item"
-                      w="100%"
-                      p="xs"
-                      onClick={() => {
-                        navigate(`/items/list?type=${type.type}`);
-                      }}
-                    >
-                      <Group align="center" justify="space-between" grow>
-                        <Text fw="bold" size="md" ta="center">
-                          {type.type}
-                        </Text>
-                        <Text
-                          size="sm"
-                          ta="center"
-                          {...(type.statusCount["returned"] === 0 && {
-                            c: "red",
-                          })}
-                        >
-                          {type.statusCount["returned"]} Available
-                        </Text>
-                      </Group>
-                    </UnstyledButton>
-                  )}
-                </ListView>
-              </Card.Section>
-            </Card>
-          </Group>
-          <Flex direction="row" wrap="nowrap" w="100%" h={180} gap="sm">
-            <InfoView
-              title="Loans in the Past Year"
-              cardProps={{ w: "100%", h: "100%" }}
-              rightSection={
-                <Text c="gray" ta="right">
-                  {today.format("MMMM DD, YYYY")}
-                </Text>
-              }
-            >
-              {data.loansByYear?.length === 0 ? (
-                <Center h="100%">
-                  <Text ta="center">No loans in the past year</Text>
-                </Center>
-              ) : (
-                <Suspense fallback={<Skeleton w="100%" h="100%" />}>
-                  <AreaChart
-                    w="100%"
-                    h="100%"
-                    withDots={false}
-                    withTooltip={false}
-                    mih={100}
-                    data={
-                      data.loansByYear?.map((l) => ({
-                        date: l.date,
-                        loaned: l.totalLoans,
-                        returned: l.totalReturns,
-                      })) ?? []
-                    }
-                    withXAxis={false}
-                    withYAxis={false}
-                    gridAxis="none"
-                    dataKey="date"
-                    series={[
-                      { name: "loaned", label: "Loans", color: "red" },
-                      {
-                        name: "returned",
-                        label: "Returns",
-                        color: "green",
-                      },
-                    ]}
-                    withLegend
-                    curveType="linear"
-                  />
-                </Suspense>
-              )}
-            </InfoView>
-            <Stack h="100%">
-              <Card withBorder>
-                <StatView label="Loans Today" value={dataToday.totalLoans} />
-              </Card>
-              <Card withBorder>
-                <StatView label="Returns Today" value={dataToday.totalReturns} />
-              </Card>
-            </Stack>
-          </Flex>
+          {/* Desktop skeleton */}
+          <Box visibleFrom="md">
+            <DesktopDashboardSkeleton />
+          </Box>
+          {/* Mobile skeleton */}
+          <Box hiddenFrom="md">
+            <MobileDashboardSkeleton />
+          </Box>
         </>
       ) : (
         <>
-          <Card withBorder>
-            <Card.Section inheritPadding withBorder p="sm">
-              <StatView
-                label="Outstanding Loans"
-                caption="Loans that are currently outstanding"
-                value={data.totalOutstanding ?? 0}
-                onClick={() => {
-                  navigate("/loans/list?status=outstanding");
-                }}
-              />
-            </Card.Section>
-            <Card.Section inheritPadding withBorder p="sm">
-              <StatView
-                label="People with Lost Items"
-                caption="People who have lost loaned out items"
-                value={data.peopleWithLostItemsTotalCount ?? 0}
-                onClick={() => {
-                  navigate("/people");
-                }}
-              />
-            </Card.Section>
-            <Card.Section inheritPadding withBorder p="sm">
-              <StatView
-                label="Items Available"
-                caption="Number of Available Items"
-                value={totalAvailableItems}
-                onClick={() => {
-                  navigate("/items/list?status=available");
-                }}
-              />
-            </Card.Section>
-          </Card>
-          <InfoView
-            title="Loans in the Past Year"
-            cardProps={{ w: "100%", mih: 130 }}
-            rightSection={
-              <Text c="gray" ta="right">
-                {today.format("MMMM DD, YYYY")}
-              </Text>
-            }
-          >
-            {data.loansByYear?.length === 0 ? (
-              <Center h="100%">
-                <Text ta="center">No loans in the past year</Text>
-              </Center>
-            ) : (
-              <Sparkline
-                w="100%"
-                h={50}
-                data={data.loansByYear?.map((l) => l.totalLoans) ?? []}
-                color="red"
-              />
-            )}
-          </InfoView>
-          <Group grow gap="xs">
+          {/* Desktop Layout */}
+          <Box visibleFrom="md" flex={1}>
+            <Group w="100%" h="70%" grow>
+              <Card h="100%" withBorder>
+                <Card.Section inheritPadding withBorder>
+                  {hasTotalOutstanding ? (
+                    <StatView
+                      h={100}
+                      label="Outstanding Loans"
+                      caption="Loans that are currently outstanding"
+                      value={data.totalOutstanding ?? 0}
+                    />
+                  ) : (
+                    <StatViewSkeleton />
+                  )}
+                </Card.Section>
+                <Card.Section h="calc(100% - 70px)">
+                  {hasRecentLoans ? (
+                    <LoanList
+                      data={data.recentLoans}
+                      initialItemsPerPage={MAX_RECENT_ITEMS}
+                      totalCount={data.recentLoans?.length}
+                      withSearch={false}
+                      showPagination={false}
+                      w="100%"
+                      h="100%"
+                      withinParent
+                    />
+                  ) : (
+                    <Stack gap="xs" p="sm">
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <Group key={index} justify="space-between" align="center" p="xs">
+                          <Stack gap="xs" flex={1}>
+                            <Skeleton h={16} w="70%" />
+                            <Skeleton h={12} w="50%" />
+                          </Stack>
+                          <Skeleton h={20} w={60} />
+                        </Group>
+                      ))}
+                    </Stack>
+                  )}
+                </Card.Section>
+              </Card>
+              <Card h="100%" withBorder>
+                <Card.Section inheritPadding withBorder>
+                  {hasPeopleData ? (
+                    <StatView
+                      h={100}
+                      label="People with Lost Items"
+                      caption="People who have lost loaned out items"
+                      value={data.peopleWithLostItemsTotalCount ?? 0}
+                    />
+                  ) : (
+                    <StatViewSkeleton />
+                  )}
+                </Card.Section>
+                <Card.Section h="calc(100% - 70px)">
+                  {hasPeopleData ? (
+                    <PeopleList
+                      data={data.peopleWithLostItems}
+                      initialItemsPerPage={MAX_RECENT_ITEMS}
+                      totalCount={data.peopleWithLostItemsTotalCount}
+                      withSearch={false}
+                      w="100%"
+                      h="100%"
+                      withinParent
+                    />
+                  ) : (
+                    <Stack gap="xs" p="sm">
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <Group key={index} justify="space-between" align="center" p="xs">
+                          <Stack gap="xs" flex={1}>
+                            <Skeleton h={16} w="80%" />
+                            <Skeleton h={12} w="60%" />
+                          </Stack>
+                          <Skeleton h={16} w={40} />
+                        </Group>
+                      ))}
+                    </Stack>
+                  )}
+                </Card.Section>
+              </Card>
+              <Card h="100%" withBorder>
+                <Card.Section inheritPadding withBorder>
+                  {hasInventoryData ? (
+                    <StatView
+                      h={100}
+                      label="Available Items"
+                      caption="Number of Available Items"
+                      value={totalAvailableItems}
+                    />
+                  ) : (
+                    <StatViewSkeleton />
+                  )}
+                </Card.Section>
+                <Card.Section h="calc(100% - 70px)">
+                  {hasInventoryData ? (
+                    <ListView
+                      data={data.inventory?.itemByTypes?.map((i) => ({
+                        ...i,
+                        id: i.typeId,
+                      }))}
+                      initialItemsPerPage={data.inventory?.itemByTypes?.length}
+                      totalCount={data.inventory?.itemByTypes?.length}
+                      withSearch={false}
+                      w="100%"
+                      h="100%"
+                      withinParent
+                    >
+                      {(type) => (
+                        <UnstyledButton
+                          className="list-item"
+                          w="100%"
+                          p="xs"
+                          onClick={() => {
+                            navigate(`/items/list?type=${type.type}`);
+                          }}
+                        >
+                          <Group align="center" justify="space-between" grow>
+                            <Text fw="bold" size="md" ta="center">
+                              {type.type}
+                            </Text>
+                            <Text
+                              size="sm"
+                              ta="center"
+                              {...(type.statusCount["returned"] === 0 && {
+                                c: "red",
+                              })}
+                            >
+                              {type.statusCount["returned"]} Available
+                            </Text>
+                          </Group>
+                        </UnstyledButton>
+                      )}
+                    </ListView>
+                  ) : (
+                    <Stack gap="xs" p="sm">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <Group key={index} justify="space-between" align="center" p="xs">
+                          <Skeleton h={16} w="40%" />
+                          <Skeleton h={12} w="30%" />
+                        </Group>
+                      ))}
+                    </Stack>
+                  )}
+                </Card.Section>
+              </Card>
+            </Group>
+            <Flex direction="row" wrap="nowrap" w="100%" h="25%" gap="md" mih={150} mt="md">
+              <InfoView
+                title="Loans in the Past Year"
+                cardProps={{ flex: 1, h: "100%" }}
+                rightSection={
+                  <Text c="gray" ta="right">
+                    {today.format("MMMM DD, YYYY")}
+                  </Text>
+                }
+              >
+                {!hasLoansData ? (
+                  <Center h="100%">
+                    <Stack align="center" gap="md">
+                      <Loader size="md" />
+                      <Text size="sm" c="dimmed">
+                        Loading loan data...
+                      </Text>
+                    </Stack>
+                  </Center>
+                ) : data.loansByYear?.length === 0 ? (
+                  <Center h="100%">
+                    <Text ta="center">No loans in the past year</Text>
+                  </Center>
+                ) : (
+                  <Suspense
+                    fallback={
+                      <Center h="100%">
+                        <Loader size="md" />
+                      </Center>
+                    }
+                  >
+                    <AreaChart
+                      w="100%"
+                      h="100%"
+                      withDots={false}
+                      withTooltip={false}
+                      mih={100}
+                      data={
+                        data.loansByYear?.map((l) => ({
+                          date: l.date,
+                          loaned: l.totalLoans,
+                          returned: l.totalReturns,
+                        })) ?? []
+                      }
+                      withXAxis={false}
+                      withYAxis={false}
+                      gridAxis="none"
+                      dataKey="date"
+                      series={[
+                        { name: "loaned", label: "Loans", color: "red" },
+                        {
+                          name: "returned",
+                          label: "Returns",
+                          color: "green",
+                        },
+                      ]}
+                      withLegend
+                      curveType="linear"
+                    />
+                  </Suspense>
+                )}
+              </InfoView>
+              <Stack h="100%" justify="space-between" w={200}>
+                <Card withBorder flex={1}>
+                  {hasLoansData ? (
+                    <StatView label="Loans Today" value={dataToday.totalLoans} />
+                  ) : (
+                    <StatViewSkeleton />
+                  )}
+                </Card>
+                <Card withBorder flex={1} mt="sm">
+                  {hasLoansData ? (
+                    <StatView label="Returns Today" value={dataToday.totalReturns} />
+                  ) : (
+                    <StatViewSkeleton />
+                  )}
+                </Card>
+              </Stack>
+            </Flex>
+          </Box>
+
+          {/* Mobile Layout */}
+          <Box hiddenFrom="md" flex={1}>
             <Card withBorder>
-              <StatView
-                label="Loans Today"
-                value={dataToday.totalLoans}
-                onClick={() => navigate("/loans")}
-              />
+              <Card.Section inheritPadding withBorder p="sm">
+                {hasTotalOutstanding ? (
+                  <StatView
+                    label="Outstanding Loans"
+                    caption="Loans that are currently outstanding"
+                    value={data.totalOutstanding ?? 0}
+                    onClick={() => {
+                      navigate("/loans/list?status=out&status=lost&status=damaged&status=unknown");
+                    }}
+                  />
+                ) : (
+                  <StatViewSkeleton />
+                )}
+              </Card.Section>
+              <Card.Section inheritPadding withBorder p="sm">
+                {hasPeopleData ? (
+                  <StatView
+                    label="People with Lost Items"
+                    caption="People who have lost loaned out items"
+                    value={data.peopleWithLostItemsTotalCount ?? 0}
+                    onClick={() => {
+                      navigate("/people");
+                    }}
+                  />
+                ) : (
+                  <StatViewSkeleton />
+                )}
+              </Card.Section>
+              <Card.Section inheritPadding withBorder p="sm">
+                {hasInventoryData ? (
+                  <StatView
+                    label="Items Available"
+                    caption="Number of Available Items"
+                    value={totalAvailableItems}
+                    onClick={() => {
+                      navigate("/items/list?status=available");
+                    }}
+                  />
+                ) : (
+                  <StatViewSkeleton />
+                )}
+              </Card.Section>
             </Card>
-            <Card withBorder>
-              <StatView
-                label="Returns Today"
-                value={dataToday.totalReturns}
-                onClick={() => navigate("/loans")}
-              />
-            </Card>
-          </Group>
+            <Box mt="md">
+              <InfoView
+                title="Loans in the Past Year"
+                cardProps={{ w: "100%", mih: 150, flex: 1 }}
+                rightSection={
+                  <Text c="gray" ta="right">
+                    {today.format("MMMM DD, YYYY")}
+                  </Text>
+                }
+              >
+                {!hasLoansData ? (
+                  <Center h="100%">
+                    <Stack align="center" gap="xs">
+                      <Loader size="sm" />
+                      <Text size="xs" c="dimmed">
+                        Loading...
+                      </Text>
+                    </Stack>
+                  </Center>
+                ) : data.loansByYear?.length === 0 ? (
+                  <Center h="100%">
+                    <Text ta="center">No loans in the past year</Text>
+                  </Center>
+                ) : (
+                  <Suspense
+                    fallback={
+                      <Center h="100%">
+                        <Loader size="sm" />
+                      </Center>
+                    }
+                  >
+                    <Sparkline
+                      w="100%"
+                      h={50}
+                      data={data.loansByYear?.map((l) => l.totalLoans) ?? []}
+                      color="red"
+                    />
+                  </Suspense>
+                )}
+              </InfoView>
+            </Box>
+            <Group grow gap="xs" mt="sm">
+              <Card withBorder>
+                {hasLoansData ? (
+                  <StatView
+                    label="Loans Today"
+                    value={dataToday.totalLoans}
+                    onClick={() => navigate("/loans")}
+                  />
+                ) : (
+                  <StatViewSkeleton />
+                )}
+              </Card>
+              <Card withBorder>
+                {hasLoansData ? (
+                  <StatView
+                    label="Returns Today"
+                    value={dataToday.totalReturns}
+                    onClick={() => navigate("/loans")}
+                  />
+                ) : (
+                  <StatViewSkeleton />
+                )}
+              </Card>
+            </Group>
+          </Box>
         </>
       )}
     </Flex>

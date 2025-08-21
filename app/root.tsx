@@ -57,10 +57,12 @@ import {
   IconHome,
   IconMapPin,
   IconTag,
+  IconTools,
   IconUser,
 } from "@tabler/icons-react";
 import { useEffect } from "react";
 import { ClientOnly } from "remix-utils/client-only";
+import ScrollToTop from "./components/base/ScrollToTop";
 import ErrorPage from "./components/ErrorPage";
 import { ToggleSchemeButton } from "./components/ToggleSchemeButton.client";
 import "./tailwind.css";
@@ -241,6 +243,13 @@ function Root({ children }: { children: React.ReactNode }) {
                   />
                   <Divider />
                   <NavLink
+                    to="/tools"
+                    component={NavLinkRemix}
+                    label="Tools"
+                    leftSection={<IconTools size={24} />}
+                    onClick={close}
+                  />
+                  <NavLink
                     to="/report"
                     component={NavLinkRemix}
                     label="Report"
@@ -251,6 +260,7 @@ function Root({ children }: { children: React.ReactNode }) {
               </AppShell.Navbar>
               <AppShell.Main w="100%" h="100dvh">
                 {children}
+                <ClientOnly fallback={null}>{() => <ScrollToTop threshold={400} />}</ClientOnly>
               </AppShell.Main>
             </AppShell>
             <ScrollRestoration />

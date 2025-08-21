@@ -59,15 +59,13 @@ dayjs.extend(isSameOrBefore);
  * @returns Promise resolving to DataReturn with items array or error
  */
 export const getItems = async (
-  filters: {
+  filters: Partial<{
     [key in keyof ItemQueryType]: string | string[] | undefined;
-  } = {},
+  }> = {},
   limit?: number,
   offset?: number
 ): Promise<DataReturn<ItemData[]>> => {
   try {
-    console.log("pageInfo", limit, offset);
-
     const parsedFilter = ItemQuerySchema.parse(filters);
 
     if (limit && limit <= 0) limit = undefined;
@@ -76,40 +74,110 @@ export const getItems = async (
       parsedFilter.name = parsedFilter.query;
     }
 
-    const statuses =
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.ItemFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        return { createdDate: finalOrder[0] as "asc" | "desc" };
+      }
+
+      return sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "location":
+            return {
+              location: {
+                name: fieldOrder,
+              },
+            };
+          case "type":
+            return {
+              type: {
+                name: fieldOrder,
+              },
+            };
+          case "name":
+          case "description":
+          case "createdDate":
+          case "updatedDate":
+            return { [field]: fieldOrder };
+          default:
+            return { createdDate: fieldOrder };
+        }
+      });
+    };
+
+    // Process statuses array to handle both IDs and names
+    const processedStatuses =
       parsedFilter.statuses && parsedFilter.statuses.length > 0
         ? parsedFilter.statuses
-            .map((status) =>
-              status !== "returned"
-                ? STATUS_OPTIONS.find((s) => s.id === status || s.name === status)?.id
-                : undefined
-            )
-            .filter((status) => status !== undefined)
+            .map((status) => {
+              // Find status by ID or name
+              const statusOption = STATUS_OPTIONS.find((s) => s.id === status || s.name === status);
+              return statusOption?.id;
+            })
+            .filter((status): status is string => status !== undefined)
         : undefined;
+
+    const hasReturnedStatus = parsedFilter.statuses?.some(
+      (status) =>
+        status === "returned" ||
+        STATUS_OPTIONS.find((s) => (s.id === status || s.name === status) && s.id === "returned")
+    );
+    const hasActiveStatuses =
+      processedStatuses && processedStatuses.some((status) => status !== "returned");
 
     const filter: Prisma.ItemWhereInput = parsedFilter.uuid
       ? { uuid: parsedFilter.uuid }
       : {
           name: parsedFilter.name ? { contains: parsedFilter.name } : undefined,
-          loans:
-            parsedFilter.personId || (parsedFilter.statuses && parsedFilter.statuses?.length > 0)
-              ? {
-                  every:
-                    parsedFilter.personId || parsedFilter.statuses?.includes("returned")
-                      ? {
-                          loan: parsedFilter.personId
-                            ? {
-                                personId: parsedFilter.personId,
-                              }
-                            : undefined,
-                          status: parsedFilter.statuses?.includes("returned")
-                            ? "returned"
-                            : undefined,
-                        }
-                      : undefined,
-                  some: statuses && statuses.length > 0 ? { status: { in: statuses } } : undefined,
-                }
-              : undefined,
+          // Handle multiple status filtering
+          ...(parsedFilter.statuses && parsedFilter.statuses.length > 0
+            ? {
+                OR: [
+                  // Items with active statuses (not returned)
+                  ...(hasActiveStatuses
+                    ? [
+                        {
+                          loans: {
+                            some: {
+                              status: {
+                                in: processedStatuses.filter((s) => s !== "returned"),
+                              },
+                            },
+                          },
+                        },
+                      ]
+                    : []),
+                  // Items with no loans or all returned loans (available status)
+                  ...(hasReturnedStatus
+                    ? [
+                        {
+                          OR: [
+                            { loans: { none: {} } }, // No loans = available
+                            { loans: { every: { status: "returned" } } }, // All loans returned
+                          ],
+                        },
+                      ]
+                    : []),
+                ],
+              }
+            : parsedFilter.personId
+            ? {
+                loans: {
+                  some: {
+                    loan: {
+                      personId: parsedFilter.personId,
+                    },
+                  },
+                },
+              }
+            : {}),
           type: parsedFilter.types
             ? {
                 OR: parsedFilter.types.map((type) => ({ name: type })),
@@ -124,19 +192,13 @@ export const getItems = async (
           tags: parsedFilter.tags ? { some: { id: { in: parsedFilter.tags } } } : undefined,
         };
 
-    console.log("filter", JSON.stringify(filter, null, 2));
-
     const items = await prisma.item.findMany({
       ...itemSimpleSelection,
       where: filter,
-      orderBy: {
-        createdDate: "desc",
-      },
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
       take: limit,
       skip: offset,
     });
-
-    console.log("items", items);
 
     let filteredItems = items.map((item) => ({
       id: item.id,
@@ -533,12 +595,37 @@ export const getItemStatusCount = async (): Promise<
 
 //#region Item Types
 export const getItemTypes = async (
-  filters: {
+  filters: Partial<{
     [key in keyof QueryType]: string | string[] | undefined;
-  } = {}
+  }> = {}
 ): Promise<DataReturn<ItemTypeData[]>> => {
   try {
     const parsedFilter = QuerySchema.parse(filters);
+
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.ItemTypeFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        return { name: finalOrder[0] as "asc" | "desc" };
+      }
+
+      return sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "id":
+          case "name":
+          case "description":
+            return { [field]: fieldOrder };
+          default:
+            return { name: fieldOrder };
+        }
+      });
+    };
 
     const itemTypes = await prisma.itemType.findMany({
       where: parsedFilter.query
@@ -548,6 +635,7 @@ export const getItemTypes = async (
             },
           }
         : undefined,
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
     });
 
     return {
@@ -665,12 +753,36 @@ export const deleteItemType = async (id?: number | string): Promise<DataReturn<I
 
 //#region Item Locations
 export const getItemLocations = async (
-  filters: {
+  filters: Partial<{
     [key in keyof QueryType]: string | string[] | undefined;
-  } = {}
+  }> = {}
 ): Promise<DataReturn<LocationData[]>> => {
   try {
     const parsedFilter = QuerySchema.parse(filters);
+
+    // Build ordering from query parameters with fallback
+    const finalOrder = parsedFilter.order || ["desc"];
+
+    // Build orderBy object based on sort fields
+    const buildOrderBy = (
+      sortBy: string[] | null | undefined,
+      order: string[] | null | undefined
+    ): Prisma.LocationFindManyArgs["orderBy"] => {
+      if (!sortBy || sortBy.length === 0) {
+        return { name: finalOrder[0] as "asc" | "desc" };
+      }
+
+      return sortBy.map((field, index) => {
+        const fieldOrder = (order?.[index] || finalOrder[0]) as "asc" | "desc";
+        switch (field) {
+          case "id":
+          case "name":
+            return { [field]: fieldOrder };
+          default:
+            return { name: fieldOrder };
+        }
+      });
+    };
 
     const itemLocations = await prisma.location.findMany({
       where: parsedFilter.query
@@ -682,6 +794,7 @@ export const getItemLocations = async (
             })),
           }
         : undefined,
+      orderBy: buildOrderBy(parsedFilter.sortBy, parsedFilter.order),
     });
 
     return {

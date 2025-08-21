@@ -13,9 +13,10 @@
 
 import { Flex, Group, Stack, Text } from "@mantine/core";
 import { Link } from "@remix-run/react";
-import { dateDiff, formatDate, formatFullName } from "~/utils/utils";
+import { dateDiff, formatFullName } from "~/utils/utils";
 
 import { LoanedItemData } from "~/utils/types.server";
+import DateDisplay from "../DateDisplay";
 import StatusBadge from "../StatusBadge";
 import QRCodePreview from "../qrCode/QRCodePreview";
 import TagGroup from "../tags/TagGroup";
@@ -91,12 +92,14 @@ export default function LoanedItemInfoView({
       {showDetails &&
         (data.dateReturned ? (
           <Text size="xs" lineClamp={1}>
-            Returned: {formatDate(data.dateReturned)} ({dateDiff({ date: data.dateReturned })})
+            Returned: <DateDisplay date={data.dateReturned} /> (
+            {data.dateReturned && dateDiff({ date: data.dateReturned })})
           </Text>
         ) : (
           data.dateLoaned && (
             <Text size="xs" lineClamp={1}>
-              Last Seen: {formatDate(data.dateLoaned)} ({dateDiff({ date: data.dateLoaned })})
+              <DateDisplay date={data.dateLoaned} inherit span prefix="Last Seen: " /> (
+              {data.dateLoaned && dateDiff({ date: data.dateLoaned })})
             </Text>
           )
         ))}
