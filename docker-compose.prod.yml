@@ -2,8 +2,8 @@ name: signout-app
 
 services:
   mariadb:
-    container_name: mariadb:11.2
-    image: mariadb
+    container_name: mariadb
+    image: mariadb:11.2
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
@@ -53,5 +53,3 @@ services:
 
 volumes:
   mariadb_data:
-    name: mariadb_data
-    driver: local
